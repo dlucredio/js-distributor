@@ -39,7 +39,7 @@ export default class CopyPasteGenerator extends JavaScriptParserVisitor {
   }
 
   visitImportStatement(ctx) {
-    this.appendString("import");
+    this.appendString("import ");
     this.visitImportFromBlock(ctx.importFromBlock());
   }
 

@@ -5,7 +5,6 @@ import glob from "glob";
 import sleep from "sleep";
 import beautify from "js-beautify";
 import CopyPasteGenerator from "./generators/copypaste-generator.js";
-import { flattenGeneratedCode } from "./generators/generator-utils.js";
 import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
 import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 
