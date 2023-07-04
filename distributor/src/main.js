@@ -1,8 +1,6 @@
 import antlr4 from "antlr4";
 import path from "path";
 import fs from "fs";
-import glob from "glob";
-import sleep from "sleep";
 import beautify from "js-beautify";
 import CopyPasteGenerator from "./generators/copypaste-generator.js";
 import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
@@ -32,13 +30,12 @@ export default function main(
       if (filename) {
         if (fsWait) return;
         fsWait = true;
-        fsWait = setTimeout(() => {
+        setTimeout(() => {
           fsWait = false;
         }, 500);
         console.log(
           `File ${filename} has changed (${event}). Generating code again...`
         );
-        sleep.msleep(100);
         generateCodeDir(target, inputDirRelative, outputDir);
       }
     });
@@ -47,16 +44,38 @@ export default function main(
   }
 }
 
+/**
+ * Função responsável por gerar o código para um diretório de entrada.
+ * 
+ * @param {string} target - O alvo de geração de código.
+ * @param {string} inputDir - O diretório de entrada.
+ * @param {string} outputDir - O diretório de saída.
+ */
 function generateCodeDir(target, inputDir, outputDir) {
+  // Exibe uma mensagem indicando o diretório que está sendo escaneado
   console.log(`Scanning directory ${inputDir}`);
 
-  glob(`${inputDir}/**/*.js`, function (er, files) {
-    files.forEach((inputFile) => {
-      const outputFile = path.join(outputDir, path.basename(inputFile));
+  // Lê o conteúdo do diretório de entrada
+  fs.readdir(inputDir, (err, files) => {
+    if (err) {
+      // Em caso de erro, exibe a mensagem de erro e interrompe a execução
+      console.error(`Error reading directory ${inputDir}: ${err}`);
+      return;
+    }
+
+    // Para cada arquivo encontrado no diretório
+    files.forEach((filename) => {
+      // Cria o caminho completo do arquivo de entrada
+      const inputFile = path.join(inputDir, filename);
+      // Cria o caminho completo do arquivo de saída
+      const outputFile = path.join(outputDir, filename);
+      
+      // Chama a função generateCode para processar o arquivo
       generateCode(target, inputFile, outputFile);
     });
   });
 }
+
 
 function generateCode(target, inputFile, outputFile) {
   try {
