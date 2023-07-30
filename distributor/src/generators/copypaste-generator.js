@@ -208,7 +208,7 @@ functionDeclaration
 visitFunctionDeclaration(ctx) {
   if (ctx.Async()) this.appendString(" async ")
   this.appendString(" function ");
-  if (ctx.getText().includes("")) this.appendString("");
+  if (ctx.getText().includes("*")) this.appendString("*");
   this.appendString(ctx.identifier().getText());
   this.appendString("(");
   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
@@ -227,7 +227,7 @@ anonymousFunction
 visitAnonymousFunctionDecl(ctx) {
   if (ctx.Async()) this.appendTokens(ctx.Async());
   this.appendTokens(ctx.Function_());
-  if (ctx.getText().includes("")) this.appendString("");
+  if (ctx.getText().includes("*")) this.appendString("*");
   this.appendString("(");
   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
   this.appendString(")");
@@ -451,7 +451,7 @@ visitArrowFunctionParameters(ctx) {
       ;
     */
     visitMethodDefinition(ctx) {
-      if (ctx.children[0].getText().includes("")) this.appendString("");
+      if (ctx.children[0].getText().includes("*")) this.appendString("*");
       if (ctx.children[0].getText().includes("#") || ctx.children[1].getText().includes("#")) this.appendString("#");
       if (ctx.propertyName()) {
         this.visitPropertyName(ctx.propertyName());
