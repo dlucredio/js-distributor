@@ -1,12 +1,10 @@
 import JavaScriptParserVisitor from "../antlr4/JavaScriptParserVisitor.js";
 import { StringBuilder } from "./generator-utils.js";
-import VisitImports from "./codegen-visitors/visitImports.js";
 
 export default class CopyPasteGenerator extends JavaScriptParserVisitor {
   constructor() {
     super();
     this.stringBuilder = new StringBuilder();
-    this.instanciaVisitImports = new VisitImports(this);
   }
 
   appendTokens(token) {
@@ -26,15 +24,23 @@ export default class CopyPasteGenerator extends JavaScriptParserVisitor {
   }
 
   visitProgram(ctx) {
-    this.instanciaVisitImports.visitProgram(ctx);
+    this.appendTokens(ctx.HashBangLine());
+    if (ctx.sourceElements()) {
+      this.visitSourceElements(ctx.sourceElements());
+    }
   }
 
   visitBlock(ctx) {
-    this.instanciaVisitImports.visitBlock(ctx);
+    this.appendString("{");
+    if(ctx.statementList()) {
+        this.visitStatementList(ctx.statementList());
+    }
+    this.appendString("}");
   }
 
   visitImportStatement(ctx) {
-    this.instanciaVisitImports.visitImportStatement(ctx);
+    this.appendString("import ");
+    this.visitImportFromBlock(ctx.importFromBlock());
   }
   
 
@@ -202,7 +208,7 @@ functionDeclaration
 visitFunctionDeclaration(ctx) {
   if (ctx.Async()) this.appendString(" async ")
   this.appendString(" function ");
-  if (ctx.getText().includes("*")) this.appendString("*");
+  if (ctx.getText().includes("")) this.appendString("");
   this.appendString(ctx.identifier().getText());
   this.appendString("(");
   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
@@ -221,7 +227,7 @@ anonymousFunction
 visitAnonymousFunctionDecl(ctx) {
   if (ctx.Async()) this.appendTokens(ctx.Async());
   this.appendTokens(ctx.Function_());
-  if (ctx.getText().includes("*")) this.appendString("*");
+  if (ctx.getText().includes("")) this.appendString("");
   this.appendString("(");
   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
   this.appendString(")");
@@ -445,7 +451,7 @@ visitArrowFunctionParameters(ctx) {
       ;
     */
     visitMethodDefinition(ctx) {
-      if (ctx.children[0].getText().includes("*")) this.appendString("*");
+      if (ctx.children[0].getText().includes("")) this.appendString("");
       if (ctx.children[0].getText().includes("#") || ctx.children[1].getText().includes("#")) this.appendString("#");
       if (ctx.propertyName()) {
         this.visitPropertyName(ctx.propertyName());
@@ -508,7 +514,7 @@ visitArrowFunctionParameters(ctx) {
 
     // variableDeclaration
     visitVariableDeclaration(ctx) {
-      this.visitAssignable(ctx.assignable());
+      //if(ctx.assignable()) this.visitAssignable(ctx.assignable());
       this.visitChildren(ctx.children[0])
       if (ctx.children[0]) {
         this.appendString(ctx.children[0].getText());
@@ -1056,7 +1062,7 @@ debuggerStatement --
 
     // MultiplicativeExpression
   visitMultiplicativeExpression(ctx) {
-    this.visitChildren(ctx.children[0]) // Visita a primeira subexpressão *****
+    this.visitChildren(ctx.children[0]) // Visita a primeira subexpressão ***
 
     const operator = ctx.getChild(1).getText(); // Obtém o texto do operador
 
