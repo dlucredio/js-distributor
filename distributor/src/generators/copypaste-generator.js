@@ -206,7 +206,7 @@ functionDeclaration
 ;
 */
 visitFunctionDeclaration(ctx) {
-  if (ctx.Async()) this.appendString(" async ")
+  if (ctx.Async()) this.appendString("async ")
   this.appendString(" function ");
   if (ctx.getText().includes("*")) this.appendString("*");
   this.appendString(ctx.identifier().getText());
@@ -316,15 +316,15 @@ visitArrowFunctionParameters(ctx) {
       this.appendString("] ");
    }
    /*
-   objectLiteral
+   objectLiteral - erro
       : '{' (propertyAssignment (',' propertyAssignment)* ','?)? '}'
       ;
     */
    visitObjectLiteral(ctx) {
       this.appendString("{ ");
-      for (let i = 0; i < ctx.propertyAssignment().length - 1; i++) {
-        this.visitChildren(ctx.children[i]);
-        if (i != ctx.propertyAssignment().length - 1) this.appendString(", ");
+      for (let i = 0; i < ctx.children.length - 1; i++) {
+        this.visit(ctx.children[i]);
+        if (i != ctx.children.length - 1) this.appendString(", ");
       }
       this.appendString("}");
    }
@@ -399,7 +399,7 @@ visitArrowFunctionParameters(ctx) {
     visitClassTail(ctx) {
       if (ctx.Extends()) {
         this.appendString(" extends ");
-        this.visitChildren(ctx.children[1]);
+        this.visit(ctx.children[1]);
       }
       this.appendString("{");
       for (let i = 0; i < ctx.classElement().length; i++) {
@@ -422,7 +422,7 @@ visitArrowFunctionParameters(ctx) {
         if (ctx.children.length === 4) this.appendString("# ");
         this.visitPropertyName(ctx.propertyName());
         this.appendString(" = ");
-        this.visitChildren(ctx.children[ctx.children.length - 1]);
+        this.visit(ctx.children[ctx.children.length - 1]);
       } else {
         for (const tk of ctx.Static()) {
           this.appendString(tk.getText()+ " ");
@@ -472,6 +472,16 @@ visitArrowFunctionParameters(ctx) {
       this.visitFunctionBody(ctx.functionBody());
     }
 
+    visitGetter(ctx) {
+      this.appendString("get ");
+      this.visitPropertyName(ctx.propertyName());
+    }
+
+    visitSetter(ctx) {
+      this.appendString("set ");
+      this.visitPropertyName(ctx.propertyName());
+    }
+
     // declaration
     visitDeclaration(ctx) {
       if (ctx.variableStatement()) {
@@ -514,26 +524,31 @@ visitArrowFunctionParameters(ctx) {
 
     // variableDeclaration
     visitVariableDeclaration(ctx) {
-      //if(ctx.assignable()) this.visitAssignable(ctx.assignable());
-      this.visitChildren(ctx.children[0])
-      if (ctx.children[0]) {
-        this.appendString(ctx.children[0].getText());
-      }
-      if (ctx.children[1]){
-        this.appendString(ctx.children[1].getText())
+      // //if(ctx.assignable()) this.visitAssignable(ctx.assignable());
+      // this.visitChildren(ctx.children[0])
+      // if (ctx.children[0]) {
+      //   this.appendString(ctx.children[0].getText());
+      // }
+      // if (ctx.children[1]){
+      //   this.appendString(ctx.children[1].getText())
 
+      // }
+      // if(ctx.children[2]){
+      //   this.appendString(ctx.children[2].getText())
+      // }
+      // this.appendNewLine();
+      // //this.appendString(';');
+      this.visitAssignable(ctx.assignable());
+      if (ctx.children.length > 1) {
+        this.appendString(" = " );
+        this.visit(ctx.children[2]);
       }
-      if(ctx.children[2]){
-        this.appendString(ctx.children[2].getText())
-      }
-      this.appendNewLine();
-      //this.appendString(';');
     }
 
       // continueStatement
     visitContinueStatement(ctx) {
       this.appendString("continue");
-      if (ctx.notLineTerminator() && ctx.identifier()) {
+      if (ctx.identifier()) {
         this.appendString(" " + ctx.identifier().getText());
       }
       this.appendTokens(ctx.eos());
@@ -542,7 +557,7 @@ visitArrowFunctionParameters(ctx) {
     // breakStatement
     visitBreakStatement(ctx) {
       this.appendString("break");
-      if (ctx.notLineTerminator() && ctx.identifier()) {
+      if (ctx.identifier()) {
         this.appendString(" " + ctx.identifier().getText());
       }
       this.appendTokens(ctx.eos());
@@ -643,7 +658,6 @@ throwStatement --
     */
     visitThrowStatement(ctx) {
       this.appendString("throw ");
-      //? duvida
       this.visitExpressionSequence(ctx.expressionSequence());
       this.appendString(";");
     }
@@ -709,7 +723,7 @@ debuggerStatement --
 
     // emptyStatement_
     visitEmptyStatement_(ctx){
-      this.appendTokens(ctx.SemiColon())
+      this.appendTokens(ctx.SemiColon());
     }
 
    /* visitExpressionStatement(ctx) {
@@ -721,11 +735,20 @@ debuggerStatement --
 
     // expressionSequence
     visitExpressionSequence(ctx) {
+      // //co1nsole.log(ctx.children[0]);
+      // if (ctx.children.length === 1) this.visitChildren(ctx);
+      // else {
+      //   for (let i = 0; i < ctx.children.length; i++) {
+      //     this.visitChildren(ctx.children[i]);
+      //     if (i !== ctx.children.length - 1) {
+      //       this.appendString(",");
+      //     }
+      //   }
+      // }
       for (let i = 0; i < ctx.children.length; i++) {
-        this.visitChildren(ctx.children[i]);
-        this.appendString(ctx.children[i].getText())
-        if (i < ctx.children.length - 1) {
-          //this.appendString(",");
+        this.visit(ctx.children[i]);
+        if (i !== ctx.children.length - 1) {
+          this.appendString(",");
         }
       }
     }
@@ -736,6 +759,7 @@ debuggerStatement --
       this.appendString("(");
       this.visitExpressionSequence(ctx.expressionSequence());
       this.appendString(") ");
+      this.appendNewLine(); // colocar ou nao?
       this.visitStatement(ctx.statement(0));
       if (ctx.Else()) {
         this.appendString("else ");
@@ -798,88 +822,99 @@ debuggerStatement --
       }
     }
 
+    visitIdentifier(ctx) {
+      this.appendString(ctx.getText());
+    }
 
-    // statement
-    visitStatement(ctx) {
-      switch (ctx.children[0].constructor.name) {
-        case "BlockContext":
-          this.visitBlock(ctx.block());
-          break;
-        case "VariableStatementContext":
-          this.visitVariableStatement(ctx.variableStatement());
-          break;
-        case "ImportStatementContext":
-          this.visitImportStatement(ctx.importStatement());
-          break;
-        case "EmptyStatement_Context":
-          this.appendString(";");
-          break;
-        case "ClassDeclarationContext":
-          this.visitClassDeclaration(ctx.classDeclaration());
-          break;
-        case "FunctionDeclarationContext":
-          this.visitFunctionDeclaration(ctx.functionDeclaration());
-          break;
-        case "ExpressionStatementContext":
-          this.visitExpressionStatement(ctx.expressionStatement());
-          break;
-        case "IfStatementContext":
-          this.visitIfStatement(ctx.ifStatement());
-          break;
-        case "IterationStatementContext":
-          this.visitIterationStatement(ctx.iterationStatement());
-          break;
-        case "ContinueStatementContext":
-          this.appendString("continue;");
-          break;
-        case "BreakStatementContext":
-          this.appendString("break;");
-          break;
-        case "ReturnStatementContext":
-          this.visitReturnStatement(ctx.returnStatement());
-          break;
-        case "YieldStatementContext":
-          this.visitYieldStatement(ctx.yieldStatement());
-          break;
-        case "WithStatementContext":
-          this.visitWithStatement(ctx.withStatement());
-          break;
-        case "LabelledStatementContext":
-          this.visitLabelledStatement(ctx.labelledStatement());
-          break;
-        case "SwitchStatementContext":
-          this.visitSwitchStatement(ctx.switchStatement());
-          break;
-        case "ThrowStatementContext":
-          this.visitThrowStatement(ctx.throwStatement());
-          break;
-        case "TryStatementContext":
-          this.visitTryStatement(ctx.tryStatement());
-          break;
-        case "DebuggerStatementContext":
-          this.appendString("debugger;");
-          break;
-        default:
-          this.appendString(ctx.getText());
-          break;
-      }
+
+    // // statement - nao precisa pois so visita filhos sem gerar codigo intermediario
+    // visitStatement(ctx) {
+    //   this.visitChildren(ctx);
+    //   // switch (ctx.children[0].constructor.name) {
+    //   //   case "BlockContext":
+    //   //     this.visitBlock(ctx.block());
+    //   //     break;
+    //   //   case "VariableStatementContext":
+    //   //     this.visitVariableStatement(ctx.variableStatement());
+    //   //     break;
+    //   //   case "ImportStatementContext":
+    //   //     this.visitImportStatement(ctx.importStatement());
+    //   //     break;
+    //   //   case "EmptyStatement_Context":
+    //   //     this.appendString(";");
+    //   //     break;
+    //   //   case "ClassDeclarationContext":
+    //   //     this.visitClassDeclaration(ctx.classDeclaration());
+    //   //     break;
+    //   //   case "FunctionDeclarationContext":
+    //   //     this.visitFunctionDeclaration(ctx.functionDeclaration());
+    //   //     break;
+    //   //   case "ExpressionStatementContext":
+    //   //     this.visitExpressionStatement(ctx.expressionStatement());
+    //   //     break;
+    //   //   case "IfStatementContext":
+    //   //     this.visitIfStatement(ctx.ifStatement());
+    //   //     break;
+    //   //   case "IterationStatementContext":
+    //   //     this.visitIterationStatement(ctx.iterationStatement());
+    //   //     break;
+    //   //   case "ContinueStatementContext":
+    //   //     this.appendString("continue;");
+    //   //     break;
+    //   //   case "BreakStatementContext":
+    //   //     this.appendString("break;");
+    //   //     break;
+    //   //   case "ReturnStatementContext":
+    //   //     this.visitReturnStatement(ctx.returnStatement());
+    //   //     break;
+    //   //   case "YieldStatementContext":
+    //   //     this.visitYieldStatement(ctx.yieldStatement());
+    //   //     break;
+    //   //   case "WithStatementContext":
+    //   //     this.visitWithStatement(ctx.withStatement());
+    //   //     break;
+    //   //   case "LabelledStatementContext":
+    //   //     this.visitLabelledStatement(ctx.labelledStatement());
+    //   //     break;
+    //   //   case "SwitchStatementContext":
+    //   //     this.visitSwitchStatement(ctx.switchStatement());
+    //   //     break;
+    //   //   case "ThrowStatementContext":
+    //   //     this.visitThrowStatement(ctx.throwStatement());
+    //   //     break;
+    //   //   case "TryStatementContext":
+    //   //     this.visitTryStatement(ctx.tryStatement());
+    //   //     break;
+    //   //   case "DebuggerStatementContext":
+    //   //     this.appendString("debugger;");
+    //   //     break;
+    //   //   default:
+    //   //     this.appendString(ctx.getText());
+    //   //     break;
+    //   // }
+    // }
+
+    // pra ter ; eos
+    visitExpressionStatement(ctx) {
+      this.visitExpressionSequence(ctx.expressionSequence());
+      this.appendString(";");
     }
     
     // anonymousFunction
   visitAnonymousFunction(ctx) {
-    if (ctx.Async) {
-      this.appendTokens(ctx.Async);
+    if (ctx.Async()) {
+      this.appendTokens(ctx.Async());
     }
-    this.appendTokens(ctx.Function_);
-    if (ctx.Star) {
-      this.appendTokens(ctx.Star);
+    this.appendTokens(ctx.Function_());
+    if (ctx.Star()) {
+      this.appendTokens(ctx.Star());
     }
-    this.appendTokens(ctx.LeftParen);
-    if (ctx.formalParameterList) {
-      this.visitFormalParameterList(ctx.formalParameterList);
+    this.appendTokens(ctx.LeftParen());
+    if (ctx.formalParameterList()) {
+      this.visitFormalParameterList(ctx.formalParameterList());
     }
-    this.appendTokens(ctx.RightParen);
-    this.visitFunctionBody(ctx.functionBody);
+    this.appendTokens(ctx.RightParen());
+    this.visitFunctionBody(ctx.functionBody());
   }
     
 
@@ -896,9 +931,9 @@ debuggerStatement --
 
   //| singleExpression '?'? '.' '#'? identifierName                         # MemberDotExpression
   visitMemberDotExpression(ctx) { 
-    this.visitChildren(ctx.children[0]);
+    this.visit(ctx.children[0]);
     if (ctx.children[1].getText().includes("?")) this.appendString(" ? ");
-    this.appendString(" . ");
+    this.appendString(".");
     if (ctx.children[ctx.children.length-2].getText().includes("#")) this.appendString(" # ");
     this.appendString(ctx.identifierName().getText());
   }
@@ -937,10 +972,10 @@ debuggerStatement --
 
   //  singleExpression ('+' | '-') singleExpression   
   visitAdditiveExpression(ctx) {
-    this.visitChildren(ctx.children[0]);
+    this.visit(ctx.children[0]);
     if (ctx.children[1].getText().includes("+")) this.appendString("+ ");
     else this.appendString("- ");
-    this.visitChildren(ctx.children[1]);
+    this.visit(ctx.children[2]);
   }
 
   /*
@@ -964,29 +999,27 @@ debuggerStatement --
 
   //| singleExpression arguments                                            # ArgumentsExpression
   visitArgumentsExpression(ctx) {
-    this.visitChildren(ctx.children[0]);
+    this.visit(ctx.children[0]);
     this.visitArguments(ctx.arguments());
   }
 
   //| New '.' identifier                                                    # MetaExpression // new.target - duvida
   visitMetaExpression(ctx) {
-    this.appendString(" new ");
-    this.appendString(" . ");
+    this.appendString(" new");
+    this.appendString(".");
     this.appendString(ctx.identifier().getText());
   }
 
-  //| singleExpression {this.notLineTerminator()}? '++'                     # PostIncrementExpression - duvida
+  //| singleExpression {this.notLineTerminator()}? '++'                     # PostIncrementExpression 
   visitPostIncrementExpression(ctx) {
-    this.visitChildren(ctx.children[0]);
-    //?
-    this.appendString(" ++ ");
+    this.visit(ctx.children[0]);
+    this.appendString("++ ");
   }
 
   // | singleExpression {this.notLineTerminator()}? '--'                     # PostDecreaseExpression
   visitPostDecreaseExpression(ctx) {
-    this.visitChildren(ctx.children[0]);
-    // ?
-    this.appendString(" -- ");
+    this.visit(ctx.children[0]);
+    this.appendString("-- ");
   }
 
   //| Delete singleExpression                                               # DeleteExpression
@@ -1050,21 +1083,20 @@ debuggerStatement --
   }
 
   /*
-    | <assoc=right> singleExpression '**' singleExpression                  # PowerExpression duvida
+    | <assoc=right> singleExpression '**' singleExpression                  # PowerExpression
   */
 
   visitPowerExpression(ctx) {
-    //? duvida
-    this.visitChildren(ctx.children[0]);
+    this.visit(ctx.children[0]);
     this.appendString(" ** ");
-    this.visitChildren(ctx.children[1]);
+    this.visit(ctx.children[2]);
   }
 
     // MultiplicativeExpression
   visitMultiplicativeExpression(ctx) {
-    this.visitChildren(ctx.children[0]) // Visita a primeira subexpressão ***
+    this.visit(ctx.children[0]) // Visita a primeira subexpressão ***
 
-    const operator = ctx.getChild(1).getText(); // Obtém o texto do operador
+    const operator = ctx.children[1].getText(); // Obtém o texto do operador
 
     if (operator === '*') {
       this.appendString("*");
@@ -1074,12 +1106,12 @@ debuggerStatement --
       this.appendString("%");
     }
 
-    this.visitChildren(ctx.children[2]); // Visita a segunda subexpressão
+    this.visit(ctx.children[2]); // Visita a segunda subexpressão
   }
 
   // AdditiveExpression
   visitAdditiveExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]); // Visita a primeira subexpressão
 
     const operator = ctx.getChild(1).getText(); // Obtém o texto do operador
 
@@ -1089,21 +1121,21 @@ debuggerStatement --
       this.appendString("-");
     }
 
-    this.visitChildren(ctx.children[2]); // Visita a segunda subexpressão
+    this.visit(ctx.children[2]); // Visita a segunda subexpressão
   }
 
   // CoalesceExpression
   visitCoalesceExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]); // Visita a primeira subexpressão
 
     this.appendString("??");
 
-    this.visitChildren(ctx.children[1]); // Visita a segunda subexpressão
+    this.visit(ctx.children[1]); // Visita a segunda subexpressão
   }
 
   // BitShiftExpression
   visitBitShiftExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]); // Visita a primeira subexpressão
 
     const operator = ctx.getChild(1).getText(); // Obtém o texto do operador de deslocamento
 
@@ -1115,12 +1147,12 @@ debuggerStatement --
       this.appendString(">>>");
     }
 
-    this.visitChildren(ctx.children[2]); // Visita a segunda subexpressão
+    this.visit(ctx.children[2]); // Visita a segunda subexpressão
   }
 
   // RelationalExpression
   visitRelationalExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]); // Visita a primeira subexpressão
 
     const operator = ctx.getChild(1).getText(); // Obtém o texto do operador
 
@@ -1134,30 +1166,30 @@ debuggerStatement --
       this.appendString(">=");
     }
 
-    this.visitChildren(ctx.children[2]); // Visita a segunda subexpressão
+    this.visit(ctx.children[2]); // Visita a segunda subexpressão
   }
 
   // InstanceofExpression
   visitInstanceofExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]); // Visita a primeira subexpressão
 
     this.appendString("instanceof");
 
-    this.visitChildren(ctx.children[1]); // Visita a segunda subexpressão
+    this.visit(ctx.children[1]); // Visita a segunda subexpressão
   }
 
   // InExpression
   visitInExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]); // Visita a primeira subexpressão
 
     this.appendString("in");
 
-    this.visitChildren(ctx.children[1]); // Visita a segunda subexpressão
+    this.visit(ctx.children[1]); // Visita a segunda subexpressão
   }
 
   // EqualityExpression
   visitEqualityExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]); // Visita a primeira subexpressão
 
     const operator = ctx.getChild(1).getText(); // Obtém o texto do operador
 
@@ -1171,54 +1203,58 @@ debuggerStatement --
       this.appendString("!==");
     }
 
-    this.visitChildren(ctx.children[1]); // Visita a segunda subexpressão
+    this.visit(ctx.children[2]); // Visita a segunda subexpressão
   }
   // LogicalAndExpression
   visitLogicalAndExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]); // Visita a primeira subexpressão
     this.appendString("&&");
-    this.visitChildren(ctx.children[1]); // Visita a segunda subexpressão
+    this.visit(ctx.children[2]); // Visita a segunda subexpressão
   }
 
   // LogicalOrExpression
   visitLogicalOrExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]); // Visita a primeira subexpressão
     this.appendString("||");
-    this.visitChildren(ctx.children[1]); // Visita a segunda subexpressão
+    this.visit(ctx.children[2]); // Visita a segunda subexpressão
   }
 
-  // TernaryExpression
+  // TernaryExpression  | singleExpression '?' singleExpression ':' singleExpression 
   visitTernaryExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a expressão condicional
+    this.visit(ctx.children[0]); // Visita a expressão condicional
     this.appendString("?");
-    this.visitChildren(ctx.children[1]); // Visita a expressão verdadeira
+    this.visit(ctx.children[2]); // Visita a expressão verdadeira (antes tava 1)
     this.appendString(":");
-    this.visitChildren(ctx.children[2]); // Visita a expressão falsa
+    this.visit(ctx.children[4]); // Visita a expressão falsa
   }
 
-  // AssignmentExpression
+  // AssignmentExpression singleExp '=' singExp
   visitAssignmentExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a expressão à esquerda
-    this.appendString("=");
-    this.visitChildren(ctx.children[1]); // Visita a expressão à direita
+    this.visit(ctx.children[0]); // Visita a expressão à esquerda
+    this.appendString(" = ");
+    this.visit(ctx.children[2]); // Visita a expressão à direita
   }
 
   // AssignmentOperatorExpression
+  // | <assoc=right> singleExpression assignmentOperator singleExpression    # AssignmentOperatorExpression
   visitAssignmentOperatorExpression(ctx) {
-    this.visitChildren(ctx.children[0]); // Visita a expressão à esquerda
+    // this.visitChildren(ctx.children[0]); // Visita a expressão à esquerda
 
-    const operator = ctx.assignmentOperator().getText(); // Obtém o texto do operador de atribuição
+    // const operator = ctx.assignmentOperator().getText(); // Obtém o texto do operador de atribuição
 
-    this.appendString(operator);
+    // this.appendString(operator);
 
-    this.visitSingleExpression(ctx.singleExpression(1)); // Visita a expressão à direita
+    // this.visitSingleExpression(ctx.singleExpression(1)); // Visita a expressão à direita
+    this.visit(ctx.children[0]);
+    this.visitAssigmentOperator(ctx.assignmentOperator());
+    this.visit(ctx.children[2]);
   }
 
-  // ImportExpression
+  // ImportExpression  | Import '(' singleExpression ')'  
   visitImportExpression(ctx) {
     this.appendString("import");
     this.appendString("(");
-    this.visitChildren(ctx.children[0]);
+    this.visit(ctx.children[2]);
     this.appendString(")");
   }
 
@@ -1228,13 +1264,13 @@ debuggerStatement --
   }
 
   //ThisExpression
-  visitThisExpression() {
+  visitThisExpression(ctx) {
     this.appendString("this");
   }
 
-  //identifierExpression
+  //identifierExpression - todos terminais, so imprimir
   visitIdentifierExpression(ctx) {
-    this.visitChildren(ctx);
+    this.appendString(ctx.getText() + " ");
   }
 
   //SuperExpression
@@ -1247,30 +1283,38 @@ debuggerStatement --
     this.visitChildren(ctx);
   }
 
-  //ArrayLiteralExpression
-  visitArrayLiteralExpression(ctx) {
-    this.appendString("[");
-    const expressions = ctx.Children;
-    for (let i = 0; i < expressions.length; i++) {
-      this.visitChildren(expressions[i]);
-      if (i < expressions.length - 1) {
-        this.appendString(",");
-      }
-    }
-    this.appendString("]");
+  //| singleExpression '?.' singleExpression                                # OptionalChainExpression
+  visitOptionalChainExpression(ctx) {
+    this.visit(ctx.children[0]);
+    if (ctx.children.length === 3) this.appendString(".");
+    this.visit(ctx.children[2]);
   }
 
-  visitObjectLiteralExpression(ctx) {
-    this.appendString("{");
-    const propertyAssignments = ctx.propertyAssignment();
-    for (let i = 0; i < propertyAssignments.length; i++) {
-      this.visitPropertyAssignment(propertyAssignments[i]);
-      if (i < propertyAssignments.length - 1) {
-        this.appendString(",");
-      }
-    }
-    this.appendString("}");
-  }
+  //ArrayLiteralExpression - nao precisa - visitChildren visita sozinho
+  // visitArrayLiteralExpression(ctx) {
+  //   this.appendString("[");
+  //   // const expressions = ctx.children;
+  //   // for (let i = 0; i < expressions.length; i++) {
+  //   //   this.visitChildren(expressions[i]);
+  //   //   if (i < expressions.length - 1) {
+  //   //     this.appendString(",");
+  //   //   }
+  //   // }
+
+  //   this.appendString("]");
+  // }
+
+  // visitObjectLiteralExpression(ctx) {
+  //   this.appendString("{");
+  //   const propertyAssignments = ctx.propertyAssignment();
+  //   for (let i = 0; i < propertyAssignments.length; i++) {
+  //     this.visitPropertyAssignment(propertyAssignments[i]);
+  //     if (i < propertyAssignments.length - 1) {
+  //       this.appendString(",");
+  //     }
+  //   }
+  //   this.appendString("}");
+  // }
 
   //ParenthesizedExpression
   visitParenthesizedExpression(ctx){
@@ -1281,32 +1325,33 @@ debuggerStatement --
 
   // assignmentOperator
   visitAssigmentOperator(ctx){
-    const op = ctx.getText();
-    if(op === '*='){
-      this.appendString('*= ');
-    } else if(op === '/='){
-      this.appendString('/= ');
-    }else if(op === '%= '){
-      this.appendString('%= ');
-    }else if(op === '+= '){
-      this.appendString('+= ');
-    }else if(op === '-='){
-      this.appendString('-=');
-    }else if(op === '<<='){
-      this.appendString('<<= ');
-    }else if(op === '>>='){
-      this.appendString('>>= ');
-    }else if(op === '>>>='){
-      this.appendString('>>>= ');
-    }else if(op === '&='){
-      this.appendString('&= ');
-    }else if(op === '^='){
-      this.appendString('^= ');
-    }else if(op === '|='){
-      this.appendString('|= ');
-    }else if(op === '**='){
-      this.appendString('**= ');
-    }
+    this.appendString(ctx.getText());
+    //const op = ctx.getText();
+    // if(op === '*='){
+    //   this.appendString('*= ');
+    // } else if(op === '/='){
+    //   this.appendString('/= ');
+    // }else if(op === '%= '){
+    //   this.appendString('%= ');
+    // }else if(op === '+= '){
+    //   this.appendString('+= ');
+    // }else if(op === '-='){
+    //   this.appendString('-=');
+    // }else if(op === '<<='){
+    //   this.appendString('<<= ');
+    // }else if(op === '>>='){
+    //   this.appendString('>>= ');
+    // }else if(op === '>>>='){
+    //   this.appendString('>>>= ');
+    // }else if(op === '&='){
+    //   this.appendString('&= ');
+    // }else if(op === '^='){
+    //   this.appendString('^= ');
+    // }else if(op === '|='){
+    //   this.appendString('|= ');
+    // }else if(op === '**='){
+    //   this.appendString('**= ');
+    // }
   }
   /*
 
@@ -1321,7 +1366,8 @@ debuggerStatement --
       ;
   */
   visitLiteral(ctx) {
-    this.visitChildren(ctx);
+    if (ctx.templateStringLiteral()) this.visitTemplateStringLiteral(ctx.templateStringLiteral());
+    else this.appendString(ctx.getText());
   }
 
   visitTemplateStringLiteral(ctx) {
