@@ -31,6 +31,7 @@ export default class CopyPasteGenerator extends JavaScriptParserVisitor {
   }
 
   visitBlock(ctx) {
+    // this.appendNewLine(); // duvida
     this.appendString("{");
     if(ctx.statementList()) {
         this.visitStatementList(ctx.statementList());
@@ -131,7 +132,6 @@ export default class CopyPasteGenerator extends JavaScriptParserVisitor {
       this.appendString(ctx.StringLiteral().getText());
     }
 
-    // regras de export.js
 /*
 exportStatement
     : Export Default? (exportFromBlock | declaration) eos    # ExportDeclaration
@@ -141,18 +141,20 @@ exportStatement
 visitExportDeclaration(ctx) {
   this.appendString("export ");
   if (ctx.Default()) this.appendString(" default ");
-  if (ctx.exportFromBlock()) this.visitExportFromBlock(ctx.exportFromBlock());
+  if (ctx.exportFromBlock()) {
+    this.visitExportFromBlock(ctx.exportFromBlock());
+    this.appendString(";");
+  }
+  // nao adiciona ';' pois visitDeclaration adicionara  
   else if (ctx.declaration()) this.visitDeclaration(ctx.declaration());
-  this.appendString(";"); // -------------------------------- avaliar ;
-  //this.appendNewLine();
+
 }
 
 visitExportDefaultDeclaration(ctx) {
   this.appendString("export ");
   this.appendString(" default ");
   this.visitChildren(ctx);
-  this.appendString(";"); // -------------------------------- avaliar ;
-  //this.appendNewLine();
+  this.appendString(";");
 }
 
 /*
@@ -200,6 +202,17 @@ visitExportAliasName(ctx) {
 }
 
 
+//| Async? '*'? propertyName '(' formalParameterList?  ')'  functionBody  # FunctionProperty
+visitFunctionProperty(ctx) {
+  if (ctx.Async()) this.appendString("async ");
+  if (ctx.children[0].getText().includes("*") || ctx.children[1].getText().includes("*")) this.appendString("*");
+  this.visitPropertyName(ctx.propertyName());
+  this.appendString("( ");
+  if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
+  this.appendString(")");
+  this.visitFunctionBody(ctx.functionBody());
+}
+
 /*
 functionDeclaration
 : Async? Function_ '*'? identifier '(' formalParameterList? ')' functionBody
@@ -207,7 +220,7 @@ functionDeclaration
 */
 visitFunctionDeclaration(ctx) {
   if (ctx.Async()) this.appendString("async ")
-  this.appendString(" function ");
+  this.appendString("function ");
   if (ctx.getText().includes("*")) this.appendString("*");
   this.appendString(ctx.identifier().getText());
   this.appendString("(");
@@ -264,21 +277,21 @@ visitArrowFunctionParameters(ctx) {
     | lastFormalParameterArg
     ;
   */
-    visitFormalParameterList(ctx) {
-      if (ctx.formalParameterArg()) {
-        for (let i = 0; i < ctx.formalParameterArg().length; i++) {
-          this.visitFormalParameterArg(ctx.formalParameterArg(i));
-          if (i !== ctx.formalParameterArg().length - 1) this.appendString(", ");
-        }
+  visitFormalParameterList(ctx) {
+    if (ctx.formalParameterArg().length !== 0) {
+      for (let i = 0; i < ctx.formalParameterArg().length; i++) {
+        this.visitFormalParameterArg(ctx.formalParameterArg(i));
+        if (i !== ctx.formalParameterArg().length - 1) this.appendString(", ");
+      }
   
-        if (ctx.lastFormalParameterArg()) { 
-          this.appendString("," );
-          this.visitLastFormalParameterArg(ctx.lastFormalParameterArg());
-        }
-      } else {
+      if (ctx.lastFormalParameterArg()) { 
+        this.appendString("," );
         this.visitLastFormalParameterArg(ctx.lastFormalParameterArg());
       }
+    } else {
+      this.visitLastFormalParameterArg(ctx.lastFormalParameterArg());
     }
+  }
   
     /*
     formalParameterArg
@@ -289,7 +302,7 @@ visitArrowFunctionParameters(ctx) {
       this.visitAssignable(ctx.assignable());
       if (ctx.children.length > 1) {
         this.appendString(" = ");
-        this.visitChildren(ctx);
+        this.visit(ctx.children[2]);
       }
     }
   
@@ -301,7 +314,7 @@ visitArrowFunctionParameters(ctx) {
       ;
     */
     visitAssignable(ctx) {
-      if (ctx.identifier()) this.appendString(ctx.identifier().getText());
+      if (ctx.identifier()) this.visitIdentifier(ctx.identifier());
       else this.visitChildren(ctx);
     }
   
@@ -316,17 +329,28 @@ visitArrowFunctionParameters(ctx) {
       this.appendString("] ");
    }
    /*
-   objectLiteral - erro
+   objectLiteral - erro aqui
       : '{' (propertyAssignment (',' propertyAssignment)* ','?)? '}'
       ;
     */
    visitObjectLiteral(ctx) {
       this.appendString("{ ");
-      for (let i = 0; i < ctx.children.length - 1; i++) {
+      // for (let i = 0; i < ctx.chindren.length - 1; i++) {
+      //   this.visit(ctx.children[i]);
+      //   if (i !== ctx.children.length - 1) this.appendString(", ");
+      // }
+      for (let i = 1; i < ctx.children.length - 1; i++) {
         this.visit(ctx.children[i]);
-        if (i != ctx.children.length - 1) this.appendString(", ");
+        if(i !== ctx.children.length - 2 && !ctx.children[i].getText().includes(",")) this.appendString(", ");
       }
       this.appendString("}");
+   }
+
+   // : propertyName ':' singleExpression                                             # PropertyExpressionAssignment
+   visitPropertyExpressionAssignment(ctx) {
+      this.visitPropertyName(ctx.propertyName());
+      this.appendString(": ");
+      this.visit(ctx.children[2]);
    }
   
    /*
@@ -335,7 +359,7 @@ visitArrowFunctionParameters(ctx) {
       ;
    */
    visitElementList(ctx) {
-      for (let i = 0; i < ctx.arrayElement().length - 1; i++) {
+      for (let i = 0; i < ctx.arrayElement().length; i++) {
         this.visitArrayElement(ctx.arrayElement(i));
         if (i !== ctx.arrayElement().length - 1) this.appendString(", ");
       }
@@ -493,9 +517,12 @@ visitArrowFunctionParameters(ctx) {
       }
     }
 
-    visitVariableStatement(ctx) {
+    visitVariableStatement(ctx) { 
       this.visitVariableDeclarationList(ctx.variableDeclarationList());
-      //this.appendTokens(ctx.eos());
+      if (ctx.eos().getText().includes(";")) this.appendString(";");
+      this.appendNewLine(); // duvida 
+      // console.log(ctx.getText())
+      // no arquivo destructuringAssignment texto chegando estranho
     }
 
     // varModifier
@@ -519,30 +546,21 @@ visitArrowFunctionParameters(ctx) {
           this.appendString(",");
         }
       }
-      this.appendString(';');
     }
 
     // variableDeclaration
+    /*
+    variableDeclaration
+    : assignable ('=' singleExpression)? // ECMAScript 6: Array & Object Matching
+    ;
+    */
     visitVariableDeclaration(ctx) {
-      // //if(ctx.assignable()) this.visitAssignable(ctx.assignable());
-      // this.visitChildren(ctx.children[0])
-      // if (ctx.children[0]) {
-      //   this.appendString(ctx.children[0].getText());
-      // }
-      // if (ctx.children[1]){
-      //   this.appendString(ctx.children[1].getText())
-
-      // }
-      // if(ctx.children[2]){
-      //   this.appendString(ctx.children[2].getText())
-      // }
-      // this.appendNewLine();
-      // //this.appendString(';');
       this.visitAssignable(ctx.assignable());
       if (ctx.children.length > 1) {
         this.appendString(" = " );
         this.visit(ctx.children[2]);
       }
+      // this.appendString(";");
     }
 
       // continueStatement
@@ -565,11 +583,16 @@ visitArrowFunctionParameters(ctx) {
 
     // returnStatement
     visitReturnStatement(ctx) {
-      this.appendString("return");
-      if (ctx.expressionSequence()) {
-        this.appendString(" " + ctx.expressionSequence().getText());
-      }
-      this.appendTokens(ctx.eos());
+      // this.appendString("return");
+      // if (ctx.expressionSequence()) {
+      //   this.appendString(" " + ctx.expressionSequence().getText());
+      // }
+      // this.appendTokens(ctx.eos());
+
+      this.appendString("return ");
+      if (ctx.expressionSequence()) this.visitExpressionSequence(ctx.expressionSequence());
+      this.appendString(";");
+      this.appendNewLine();
     }
 
     //yieldStatement
@@ -733,21 +756,11 @@ debuggerStatement --
       }
     }*/
 
-    // expressionSequence
+    // expressionSequence: singleExp (',' singleExp)*
     visitExpressionSequence(ctx) {
-      // //co1nsole.log(ctx.children[0]);
-      // if (ctx.children.length === 1) this.visitChildren(ctx);
-      // else {
-      //   for (let i = 0; i < ctx.children.length; i++) {
-      //     this.visitChildren(ctx.children[i]);
-      //     if (i !== ctx.children.length - 1) {
-      //       this.appendString(",");
-      //     }
-      //   }
-      // }
       for (let i = 0; i < ctx.children.length; i++) {
         this.visit(ctx.children[i]);
-        if (i !== ctx.children.length - 1) {
+        if (i % 2 !== 0 && i !== 0) {
           this.appendString(",");
         }
       }
@@ -768,131 +781,78 @@ debuggerStatement --
     }
 
     // iterationStatement
-    visitIterationStatement(ctx) {
-      if (ctx.Do()) {
-        this.appendString("do");
-        this.visitStatement(ctx.statement());
-        this.appendString("while");
-        this.appendString("(");
-        this.visitExpressionSequence(ctx.expressionSequence());
-        this.appendString(")");
-        this.appendTokens(ctx.eos());
-      } else if (ctx.While()) {
-        this.appendString("while");
-        this.appendString("(");
-        this.visitExpressionSequence(ctx.expressionSequence());
-        this.appendString(")");
-        this.visitStatement(ctx.statement());
-      } else if (ctx.For()) {
-        this.appendString("for");
-        this.appendString("(");
-        if (ctx.expressionSequence()) {
-          this.visitExpressionSequence(ctx.expressionSequence(0));
-        } else if (ctx.variableDeclarationList()) {
-          this.visitVariableDeclarationList(ctx.variableDeclarationList());
-        }
-        this.appendString(";");
-        if (ctx.expressionSequence(1)) {
-          this.visitExpressionSequence(ctx.expressionSequence(1));
-        }
-        this.appendString(";");
-        if (ctx.expressionSequence(2)) {
-          this.visitExpressionSequence(ctx.expressionSequence(2));
-        }
-        this.appendString(")");
-        this.visitStatement(ctx.statement());
-      } else if (ctx.ForAwait) {
-        this.appendString("for");
-        if (ctx.Await()) {
-          this.appendString("await ");
-        }
-        this.appendString("(");
-        if (ctx.singleExpression()) {
-          this.visitSingleExpression(ctx.singleExpression());
-        } else if (ctx.variableDeclarationList()) {
-          this.visitVariableDeclarationList(ctx.variableDeclarationList());
-        }
-        this.visitIdentifier(ctx.identifier());
-        if (this.p("of")) {
-          this.appendString(" of ");
-        }
-        this.visitExpressionSequence(ctx.expressionSequence());
-        this.appendString(")");
-        this.visitStatement(ctx.statement());
+    /*
+    iterationStatement
+    : Do statement While '(' expressionSequence ')' eos                                                                       # DoStatement
+    | While '(' expressionSequence ')' statement                                                                              # WhileStatement
+    | For '(' (expressionSequence | variableDeclarationList)? ';' expressionSequence? ';' expressionSequence? ')' statement   # ForStatement
+    | For '(' (singleExpression | variableDeclarationList) In expressionSequence ')' statement                                # ForInStatement
+    // strange, 'of' is an identifier. and this.p("of") not work in sometime.
+    | For Await? '(' (singleExpression | variableDeclarationList) identifier{this.p("of")}? expressionSequence ')' statement  # ForOfStatement
+    ;
+    */
+   visitDoStatement(ctx) {
+      this.appendString("do ");
+      this.visitStatement(ctx.statement());
+      this.appendString("while");
+      this.appendString("(");
+      this.visitExpressionSequence(ctx.expressionSequence());
+      this.appendString(")");
+      this.appendTokens(ctx.eos());
+   }
+
+   visitWhileStatement(ctx) {
+      this.appendString("while ");
+      this.appendString("(");
+      this.visitExpressionSequence(ctx.expressionSequence());
+      this.appendString(")");
+      this.visitStatement(ctx.statement());
+   }
+
+   visitForStatement(ctx) {
+      for (const childCtx of ctx.children) {
+        if (childCtx.getText() === "for") this.appendString("for ");
+        else if (childCtx.getText() === ";") this.appendString(";");
+        else if (childCtx.getText() === "(") this.appendString("(");
+        else if (childCtx.getText() === ")") this.appendString(")");
+        else this.visit(childCtx);
       }
-    }
+   }
 
+   // For '(' (singleExpression | variableDeclarationList) In expressionSequence ')' statement                                # ForInStatement
+   visitForInStatement(ctx) {
+      this.appendString("for ");
+      this.appendString("(");
+      this.visit(ctx.children[2]) // visita tanto singleExpression ou variableDeclarationList
+      this.appendString("in ");
+      this.visitExpressionSequence(ctx.expressionSequence());
+      this.appendString(")");
+      this.visitStatement(ctx.statement());
+
+   }
+   //| For Await? '(' (singleExpression | variableDeclarationList) identifier{this.p("of")}? expressionSequence ')' statement  # ForOfStatement
+    visitForOfStatement(ctx) {
+      this.appendString("for ");
+      if (ctx.Await()) this.appendString("await ");
+      this.appendString("(");
+      
+      if (ctx.variableDeclarationList()) this.visitVariableDeclarationList(ctx.variableDeclarationList());
+      else {
+        if (ctx.Await()) this.visit(ctx.children[3]);
+        else this.visit(ctx.children[2]);
+      }
+
+      if (ctx.identifier()) this.visitIdentifier(ctx.identifier());
+
+      this.visitExpressionSequence(ctx.expressionSequence());
+
+      this.appendString(")");
+      this.visitStatement(ctx.statement());
+    }
+  
     visitIdentifier(ctx) {
-      this.appendString(ctx.getText());
+      this.appendString(ctx.getText() + " ");
     }
-
-
-    // // statement - nao precisa pois so visita filhos sem gerar codigo intermediario
-    // visitStatement(ctx) {
-    //   this.visitChildren(ctx);
-    //   // switch (ctx.children[0].constructor.name) {
-    //   //   case "BlockContext":
-    //   //     this.visitBlock(ctx.block());
-    //   //     break;
-    //   //   case "VariableStatementContext":
-    //   //     this.visitVariableStatement(ctx.variableStatement());
-    //   //     break;
-    //   //   case "ImportStatementContext":
-    //   //     this.visitImportStatement(ctx.importStatement());
-    //   //     break;
-    //   //   case "EmptyStatement_Context":
-    //   //     this.appendString(";");
-    //   //     break;
-    //   //   case "ClassDeclarationContext":
-    //   //     this.visitClassDeclaration(ctx.classDeclaration());
-    //   //     break;
-    //   //   case "FunctionDeclarationContext":
-    //   //     this.visitFunctionDeclaration(ctx.functionDeclaration());
-    //   //     break;
-    //   //   case "ExpressionStatementContext":
-    //   //     this.visitExpressionStatement(ctx.expressionStatement());
-    //   //     break;
-    //   //   case "IfStatementContext":
-    //   //     this.visitIfStatement(ctx.ifStatement());
-    //   //     break;
-    //   //   case "IterationStatementContext":
-    //   //     this.visitIterationStatement(ctx.iterationStatement());
-    //   //     break;
-    //   //   case "ContinueStatementContext":
-    //   //     this.appendString("continue;");
-    //   //     break;
-    //   //   case "BreakStatementContext":
-    //   //     this.appendString("break;");
-    //   //     break;
-    //   //   case "ReturnStatementContext":
-    //   //     this.visitReturnStatement(ctx.returnStatement());
-    //   //     break;
-    //   //   case "YieldStatementContext":
-    //   //     this.visitYieldStatement(ctx.yieldStatement());
-    //   //     break;
-    //   //   case "WithStatementContext":
-    //   //     this.visitWithStatement(ctx.withStatement());
-    //   //     break;
-    //   //   case "LabelledStatementContext":
-    //   //     this.visitLabelledStatement(ctx.labelledStatement());
-    //   //     break;
-    //   //   case "SwitchStatementContext":
-    //   //     this.visitSwitchStatement(ctx.switchStatement());
-    //   //     break;
-    //   //   case "ThrowStatementContext":
-    //   //     this.visitThrowStatement(ctx.throwStatement());
-    //   //     break;
-    //   //   case "TryStatementContext":
-    //   //     this.visitTryStatement(ctx.tryStatement());
-    //   //     break;
-    //   //   case "DebuggerStatementContext":
-    //   //     this.appendString("debugger;");
-    //   //     break;
-    //   //   default:
-    //   //     this.appendString(ctx.getText());
-    //   //     break;
-    //   // }
-    // }
 
     // pra ter ; eos
     visitExpressionStatement(ctx) {
@@ -987,7 +947,7 @@ debuggerStatement --
     ;
   */
   visitPropertyName(ctx) {
-    if (ctx.identifierName()) this.appendString(ctx.identifierName().getText());
+    if (ctx.identifierName()) this.visitIdentifierName(ctx.identifierName());
     else if (ctx.StringLiteral()) this.appendString(ctx.StringLiteral().getText());
     else if (ctx.numericLiteral()) this.appendTokens(ctx.numericLiteral());
     else {
@@ -1003,7 +963,7 @@ debuggerStatement --
     this.visitArguments(ctx.arguments());
   }
 
-  //| New '.' identifier                                                    # MetaExpression // new.target - duvida
+  //| New '.' identifier                                                    # MetaExpression // new.target
   visitMetaExpression(ctx) {
     this.appendString(" new");
     this.appendString(".");
@@ -1104,21 +1064,6 @@ debuggerStatement --
       this.appendString("/");
     } else if (operator === '%') {
       this.appendString("%");
-    }
-
-    this.visit(ctx.children[2]); // Visita a segunda subexpressão
-  }
-
-  // AdditiveExpression
-  visitAdditiveExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a primeira subexpressão
-
-    const operator = ctx.getChild(1).getText(); // Obtém o texto do operador
-
-    if (operator === '+') {
-      this.appendString("+");
-    } else if (operator === '-') {
-      this.appendString("-");
     }
 
     this.visit(ctx.children[2]); // Visita a segunda subexpressão
@@ -1230,6 +1175,7 @@ debuggerStatement --
 
   // AssignmentExpression singleExp '=' singExp
   visitAssignmentExpression(ctx) {
+    // console.log(ctx.getText(), ctx); // duvida chega list[ b, a ] = [ a, b ] e produz [ b, a ] = [ a, b ]
     this.visit(ctx.children[0]); // Visita a expressão à esquerda
     this.appendString(" = ");
     this.visit(ctx.children[2]); // Visita a expressão à direita
@@ -1290,68 +1236,16 @@ debuggerStatement --
     this.visit(ctx.children[2]);
   }
 
-  //ArrayLiteralExpression - nao precisa - visitChildren visita sozinho
-  // visitArrayLiteralExpression(ctx) {
-  //   this.appendString("[");
-  //   // const expressions = ctx.children;
-  //   // for (let i = 0; i < expressions.length; i++) {
-  //   //   this.visitChildren(expressions[i]);
-  //   //   if (i < expressions.length - 1) {
-  //   //     this.appendString(",");
-  //   //   }
-  //   // }
-
-  //   this.appendString("]");
-  // }
-
-  // visitObjectLiteralExpression(ctx) {
-  //   this.appendString("{");
-  //   const propertyAssignments = ctx.propertyAssignment();
-  //   for (let i = 0; i < propertyAssignments.length; i++) {
-  //     this.visitPropertyAssignment(propertyAssignments[i]);
-  //     if (i < propertyAssignments.length - 1) {
-  //       this.appendString(",");
-  //     }
-  //   }
-  //   this.appendString("}");
-  // }
-
   //ParenthesizedExpression
   visitParenthesizedExpression(ctx){
     this.appendString('(');
-    this.visitExpressionSequence(ctx);
+    this.visitExpressionSequence(ctx.children[1]);
     this.appendString(')');
   }
 
   // assignmentOperator
   visitAssigmentOperator(ctx){
     this.appendString(ctx.getText());
-    //const op = ctx.getText();
-    // if(op === '*='){
-    //   this.appendString('*= ');
-    // } else if(op === '/='){
-    //   this.appendString('/= ');
-    // }else if(op === '%= '){
-    //   this.appendString('%= ');
-    // }else if(op === '+= '){
-    //   this.appendString('+= ');
-    // }else if(op === '-='){
-    //   this.appendString('-=');
-    // }else if(op === '<<='){
-    //   this.appendString('<<= ');
-    // }else if(op === '>>='){
-    //   this.appendString('>>= ');
-    // }else if(op === '>>>='){
-    //   this.appendString('>>>= ');
-    // }else if(op === '&='){
-    //   this.appendString('&= ');
-    // }else if(op === '^='){
-    //   this.appendString('^= ');
-    // }else if(op === '|='){
-    //   this.appendString('|= ');
-    // }else if(op === '**='){
-    //   this.appendString('**= ');
-    // }
   }
   /*
 
@@ -1384,10 +1278,8 @@ debuggerStatement --
       this.appendString(ctx.TemplateStringAtom().getText());
     } else {
       this.appendString('${');
-      this.visitSingleExpression(ctx.singleExpression());
+      this.appendString(ctx.children[1].getText());
       this.appendString('}');
     }
   }
-
-
 }
