@@ -221,12 +221,15 @@ functionDeclaration
 visitFunctionDeclaration(ctx) {
   if (ctx.Async()) this.appendString("async ")
   this.appendString("function ");
-  if (ctx.getText().includes("*")) this.appendString("*");
+  if (ctx.children[1].getText().includes("*")) this.appendString("*");
   this.appendString(ctx.identifier().getText());
   this.appendString("(");
   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
   this.appendString(")");
   this.visitFunctionBody(ctx.functionBody());
+  // console.log(" testando 1 " + ctx.children[0].getText())
+  // console.log(" testando 2 " + ctx.children[1].getText())
+  // console.log(" testando 3 " + ctx.children[2].getText())
 }
 
 
@@ -240,12 +243,15 @@ anonymousFunction
 visitAnonymousFunctionDecl(ctx) {
   if (ctx.Async()) this.appendTokens(ctx.Async());
   this.appendTokens(ctx.Function_());
-  if (ctx.getText().includes("*")) this.appendString("*");
+  if (ctx.children[0].getText().includes("*") || ctx.children[1].getText().includes("*")) this.appendString("*");
   this.appendString("(");
   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
   this.appendString(")");
   this.visitFunctionBody(ctx.functionBody());
 
+  // console.log("Testando o contexto = " + ctx.getText())
+  // console.log("teste 2 " + ctx.children[0].getText())
+  // console.log("teste 3 " + ctx.children[1].getText())
 }
 
 visitArrowFunction(ctx) {
@@ -443,7 +449,7 @@ visitArrowFunctionParameters(ctx) {
       if (ctx.emptyStatement_()) {
         this.appendString(";");
       } else if (ctx.propertyName()) {
-        if (ctx.children.length === 4) this.appendString("# ");
+        if (ctx.children.length === 4) this.appendString("#");
         this.visitPropertyName(ctx.propertyName());
         this.appendString(" = ");
         this.visit(ctx.children[ctx.children.length - 1]);
@@ -557,9 +563,19 @@ visitArrowFunctionParameters(ctx) {
     visitVariableDeclaration(ctx) {
       this.visitAssignable(ctx.assignable());
       if (ctx.children.length > 1) {
-        this.appendString(" = " );
+        if((ctx.children[2].getText().includes("?"))&&(!(ctx.children[2].getText().includes("return")))
+          ||(ctx.children[2].getText().includes(",,")))
+    
+        {
+          this.appendString(" = ")
+          this.appendString(ctx.children[2].getText());
+        }else{
+          this.appendString(" = " );
         this.visit(ctx.children[2]);
+        }
+        
       }
+      
       // this.appendString(";");
     }
 
@@ -583,17 +599,17 @@ visitArrowFunctionParameters(ctx) {
 
     // returnStatement
     visitReturnStatement(ctx) {
-      // this.appendString("return");
-      // if (ctx.expressionSequence()) {
-      //   this.appendString(" " + ctx.expressionSequence().getText());
-      // }
-      // this.appendTokens(ctx.eos());
-
       this.appendString("return ");
-      if (ctx.expressionSequence()) this.visitExpressionSequence(ctx.expressionSequence());
-      this.appendString(";");
-      this.appendNewLine();
-    }
+      if (ctx.expressionSequence()) {
+          this.visitExpressionSequence(ctx.expressionSequence());
+          this.appendString(";");
+          this.appendNewLine();
+      } else {
+          this.appendString(";");
+          this.appendNewLine();
+      }
+  }
+  
 
     //yieldStatement
     visitYieldStatement(ctx){
@@ -759,12 +775,13 @@ debuggerStatement --
     // expressionSequence: singleExp (',' singleExp)*
     visitExpressionSequence(ctx) {
       for (let i = 0; i < ctx.children.length; i++) {
-        this.visit(ctx.children[i]);
-        if (i % 2 !== 0 && i !== 0) {
-          this.appendString(",");
-        }
+          this.visit(ctx.children[i]);
+          if (i % 2 !== 0 && i !== 0) {
+              this.appendString(",");
+          }
       }
-    }
+  }
+  
     
     // ifStatement
     visitIfStatement(ctx) {
@@ -819,17 +836,23 @@ debuggerStatement --
       }
    }
 
-   // For '(' (singleExpression | variableDeclarationList) In expressionSequence ')' statement                                # ForInStatement
-   visitForInStatement(ctx) {
-      this.appendString("for ");
-      this.appendString("(");
-      this.visit(ctx.children[2]) // visita tanto singleExpression ou variableDeclarationList
-      this.appendString("in ");
-      this.visitExpressionSequence(ctx.expressionSequence());
-      this.appendString(")");
-      this.visitStatement(ctx.statement());
+//    visitForInStatement(ctx) {
+//     this.appendString("for ");
+//     this.appendString("(");
 
-   }
+//     // Verificar se há um singleExpression ou variableDeclarationList no contexto
+//     if (ctx.children[2].singleExpression()) {
+//         this.visit(ctx.children[2].singleExpression());
+//     } else if (ctx.children[2].variableDeclarationList()) {
+//         this.visitVariableDeclarationList(ctx.children[2].variableDeclarationList());
+//     }
+
+//     this.appendString(" in ");
+//     this.visitExpressionSequence(ctx.expressionSequence());
+//     this.appendString(")");
+//     this.visitStatement(ctx.statement());
+// }
+
    //| For Await? '(' (singleExpression | variableDeclarationList) identifier{this.p("of")}? expressionSequence ')' statement  # ForOfStatement
     visitForOfStatement(ctx) {
       this.appendString("for ");
@@ -883,6 +906,7 @@ debuggerStatement --
 
     // | singleExpression '?.'? '[' expressionSequence ']'                     # MemberIndexExpression
   visitMemberIndexExpression(ctx) {
+    this.visit(ctx.children[0])
     if (ctx.children.length === 5) this.appendString(" ?. ");
     this.appendString("[ ");
     this.visitExpressionSequence(ctx.expressionSequence());
@@ -894,7 +918,7 @@ debuggerStatement --
     this.visit(ctx.children[0]);
     if (ctx.children[1].getText().includes("?")) this.appendString(" ? ");
     this.appendString(".");
-    if (ctx.children[ctx.children.length-2].getText().includes("#")) this.appendString(" # ");
+    if (ctx.children[ctx.children.length-2].getText().includes("#")) this.appendString(" #");
     this.appendString(ctx.identifierName().getText());
   }
 
@@ -1127,9 +1151,10 @@ debuggerStatement --
   visitInExpression(ctx) {
     this.visit(ctx.children[0]); // Visita a primeira subexpressão
 
-    this.appendString("in");
+    this.appendString("in ");
 
-    this.visit(ctx.children[1]); // Visita a segunda subexpressão
+    //this.visit(ctx.children[1]); // Visita a segunda subexpressão
+    this.visit(ctx.children[2]);
   }
 
   // EqualityExpression
@@ -1147,8 +1172,29 @@ debuggerStatement --
     } else if (operator === '!==') {
       this.appendString("!==");
     }
+    console.log('teste aqui '+ ctx.children[3])
+    if (!(ctx.children[2].getText().includes(";"))
+        && (ctx.children[2].getText().includes("["))
+        &&(!(ctx.children[2].getText().includes("*")))
+        &&(!(ctx.children[2].getText().includes("/")))
+        &&((ctx.children[2].getText().includes(".")))
 
-    this.visit(ctx.children[2]); // Visita a segunda subexpressão
+    ) { //se nao tem ;
+      let modifiedText = ctx.children[2].getText();
+      let index = modifiedText.indexOf("[");
+      
+      if (index !== -1) {
+          modifiedText = modifiedText.slice(0, index) + ";" + modifiedText.slice(index);
+      }
+      
+     this.appendString(modifiedText)
+  }
+  else{
+      this.visit(ctx.children[2]); // Visita a segunda subexpressão
+    }
+    console.log("tesssssst " + ctx.children[2].getText())
+    
+   
   }
   // LogicalAndExpression
   visitLogicalAndExpression(ctx) {
@@ -1167,11 +1213,13 @@ debuggerStatement --
   // TernaryExpression  | singleExpression '?' singleExpression ':' singleExpression 
   visitTernaryExpression(ctx) {
     this.visit(ctx.children[0]); // Visita a expressão condicional
-    this.appendString("?");
-    this.visit(ctx.children[2]); // Visita a expressão verdadeira (antes tava 1)
-    this.appendString(":");
+    this.appendString(" ? ");
+    this.visit(ctx.children[2]); // Visita a expressão verdadeira
+    this.appendString(" : ");
     this.visit(ctx.children[4]); // Visita a expressão falsa
-  }
+}
+
+
 
   // AssignmentExpression singleExp '=' singExp
   visitAssignmentExpression(ctx) {

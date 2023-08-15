@@ -1,3 +1,11 @@
+// Aggregating modules
+export * from "module-name";
+export * as name1 from "module-name";
+export { name1, /* …, */ nameN } from "module-name";
+export { import1 as name1, import2 as name2, /* …, */ nameN } from "module-name";
+export { default, /* …, */ } from "module-name";
+export { default as name1 } from "module-name";
+
 // https://github.com/antlr/grammars-v4/issues/3484
 
 import defaultExport from "module-name";
