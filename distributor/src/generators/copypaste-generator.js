@@ -221,15 +221,12 @@ functionDeclaration
 visitFunctionDeclaration(ctx) {
   if (ctx.Async()) this.appendString("async ")
   this.appendString("function ");
-  if (ctx.children[1].getText().includes("*")) this.appendString("*");
+  if (ctx.children[1].getText().includes("*") || ctx.children[2].getText().includes("*")) this.appendString("*");
   this.appendString(ctx.identifier().getText());
   this.appendString("(");
   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
   this.appendString(")");
   this.visitFunctionBody(ctx.functionBody());
-  // console.log(" testando 1 " + ctx.children[0].getText())
-  // console.log(" testando 2 " + ctx.children[1].getText())
-  // console.log(" testando 3 " + ctx.children[2].getText())
 }
 
 
@@ -248,10 +245,6 @@ visitAnonymousFunctionDecl(ctx) {
   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
   this.appendString(")");
   this.visitFunctionBody(ctx.functionBody());
-
-  // console.log("Testando o contexto = " + ctx.getText())
-  // console.log("teste 2 " + ctx.children[0].getText())
-  // console.log("teste 3 " + ctx.children[1].getText())
 }
 
 visitArrowFunction(ctx) {
@@ -439,7 +432,7 @@ visitArrowFunctionParameters(ctx) {
     }
   
     /*
-    classElement
+    classElement - duvida com professor
       : (Static | {this.n("static")}? identifier | Async)* (methodDefinition | assignable '=' objectLiteral ';')
       | emptyStatement_
       | '#'? propertyName '=' singleExpression
@@ -453,7 +446,7 @@ visitArrowFunctionParameters(ctx) {
         this.visitPropertyName(ctx.propertyName());
         this.appendString(" = ");
         this.visit(ctx.children[ctx.children.length - 1]);
-      } else {
+      } else { // perguntar sobre ordem de static async - duvida
         for (const tk of ctx.Static()) {
           this.appendString(tk.getText()+ " ");
         }
@@ -507,6 +500,38 @@ visitArrowFunctionParameters(ctx) {
       this.visitPropertyName(ctx.propertyName());
     }
 
+    // | '[' singleExpression ']' ':' singleExpression                                 # ComputedPropertyExpressionAssignment
+    visitComputedPropertyExpressionAssignment(ctx) {
+      this.appendString("[");
+      this.visit(ctx.children[1]);
+      this.appendString("]");
+      this.appendString(":");
+      this.visit(ctx.children[4]);
+    }
+
+    // | getter '(' ')' functionBody                                           # PropertyGetter
+    visitPropertyGetter(ctx) {
+      this.visitGetter(ctx.getter());
+      this.appendString("(");
+      this.appendString(")");
+      this.visitFunctionBody(ctx.functionBody())
+    }
+
+    //| setter '(' formalParameterArg ')' functionBody                        # PropertySetter
+    visitPropertySetter(ctx) {
+      this.visitSetter(ctx.setter());
+      this.appendString("(");
+      this.visitFormalParameterArg(ctx.formalParameterArg());
+      this.appendString(")");
+      this.visitFunctionBody(ctx.functionBody())
+    }
+
+    // | Ellipsis? singleExpression                                                    # PropertyShorthand
+    visitPropertyShorthand(ctx) {
+      if (ctx.Ellipsis()) this.appendString("...");
+      this.visitChildren(ctx);
+    }
+
     visitSetter(ctx) {
       this.appendString("set ");
       this.visitPropertyName(ctx.propertyName());
@@ -526,9 +551,7 @@ visitArrowFunctionParameters(ctx) {
     visitVariableStatement(ctx) { 
       this.visitVariableDeclarationList(ctx.variableDeclarationList());
       if (ctx.eos().getText().includes(";")) this.appendString(";");
-      this.appendNewLine(); // duvida 
-      // console.log(ctx.getText())
-      // no arquivo destructuringAssignment texto chegando estranho
+      this.appendNewLine(); 
     }
 
     // varModifier
@@ -563,20 +586,10 @@ visitArrowFunctionParameters(ctx) {
     visitVariableDeclaration(ctx) {
       this.visitAssignable(ctx.assignable());
       if (ctx.children.length > 1) {
-        if((ctx.children[2].getText().includes("?"))&&(!(ctx.children[2].getText().includes("return")))
-          ||(ctx.children[2].getText().includes(",,")))
-    
-        {
-          this.appendString(" = ")
-          this.appendString(ctx.children[2].getText());
-        }else{
-          this.appendString(" = " );
+        this.appendString(" = ");
         this.visit(ctx.children[2]);
-        }
         
       }
-      
-      // this.appendString(";");
     }
 
       // continueStatement
@@ -1172,7 +1185,6 @@ debuggerStatement --
     } else if (operator === '!==') {
       this.appendString("!==");
     }
-    console.log('teste aqui '+ ctx.children[3])
     if (!(ctx.children[2].getText().includes(";"))
         && (ctx.children[2].getText().includes("["))
         &&(!(ctx.children[2].getText().includes("*")))
@@ -1192,9 +1204,6 @@ debuggerStatement --
   else{
       this.visit(ctx.children[2]); // Visita a segunda subexpressão
     }
-    console.log("tesssssst " + ctx.children[2].getText())
-    
-   
   }
   // LogicalAndExpression
   visitLogicalAndExpression(ctx) {
@@ -1223,7 +1232,6 @@ debuggerStatement --
 
   // AssignmentExpression singleExp '=' singExp
   visitAssignmentExpression(ctx) {
-    // console.log(ctx.getText(), ctx); // duvida chega list[ b, a ] = [ a, b ] e produz [ b, a ] = [ a, b ]
     this.visit(ctx.children[0]); // Visita a expressão à esquerda
     this.appendString(" = ");
     this.visit(ctx.children[2]); // Visita a expressão à direita
