@@ -2,9 +2,10 @@ import antlr4 from "antlr4";
 import path from "path";
 import fs from "fs";
 import beautify from "js-beautify";
-import CopyPasteGenerator from "./generators/copypaste-generator.js";
 import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
 import JavaScriptParser from "./antlr4/JavaScriptParser.js";
+import CopyPasteGenerator from "./generators/copypaste-generator.js";
+import FunctionGenerator from "../src/generators/FunctionGenerator.js";
 
 export default function main(
   mode,
@@ -21,6 +22,7 @@ export default function main(
 
   if (mode === "single") {
     generateCodeDir(target, inputDirRelative, outputDir);
+    generateFunctionFile(target, inputDirRelative, outputDir);
   } else if (mode === "watch") {
     let fsWait = false;
 
@@ -34,9 +36,10 @@ export default function main(
           fsWait = false;
         }, 500);
         console.log(
-          `File ${filename} has changed (${event}). Generating code again...`
+          `File ${filename} has changed (${event}). Generating code and function file again...`
         );
         generateCodeDir(target, inputDirRelative, outputDir);
+        generateFunctionFile(target, inputDirRelative, outputDir);
       }
     });
   } else {
@@ -44,42 +47,27 @@ export default function main(
   }
 }
 
-/**
- * Função responsável por gerar o código para um diretório de entrada.
- * 
- * @param {string} target - O alvo de geração de código.
- * @param {string} inputDir - O diretório de entrada.
- * @param {string} outputDir - O diretório de saída.
- */
 function generateCodeDir(target, inputDir, outputDir) {
-  // Exibe uma mensagem indicando o diretório que está sendo escaneado
   console.log(`Scanning directory ${inputDir}`);
 
-  // Lê o conteúdo do diretório de entrada
   fs.readdir(inputDir, (err, files) => {
     if (err) {
-      // Em caso de erro, exibe a mensagem de erro e interrompe a execução
       console.error(`Error reading directory ${inputDir}: ${err}`);
       return;
     }
 
-    // Para cada arquivo encontrado no diretório
     files.forEach((filename) => {
-      // Cria o caminho completo do arquivo de entrada
       const inputFile = path.join(inputDir, filename);
-      // Cria o caminho completo do arquivo de saída
       const outputFile = path.join(outputDir, filename);
-      
-      // Chama a função generateCode para processar o arquivo
+
       generateCode(target, inputFile, outputFile);
     });
   });
 }
 
-
 function generateCode(target, inputFile, outputFile) {
   try {
-    console.log(`generating ${inputFile} -> ${outputFile}`);
+    console.log(`Generating ${inputFile} -> ${outputFile}`);
 
     const input = fs.readFileSync(inputFile, { encoding: "utf8" });
     const chars = new antlr4.InputStream(input);
@@ -114,3 +102,74 @@ function generateCode(target, inputFile, outputFile) {
     console.log(e);
   }
 }
+
+/* 
+
+A função generateFunctionFile é responsável por ler arquivos de um diretório de 
+entrada, analisá-los com o analisador léxico e sintático 
+e extrair definições de funções desses arquivos. 
+
+*/
+
+function generateFunctionFile(target, inputDir, outputDir) {
+  console.log(`Generating function file from directory ${inputDir}`);
+  // lista para armazenar funções
+  const functionDefinitions = [];
+
+  // Lê todos os arquivos no diretório de entrada -- ARRUMAR
+  fs.readdir(inputDir, (err, files) => {
+    if (err) {
+      console.error(`Error reading directory ${inputDir}: ${err}`);
+      return;
+    }
+
+    // Itera sobre cada arquivo no diretório -- ARRUMAR (Nao precisa ser todos arquivos)
+    files.forEach((filename) => {
+      const inputFile = path.join(inputDir, filename);
+
+      try {
+        // Lê o conteúdo do arquivo de entrada
+        const input = fs.readFileSync(inputFile, { encoding: "utf8" });
+        const chars = new antlr4.InputStream(input);
+
+        // analisador léxico usando o fluxo de caracteres
+        const lexer = new JavaScriptLexer(chars);
+
+        // Cria um fluxo de tokens usando o analisador léxico
+        const tokens = new antlr4.CommonTokenStream(lexer);
+
+        // Cria um analisador sintático JavaScriptParser usando o fluxo de tokens
+        const parser = new JavaScriptParser(tokens);
+
+        //  construção de árvores de análise
+        parser.buildParseTrees = true;
+
+        // Faz a análise do programa no arquivo
+        const tree = parser.program();
+
+        // Usa a classe FunctionGenerator para extrair as definições de função do arquivo
+        const functionGenerator = new FunctionGenerator();
+        const functionCode = functionGenerator.generateFunctions(tree);
+
+        // Adiciona as definições de função extraídas à lista
+        functionDefinitions.push(functionCode);
+
+      } catch (e) {
+        console.log(e);
+      }
+    });
+
+    // Caminho completo para o arquivo de saída
+    const outputFile = path.join(outputDir, "functions.js");
+
+    // Concatena todas as definições de função em um único código
+    const beautifiedCode = beautify(functionDefinitions.join("\n"), {
+      indent_size: 4,
+      space_in_empty_paren: true,
+    });
+
+    // Escreve o código no arquivo de saída
+    fs.writeFileSync(outputFile, beautifiedCode, { encoding: "utf8" });
+  });
+}
+

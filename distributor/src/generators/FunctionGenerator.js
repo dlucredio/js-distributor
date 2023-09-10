@@ -1,7 +1,10 @@
 import JavaScriptParserVisitor from "../antlr4/JavaScriptParserVisitor.js";
 import { StringBuilder } from "./generator-utils.js";
 
-export default class CopyPasteGenerator extends JavaScriptParserVisitor {
+var isFunction = false
+let isInFunction = false;
+
+export default class FunctionGenerator extends JavaScriptParserVisitor {
   constructor() {
     super();
     this.stringBuilder = new StringBuilder();
@@ -24,65 +27,24 @@ export default class CopyPasteGenerator extends JavaScriptParserVisitor {
   }
 
   visitProgram(ctx) {
-    this.appendTokens(ctx.HashBangLine());
     if (ctx.sourceElements()) {
       this.visitSourceElements(ctx.sourceElements());
     }
+    
   }
 
   visitBlock(ctx) {
     // this.appendNewLine(); // duvida
-    this.appendString("{");
+    if (isInFunction) {
+      this.appendString("{");
     if(ctx.statementList()) {
         this.visitStatementList(ctx.statementList());
     }
     this.appendString("}");
+    }
+    
   }
 
-  visitImportStatement(ctx) {
-    this.appendString("import ");
-    this.visitImportFromBlock(ctx.importFromBlock());
-  }
-  
-
-  visitImportFromBlock(ctx) {
-    if (ctx.importFrom()) {
-        if (ctx.importDefault()){
-          this.visitImportDefault(ctx.importDefault());
-        }
-        if (ctx.importNamespace()){
-          this.visitImportNamespace(ctx.importNamespace());
-        } else {
-          this.visitImportModuleItems(ctx.importModuleItems());
-        }
-        this.visitImportFrom(ctx.importFrom());
-    } else {
-        this.appendTokens(ctx.StringLiteral());
-    }
-    this.appendString(";");
-    this.appendNewLine();
-  }
-
-    visitImportModuleItems(ctx) {
-      this.appendString("{");
-      for (let i = 0; i < ctx.importAliasName().length; i++){
-        this.visitImportAliasName(ctx.importAliasName(i));
-
-        if (i == ctx.importAliasName().length - 1)
-          break
-        this.appendString(",");
-      }
-      
-      this.appendString("}");
-    }
-
-    visitImportAliasName(ctx) {
-      this.visitModuleExportName(ctx.moduleExportName());
-      if (ctx.importedBinding()){
-        this.appendString(" as ");
-        this.visitImportedBinding(ctx.importedBinding());
-      }
-    }
 
     visitModuleExportName(ctx) {
       ctx.identifierName() ? this.appendString(ctx.identifierName().getText()) : this.appendString(ctx.StringLiteral().getText());
@@ -98,108 +60,6 @@ export default class CopyPasteGenerator extends JavaScriptParserVisitor {
       this.appendString(ctx.getText());
     }
 
-    visitImportDefault(ctx){
-      this.visitAliasName(ctx.aliasName());
-      this.appendString(", ");
-    } 
-
-    visitAliasName(ctx){
-      this.visitIdentifierName(ctx.identifierName(0));
-      if (ctx.identifierName(1)){
-        this.appendString(" as ");
-        this.visitIdentifierName(ctx.identifierName(1));
-      }
-    }
-
-    visitImportNamespace(ctx){
-      if (ctx.getText().includes("*")) {
-        this.appendString(" * ");
-        if (ctx.identifierName(0)) {
-          this.appendString(" as ");
-          this.visitIdentifierName(ctx.identifierName(0));
-        }
-      } else {
-        this.visitIdentifierName(ctx.identifierName(0));
-        if (ctx.identifierName(1)) {
-          this.appendString(" as ");
-          this.visitIdentifierName(ctx.identifierName(1));
-        } 
-      }
-    }
-
-    visitImportFrom(ctx){
-      this.appendString(" from ");
-      this.appendString(ctx.StringLiteral().getText());
-    }
-
-/*
-exportStatement
-    : Export Default? (exportFromBlock | declaration) eos    # ExportDeclaration
-    | Export Default singleExpression eos                    # ExportDefaultDeclaration
-    ;
-*/
-visitExportDeclaration(ctx) {
-  this.appendString("export ");
-  if (ctx.Default()) this.appendString(" default ");
-  if (ctx.exportFromBlock()) {
-    this.visitExportFromBlock(ctx.exportFromBlock());
-    this.appendString(";");
-  }
-  // nao adiciona ';' pois visitDeclaration adicionara  
-  else if (ctx.declaration()) this.visitDeclaration(ctx.declaration());
-
-}
-
-visitExportDefaultDeclaration(ctx) {
-  this.appendString("export ");
-  this.appendString(" default ");
-  this.visitChildren(ctx);
-  this.appendString(";");
-}
-
-/*
-exportFromBlock
-: importNamespace importFrom eos
-| exportModuleItems importFrom? eos
-;
-*/
-visitExportFromBlock(ctx) {
-  if (ctx.importNamespace()){
-    this.visitImportNamespace(ctx.importNamespace());
-    this.visitImportFrom(ctx.importFrom());
-  } else {
-    this.visitExportModuleItems(ctx.exportModuleItems());
-    if (ctx.importFrom()) this.visitImportFrom(ctx.importFrom());
-  }
-}
-
-/*
-exportModuleItems
-: '{' (exportAliasName ',')* (exportAliasName ','?)? '}'
-;
-*/
-visitExportModuleItems(ctx) {
-  this.appendString("{ ");
-  for (let i = 0; i < ctx.exportAliasName().length; i++){
-    this.visitExportAliasName(ctx.exportAliasName(i));
-
-    if (i !== ctx.exportAliasName().length - 1) this.appendString(", ");
-  }
-  this.appendString("}");
-}
-
-/*
-exportAliasName
-: moduleExportName (As moduleExportName)?
-;
-*/
-visitExportAliasName(ctx) {
-  this.visitModuleExportName(ctx.moduleExportName(0));
-  if (ctx.moduleExportName(1)){
-    this.appendString(" as ");
-    this.visitModuleExportName(ctx.moduleExportName(1));
-}
-}
 
 
 //| Async? '*'? propertyName '(' formalParameterList?  ')'  functionBody  # FunctionProperty
@@ -221,14 +81,28 @@ functionDeclaration
 visitFunctionDeclaration(ctx) {
   if (ctx.Async()) this.appendString("async ")
   this.appendString("function ");
+  isFunction = true;
+  isInFunction = true;
   if (ctx.children[1].getText().includes("*") || ctx.children[2].getText().includes("*")) this.appendString("*");
   this.appendString(ctx.identifier().getText());
   this.appendString("(");
   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
   this.appendString(")");
   this.visitFunctionBody(ctx.functionBody());
+  
 }
 
+  /*
+    functionBody
+      : '{' sourceElements? '}'
+      ;
+    */
+      visitFunctionBody(ctx) {
+        this.appendString("{ ");
+        if (ctx.sourceElements()) this.visitSourceElement(ctx.sourceElements());
+        this.appendString("} ");
+        isInFunction = false;
+      }
 
 /*
 anonymousFunction
@@ -384,88 +258,7 @@ visitArrowFunctionParameters(ctx) {
       this.visitChildren(ctx);
     }
   
-    /*
-    functionBody
-      : '{' sourceElements? '}'
-      ;
-    */
-    visitFunctionBody(ctx) {
-      this.appendString("{ ");
-      if (ctx.sourceElements()) this.visitSourceElement(ctx.sourceElements());
-      this.appendString("} ");
-    }
-  
-    /*
-    classDeclaration
-      : Class identifier classTail
-      ;
-    */
-  
-    visitClassDeclaration(ctx) {
-      this.appendString("class ");
-      this.appendString(ctx.identifier().getText());
-      this.visitClassTail(ctx.classTail());
-    }
     
-    // | Class identifier? classTail                                           # ClassExpression
-    visitClassExpression(ctx) {
-      this.appendString("class ");
-      if (ctx.identifier()) this.visitIdentifier(ctx.identifier());
-      this.visitClassTail(ctx.classTail());
-    }
-  
-    /*
-    classTail
-      : (Extends singleExpression)? '{' classElement* '}'
-      ;
-    */
-    visitClassTail(ctx) {
-      if (ctx.Extends()) {
-        this.appendString(" extends ");
-        this.visit(ctx.children[1]);
-      }
-      this.appendString("{");
-      for (let i = 0; i < ctx.classElement().length; i++) {
-        this.visitClassElement(ctx.classElement(i));
-      }
-      this.appendString("}");
-    }
-  
-    /*
-    classElement - duvida com professor
-      : (Static | {this.n("static")}? identifier | Async)* (methodDefinition | assignable '=' objectLiteral ';')
-      | emptyStatement_
-      | '#'? propertyName '=' singleExpression
-      ;
-    */
-    visitClassElement(ctx) {
-      if (ctx.emptyStatement_()) {
-        this.appendString(";");
-      } else if (ctx.propertyName()) {
-        if (ctx.children.length === 4) this.appendString("#");
-        this.visitPropertyName(ctx.propertyName());
-        this.appendString(" = ");
-        this.visit(ctx.children[ctx.children.length - 1]);
-      } else { // perguntar sobre ordem de static async - duvida
-        for (const tk of ctx.Static()) {
-          this.appendString(tk.getText()+ " ");
-        }
-        for (const tk of ctx.identifier()) {
-          this.appendString(tk.getText() + " ");
-        }
-        for (const tk of ctx.Async()) {
-          this.appendString(tk.getText()+ " ");
-        }
-        if (ctx.methodDefinition()) {
-          this.visitMethodDefinition(ctx.methodDefinition());
-        } else {
-          this.visitAssignable(ctx.assignable());
-          this.appendString(" = ");
-          this.visitObjectLiteral(ctx.objectLiteral());
-          this.appendString(";");
-        }
-      }
-    }
     /*
     methodDefinition
       : '*'? '#'? propertyName '(' formalParameterList? ')' functionBody
@@ -549,9 +342,12 @@ visitArrowFunctionParameters(ctx) {
     }
 
     visitVariableStatement(ctx) { 
-      this.visitVariableDeclarationList(ctx.variableDeclarationList());
-      if (ctx.eos().getText().includes(";")) this.appendString(";");
-      this.appendNewLine(); 
+      if(isInFunction){
+        this.visitVariableDeclarationList(ctx.variableDeclarationList());
+        if (ctx.eos().getText().includes(";")) this.appendString(";");
+          this.appendNewLine(); 
+      }
+    
     }
 
     // varModifier
@@ -798,7 +594,8 @@ debuggerStatement --
     
     // ifStatement
     visitIfStatement(ctx) {
-      this.appendString("if");
+      if(isInFunction){
+        this.appendString("if");
       this.appendString("(");
       this.visitExpressionSequence(ctx.expressionSequence());
       this.appendString(") ");
@@ -808,6 +605,8 @@ debuggerStatement --
         this.appendString("else ");
         this.visitStatement(ctx.statement(1));
       }
+      }
+      
     }
 
     // iterationStatement
@@ -822,6 +621,7 @@ debuggerStatement --
     ;
     */
    visitDoStatement(ctx) {
+    if(isInFunction){
       this.appendString("do ");
       this.visitStatement(ctx.statement());
       this.appendString("while");
@@ -829,17 +629,23 @@ debuggerStatement --
       this.visitExpressionSequence(ctx.expressionSequence());
       this.appendString(")");
       this.appendTokens(ctx.eos());
+    }
+      
    }
 
    visitWhileStatement(ctx) {
+    if(isInFunction){
       this.appendString("while ");
       this.appendString("(");
       this.visitExpressionSequence(ctx.expressionSequence());
       this.appendString(")");
       this.visitStatement(ctx.statement());
+    }
+      
    }
 
    visitForStatement(ctx) {
+    if(isInFunction){
       for (const childCtx of ctx.children) {
         if (childCtx.getText() === "for") this.appendString("for ");
         else if (childCtx.getText() === ";") this.appendString(";");
@@ -847,6 +653,7 @@ debuggerStatement --
         else if (childCtx.getText() === ")") this.appendString(")");
         else this.visit(childCtx);
       }
+    }
    }
 
 //    visitForInStatement(ctx) {
@@ -1338,4 +1145,12 @@ debuggerStatement --
       this.appendString('}');
     }
   }
+  generateFunctions(ctx) {
+    
+    this.visitProgram(ctx);
+    
+    return this.stringBuilder.toString();
+  }
 }
+
+
