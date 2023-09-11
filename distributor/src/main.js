@@ -5,7 +5,7 @@ import beautify from "js-beautify";
 import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
 import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 import CopyPasteGenerator from "./generators/copypaste-generator.js";
-import FunctionGenerator from "../src/generators/FunctionGenerator.js";
+import FunctionGenerator from "../src/generators/function-generator.js";
 
 export default function main(
   mode,
@@ -149,27 +149,47 @@ function generateFunctionFile(target, inputDir, outputDir) {
 
         // Usa a classe FunctionGenerator para extrair as definições de função do arquivo
         const functionGenerator = new FunctionGenerator();
-        const functionCode = functionGenerator.generateFunctions(tree);
+        const generatedCode = functionGenerator.generateFunctions(tree);
 
-        // Adiciona as definições de função extraídas à lista
-        functionDefinitions.push(functionCode);
+        // gerar arquivo de funcao gerada 
+        generatedCode.forEach(function(code, i) {
+          let outputFile = path.join(outputDir, filename);
+          outputFile = `${outputFile.slice(0, -3)}-${i}.js`;
+
+          if (fs.existsSync(outputFile)) {
+            fs.rmSync(outputFile);
+          }
+      
+          if (code !== null) {
+            fs.writeFileSync(
+              outputFile,
+              beautify(code, {
+                indent_size: 4,
+                space_in_empty_paren: true,
+              })
+            );
+          }
+        })
+
+        // // Adiciona as definições de função extraídas à lista
+        // functionDefinitions.push(functionCode);
 
       } catch (e) {
         console.log(e);
       }
     });
 
-    // Caminho completo para o arquivo de saída
-    const outputFile = path.join(outputDir, "functions.js");
+    // // Caminho completo para o arquivo de saída
+    // const outputFile = path.join(outputDir, "functions.js");
 
-    // Concatena todas as definições de função em um único código
-    const beautifiedCode = beautify(functionDefinitions.join("\n"), {
-      indent_size: 4,
-      space_in_empty_paren: true,
-    });
+    // // Concatena todas as definições de função em um único código
+    // const beautifiedCode = beautify(functionDefinitions.join("\n"), {
+    //   indent_size: 4,
+    //   space_in_empty_paren: true,
+    // });
 
-    // Escreve o código no arquivo de saída
-    fs.writeFileSync(outputFile, beautifiedCode, { encoding: "utf8" });
+    // // Escreve o código no arquivo de saída
+    // fs.writeFileSync(outputFile, beautifiedCode, { encoding: "utf8" });
   });
 }
 
