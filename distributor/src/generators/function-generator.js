@@ -9,19 +9,58 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     super();
   }
 
-  // sobreposicao de visitFunctionDeclaration 
+  /* 
+    sobreposicao de visitFunctionDeclaration   
+  */
   visitFunctionDeclaration(ctx) {
     if(isFunctionDeclaration) {
-        if (ctx.Async()) this.appendString("async ")
-        this.appendString("function ");
-        if (ctx.children[1].getText().includes("*") || ctx.children[2].getText().includes("*")) this.appendString("*");
-        this.appendString(ctx.identifier().getText());
-        this.appendString("(");
-        if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
-        this.appendString(")");
-        this.visitFunctionBody(ctx.functionBody());
-        }
-    }
+        super.visitFunctionDeclaration(ctx);
+    } 
+    // else {
+    //   this.appendString("async ");
+    //   this.appendString("function ");
+    //   this.appendString(ctx.identifier().getText());
+    //   this.appendString("(");
+    //   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
+    //   this.appendString(")");
+    //   this.visitFunctionBody(ctx.functionBody());
+    // }
+  }
+
+  /*
+    achar jeito de porta do servidor correspondente a funcao seja passada (?)
+    validar para ver se corresponde a um corpo de funcao que deve ser dessa forma (senao outras funcoes
+    serao afetadas)
+
+    modelo usado:
+    async function sum(a, b) {
+    const response = await
+    fetch('http://localhost:3000?num1=' + a +
+    '&num2=' + b);
+    const result = await response.json();
+    return result;
+  }
+  */
+  // visitFunctionBody(ctx) {
+  //   if(!isFunctionDeclaration) {  
+  //     this.appendString("{");
+  //     this.appendString('const response = await');
+  //     this.appendString(`fetch('http://localhost:porta;`);
+  //     this.appendString("const result = await response.json();");
+  //     this.appendString("return result");
+  //     this.appendString("}");
+  //   }
+  // }
+
+  /* 
+    funcao em que chamadas de funcoes sao feitas
+    - necessario fazer uma validacao para testar se determinada chamada deve ter o await ou nao (se for chamada
+      para funcao do servidor deve ter)
+  */
+  // visitArgumentsExpression(ctx) {
+  //   this.appendString("await ");
+  //   super.visitArgumentsExpression(ctx);
+  // }
 
   generateFunctions(ctx) {
     // todos codigos gerados
