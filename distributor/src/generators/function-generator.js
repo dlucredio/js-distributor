@@ -1,5 +1,8 @@
 import CopyPasteGenerator from "./copypaste-generator.js";
 import { StringBuilder } from "./generator-utils.js";
+import fs from "fs";
+import yaml from "js-yaml";
+import path from "path";
 
 // variavel global para permitir ou nao declaracao da funcao
 let isFunctionDeclaration = false;
@@ -32,6 +35,8 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     validar para ver se corresponde a um corpo de funcao que deve ser dessa forma (senao outras funcoes
     serao afetadas)
 
+      usar arquivo yml/yaml ou json
+
     modelo usado:
     async function sum(a, b) {
     const response = await
@@ -39,7 +44,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     '&num2=' + b);
     const result = await response.json();
     return result;
-  }
+  } 
   */
   // visitFunctionBody(ctx) {
   //   if(!isFunctionDeclaration) {  
@@ -63,6 +68,14 @@ export default class FunctionGenerator extends CopyPasteGenerator {
   // }
 
   generateFunctions(ctx) {
+    const yamlPath = path.resolve("..", "..", "distributor", "src", "utils.yml");
+    try {
+      const utils = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
+      console.log('Configurações do arquivo YAML:', utils);
+    } catch (e) {
+      console.error('Erro ao carregar o arquivo YAML:', e);
+    }
+
     // todos codigos gerados
     const generatedCode = [];
 
@@ -93,3 +106,11 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     return generatedCode;
   }
 }
+
+// {
+
+    // definicao de servers com urls, porta, etc
+    // definicao de funcoes, seu argumentos e o server
+
+
+// }

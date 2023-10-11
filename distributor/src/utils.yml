@@ -1,0 +1,11 @@
+# definição dos servers
+server1:
+    id: 1
+    port: 3000
+    url: localhost
+
+# definição das funções
+sum:
+    server: 1
+deTeste:
+    server: 1
