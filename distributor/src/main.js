@@ -113,8 +113,6 @@ e extrair definições de funções desses arquivos.
 
 function generateFunctionFile(target, inputDir, outputDir) {
   console.log(`Generating function file from directory ${inputDir}`);
-  // lista para armazenar funções
-  const functionDefinitions = [];
 
   // Lê todos os arquivos no diretório de entrada -- ARRUMAR
   fs.readdir(inputDir, (err, files) => {

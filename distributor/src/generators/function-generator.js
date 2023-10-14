@@ -10,12 +10,21 @@ let isFunctionDeclaration = false;
 export default class FunctionGenerator extends CopyPasteGenerator {
   constructor() {
     super();
+    try {
+      const yamlPath = path.resolve('..', '..', 'distributor', 'src', 'config.yml')
+      const config = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
+      this.servers = config.servers
+      this.functions = config.functions
+      this.numServers = this.servers.length
+    } catch (e) {
+      console.error('Erro ao carregar o arquivo YAML:', e);
+    }
   }
 
   /* 
     sobreposicao de visitFunctionDeclaration   
   */
-  visitFunctionDeclaration(ctx) {
+  visitFunctionDeclaration(ctx, serverId) {
     if(isFunctionDeclaration) {
         super.visitFunctionDeclaration(ctx);
     } 
@@ -68,22 +77,20 @@ export default class FunctionGenerator extends CopyPasteGenerator {
   // }
 
   generateFunctions(ctx) {
-    const yamlPath = path.resolve("..", "..", "distributor", "src", "utils.yml");
-    try {
-      const utils = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
-      console.log('Configurações do arquivo YAML:', utils);
-    } catch (e) {
-      console.error('Erro ao carregar o arquivo YAML:', e);
-    }
 
-    // todos codigos gerados
-    const generatedCode = [];
+    /*
+      todos codigos gerados:
+        - posicao 0: codigo de entrada com chamadas para funcoes no servidor
+        - posicao i | i != 0: definicoes de funcoes no server i
+    */
+    const generatedCode = new Array(this.numServers + 1);
+    console.log('---->', this.numServers + 1)
 
     // visitar programa para gerar codigo do arquivo de entrada sem declaracao da funcao
     this.visitProgram(ctx);
 
     // colocar codigo gerado em array
-    generatedCode.push(this.stringBuilder.toString());
+    generatedCode[0] = this.stringBuilder.toString();
 
     // visitar cada declaracao de funcao 
     isFunctionDeclaration = true;
@@ -91,14 +98,30 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
           if (sourceElements[i].statement().functionDeclaration()) {
-            // reinicio de stringBuilder
+            // // reinicio de stringBuilder
             this.stringBuilder = new StringBuilder();
+            for (let funct of this.functions) {
+              if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
+                console.log('achou funcao de nome',funct.name, funct.server)
+                this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration(), funct.server);
+                if (generatedCode[funct.server]){
+                  console.log("entrou aqui", funct.name)
+                  generatedCode[funct.server] += this.stringBuilder.toString();
+                }
+                else {
+                  generatedCode[funct.server] = this.stringBuilder.toString();
+                }
+              }
+            }
             
-            // visita apenas declaracao de funcao
-            this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
             
-            // coloca codigo gerado no array
-            generatedCode.push(this.stringBuilder.toString());
+            // // visita apenas declaracao de funcao
+            // this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
+            
+            // // coloca codigo gerado no array
+            // generatedCode.push(this.stringBuilder.toString());
+
+            // lembrar de fazer toString 
           }
       }   
     }

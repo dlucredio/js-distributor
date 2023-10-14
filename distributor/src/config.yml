@@ -1,0 +1,17 @@
+# definicao dos servers
+servers:
+    - id: 1
+      port: 3000
+      url: localhost
+    - id: 2
+      port: 3000
+      url: urlTeste
+
+# definicao das funcoes
+functions:
+    - name: sum
+      server: 1
+    - name: deTeste
+      server: 2
+    - name: sub
+      server: 1
