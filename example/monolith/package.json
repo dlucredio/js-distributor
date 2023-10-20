@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "antlr4": "^4.13.1",
     "distributor": "file:../../distributor",
     "jest": "^29.0.3"
   }

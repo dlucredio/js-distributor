@@ -24,7 +24,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
   /* 
     sobreposicao de visitFunctionDeclaration   
   */
-  visitFunctionDeclaration(ctx, serverId) {
+  visitFunctionDeclaration(ctx) {
     if(isFunctionDeclaration) {
         super.visitFunctionDeclaration(ctx);
     } 
