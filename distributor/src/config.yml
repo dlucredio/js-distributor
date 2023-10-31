@@ -1,20 +1,47 @@
-# definicao dos servers
+# Definição dos servidores
 servers:
-    - id: 1
-      port: 3000
-      url: localhost
-    - id: 2
-      port: 3000
-      url: urlTeste
-    - id: 3
-      port: 3000
-      url: urlsub
+  - id: 1
+    port: 3000
+    url: localhost
+  - id: 2
+    port: 3000
+    url: urlTeste
+  - id: 3
+    port: 3000
+    url: urlsub
+  - id: 4
+    port: 3002
+    url: localhost
+  - id: 5
+    port: 3001
+    url: foourl
 
-# definicao das funcoes
+# Definição das funções
 functions:
-    - name: sum
-      server: 1
-    - name: deTeste
-      server: 2
-    - name: sub
-      server: 3
+  - name: sum
+    server: 1
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+  - name: deTeste
+    server: 2
+    parameters: []
+  - name: sub
+    server: 3
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+  - name: calculateRectangleArea
+    server: 4
+    parameters:
+      - name: length
+        type: number
+      - name: width
+        type: number
+  - name: foo
+    server: 5
+    parameters: []

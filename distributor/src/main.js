@@ -7,6 +7,8 @@ import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 import CopyPasteGenerator from "./generators/copypaste-generator.js";
 import FunctionGenerator from "../src/generators/function-generator.js";
 import NodeFunctionGenerator from "./generators/NodeFunctionGenerator.js";
+import EventSourceGenerator from "./generators/EventSourceGenerator.js";
+import ServerGenerator from "./generators/ServerGenerator.js";
 
 export default function main(
   mode,
@@ -125,29 +127,7 @@ function generateFunctionFiles(inputDir, outputDir, target) {
         parser.buildParseTrees = true;
         const tree = parser.program();
 
-        const functionGenerator = new FunctionGenerator();
-        const generatedCode = functionGenerator.generateFunctions(tree);
-
-        generatedCode.forEach(function(code, i) {
-          let outputFile = path.join(outputDir, filename);
-          outputFile = `${outputFile.slice(0, -3)}-${i}.js`;
-
-          if (fs.existsSync(outputFile)) {
-            fs.rmSync(outputFile);
-          }
-
-          if (code !== null) {
-            fs.writeFileSync(
-              outputFile,
-              beautify(code, {
-                indent_size: 4,
-                space_in_empty_paren: true,
-              })
-            );
-          }
-        });
-
-        // Adiciona o código para gerar com NodeFunctionGenerator 
+        // Adiciona o código para gerar com NodeFunctionGenerator
         const nodeGenerator = new NodeFunctionGenerator();
         const modifiedNodeCode = nodeGenerator.generateFunctions(tree);
 
@@ -169,9 +149,63 @@ function generateFunctionFiles(inputDir, outputDir, target) {
             );
           }
         });
+
+       // Gerador de servidor node
+      const serverGenerator = new ServerGenerator();  
+      const modifiedServerCode = serverGenerator.generateFunctions(tree); 
+      modifiedServerCode.forEach(function(code, i) {
+        let outputFile = path.join(outputDir, filename);
+        outputFile = `${outputFile.slice(0, -3)}-modifiedNodeServer-${i}.js`;
+
+        if (fs.existsSync(outputFile)) {
+          fs.rmSync(outputFile);
+        }
+
+        if (code !== null) {
+          fs.writeFileSync(
+            outputFile,
+            beautify(code, {
+              indent_size: 4,
+              space_in_empty_paren: true,
+            })
+          );
+        }
+      });
+
+
+
+
+
+
+
+        // Adiciona o código para gerar com EventSourceGenerator
+
+        // tree -> generateFunctions
+        const EventSourceGen = new EventSourceGenerator();
+        const modifiedEventSource = EventSourceGen.generateFunctions(tree);
+
+        modifiedEventSource.forEach(function(code, i) {
+          let outputFile = path.join(outputDir, filename);
+          outputFile = `${outputFile.slice(0, -3)}-modifiedES-${i}.js`;
+
+          if (fs.existsSync(outputFile)) {
+            fs.rmSync(outputFile);
+          }
+
+          if (code !== null) {
+            fs.writeFileSync(
+              outputFile,
+              beautify(code, {
+                indent_size: 4,
+                space_in_empty_paren: true,
+              })
+            );
+          }
+        });
       } catch (e) {
         console.log(e);
       }
     });
   });
 }
+

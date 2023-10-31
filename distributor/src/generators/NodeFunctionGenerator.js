@@ -56,12 +56,7 @@ export default class NodeFunctionGenerator extends FunctionGenerator {
       this.appendString(fetchCode);
       this.appendString(isAsync ? 'const result = await response.json();' : 'const result = response.json();');
     }
-    this.appendNewLine();
-  
-    if (ctx.functionBody()) {
-      this.visitFunctionBody(ctx.functionBody());
-    }
-  
+    this.appendNewLine();  
     this.appendString(`}`);
   }
 }
