@@ -10,12 +10,19 @@ let isFunctionDeclaration = false;
 export default class FunctionGenerator extends CopyPasteGenerator {
   constructor() {
     super();
+    this.servers = [];
+    this.functions = [];
+    this.numServers = 0;
+    this.loadYAML();
+  }
+
+  loadYAML() {
     try {
-      const yamlPath = path.resolve('..', '..', 'distributor', 'src', 'config.yml')
+      const yamlPath = path.resolve('config.yml')
       const config = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
-      this.servers = config.servers
-      this.functions = config.functions
-      this.numServers = this.servers.length
+      this.servers = config.servers;
+      this.functions = config.functions;
+      this.numServers = this.servers.length;
     } catch (e) {
       console.error('Erro ao carregar o arquivo YAML:', e);
     }
@@ -24,76 +31,58 @@ export default class FunctionGenerator extends CopyPasteGenerator {
   /* 
     sobreposicao de visitFunctionDeclaration   
   */
-  visitFunctionDeclaration(ctx) {
-    if(isFunctionDeclaration) {
-        super.visitFunctionDeclaration(ctx);
-    } 
-    // else {
-    //   this.appendString("async ");
-    //   this.appendString("function ");
-    //   this.appendString(ctx.identifier().getText());
-    //   this.appendString("(");
-    //   if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
-    //   this.appendString(")");
-    //   this.visitFunctionBody(ctx.functionBody());
-    // }
-  }
+    visitFunctionDeclaration(ctx) {
+      // Obtém o nome da função
+      const functionName = ctx.identifier().getText();
+    
+      // Verifica se a função é assíncrona
+      const isAsync = ctx.Async() !== null;
+    
+      // declaração da função
+      this.appendString(`${isAsync ? 'async ' : ''}function ${functionName}(`);
+    
+      if (ctx.formalParameterList()) {
+        this.visitFormalParameterList(ctx.formalParameterList());
+      }
+    
+      this.appendString(`) {`);
+      this.appendNewLine();
+    
+      // Puxando infos do YAML para gerar a URL
+      const serverName = (this.functions.find((func) => func.name === functionName)).server;
+      const server = this.servers.find((server) => server.id === serverName);
+      if (server) {
+        const serverURL = `http://${server.url}:${server.port}/${functionName}`;
+        const fetchCode = isAsync
+          ? `const response = await fetch('${serverURL}');`
+          : `const response = fetch('${serverURL}');`;
+  
+        this.appendString(fetchCode);
+        this.appendString(isAsync ? 'const result = await response.json();' : 'const result = response.json();');
+        this.appendString("return result;");
+      }
+      this.appendNewLine();  
+      this.appendString(`}`);
+    }
 
-  /*
-    achar jeito de porta do servidor correspondente a funcao seja passada (?)
-    validar para ver se corresponde a um corpo de funcao que deve ser dessa forma (senao outras funcoes
-    serao afetadas)
-
-      usar arquivo yml/yaml ou json
-
-    modelo usado:
-    async function sum(a, b) {
-    const response = await
-    fetch('http://localhost:3000?num1=' + a +
-    '&num2=' + b);
-    const result = await response.json();
-    return result;
-  } 
-  */
-  // visitFunctionBody(ctx) {
-  //   if(!isFunctionDeclaration) {  
-  //     this.appendString("{");
-  //     this.appendString('const response = await');
-  //     this.appendString(`fetch('http://localhost:porta;`);
-  //     this.appendString("const result = await response.json();");
-  //     this.appendString("return result");
-  //     this.appendString("}");
-  //   }
-  // }
-
-  /* 
-    funcao em que chamadas de funcoes sao feitas
-    - necessario fazer uma validacao para testar se determinada chamada deve ter o await ou nao (se for chamada
-      para funcao do servidor deve ter)
-  */
-  // visitArgumentsExpression(ctx) {
-  //   this.appendString("await ");
-  //   super.visitArgumentsExpression(ctx);
-  // }
+    generateFetchCode() {
+      
+    }
 
   generateFunctions(ctx) {
-
+    const functionCode = new Map();
     /*
       todos codigos gerados:
-        - posicao 0: codigo de entrada com chamadas para funcoes no servidor
-        - posicao i | i != 0: definicoes de funcoes no server i
+        - posicao 0: todas chamadas de funcoes
+        - posicao i | i != 0: chamadas de funcoes do server i
     */
-    const generatedCode = new Array(this.numServers + 1);
-    console.log('---->', this.numServers + 1)
-
+    // console.log(this.servers[0].id)
     // visitar programa para gerar codigo do arquivo de entrada sem declaracao da funcao
     this.visitProgram(ctx);
-
     // colocar codigo gerado em array
-    generatedCode[0] = this.stringBuilder.toString();
+    // generatedCode[0] = this.stringBuilder.toString();
+    functionCode.set("allfunctions", this.stringBuilder.toString())
 
-    // visitar cada declaracao de funcao 
-    isFunctionDeclaration = true;
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
@@ -102,31 +91,20 @@ export default class FunctionGenerator extends CopyPasteGenerator {
             this.stringBuilder = new StringBuilder();
             for (let funct of this.functions) {
               if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
-                console.log('achou funcao de nome',funct.name, funct.server)
-                this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration(), funct.server);
-                if (generatedCode[funct.server]){
-                  console.log("entrou aqui", funct.name)
-                  generatedCode[funct.server] += this.stringBuilder.toString();
+                this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
+                let newCode = functionCode.get(funct.server);
+                if (newCode === undefined) {
+                  newCode = this.stringBuilder.toString();
+                } else {
+                  newCode += this.stringBuilder.toString();
                 }
-                else {
-                  generatedCode[funct.server] = this.stringBuilder.toString();
-                }
+                functionCode.set(funct.server, newCode);
               }
             }
-            
-            
-            // // visita apenas declaracao de funcao
-            // this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
-            
-            // // coloca codigo gerado no array
-            // generatedCode.push(this.stringBuilder.toString());
-
-            // lembrar de fazer toString 
           }
       }   
     }
-    
-    return generatedCode;
+    return functionCode;
   }
 }
 

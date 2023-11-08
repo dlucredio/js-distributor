@@ -6,7 +6,6 @@ import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
 import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 import CopyPasteGenerator from "./generators/copypaste-generator.js";
 import FunctionGenerator from "../src/generators/function-generator.js";
-import NodeFunctionGenerator from "./generators/NodeFunctionGenerator.js";
 import EventSourceGenerator from "./generators/EventSourceGenerator.js";
 import ServerGenerator from "./generators/ServerGenerator.js";
 
@@ -128,13 +127,12 @@ function generateFunctionFiles(inputDir, outputDir, target) {
         const tree = parser.program();
 
         // Adiciona o código para gerar com NodeFunctionGenerator
-        const nodeGenerator = new NodeFunctionGenerator();
-        const modifiedNodeCode = nodeGenerator.generateFunctions(tree);
-
-        modifiedNodeCode.forEach(function(code, i) {
+        const functionGenerator = new FunctionGenerator();
+        const modifiedNodeCode = functionGenerator.generateFunctions(tree);
+        
+        for (var [key, code] of modifiedNodeCode) {
           let outputFile = path.join(outputDir, filename);
-          outputFile = `${outputFile.slice(0, -3)}-modifiedNode-${i}.js`;
-
+          outputFile = `${outputFile.slice(0, -3)}-modifiedNode-${key}.js`;
           if (fs.existsSync(outputFile)) {
             fs.rmSync(outputFile);
           }
@@ -148,15 +146,32 @@ function generateFunctionFiles(inputDir, outputDir, target) {
               })
             );
           }
-        });
+        }
+        // modifiedNodeCode.forEach(function(code, i) {
+        //   let outputFile = path.join(outputDir, filename);
+        //   outputFile = `${outputFile.slice(0, -3)}-modifiedNode-${i}.js`;
+
+        //   if (fs.existsSync(outputFile)) {
+        //     fs.rmSync(outputFile);
+        //   }
+
+        //   if (code !== null) {
+        //     fs.writeFileSync(
+        //       outputFile,
+        //       beautify(code, {
+        //         indent_size: 4,
+        //         space_in_empty_paren: true,
+        //       })
+        //     );
+        //   }
+        // });
 
        // Gerador de servidor node
       const serverGenerator = new ServerGenerator();  
       const modifiedServerCode = serverGenerator.generateFunctions(tree); 
-      modifiedServerCode.forEach(function(code, i) {
+      for (var [key, code] of modifiedServerCode) {
         let outputFile = path.join(outputDir, filename);
-        outputFile = `${outputFile.slice(0, -3)}-modifiedNodeServer-${i}.js`;
-
+        outputFile = `${outputFile.slice(0, -3)}-modifiedNodeServer-${key}.js`;
         if (fs.existsSync(outputFile)) {
           fs.rmSync(outputFile);
         }
@@ -170,7 +185,25 @@ function generateFunctionFiles(inputDir, outputDir, target) {
             })
           );
         }
-      });
+      }
+      // modifiedServerCode.forEach(function(code, i) {
+      //   let outputFile = path.join(outputDir, filename);
+      //   outputFile = `${outputFile.slice(0, -3)}-modifiedNodeServer-${i}.js`;
+
+      //   if (fs.existsSync(outputFile)) {
+      //     fs.rmSync(outputFile);
+      //   }
+
+      //   if (code !== null) {
+      //     fs.writeFileSync(
+      //       outputFile,
+      //       beautify(code, {
+      //         indent_size: 4,
+      //         space_in_empty_paren: true,
+      //       })
+      //     );
+      //   }
+      // });
 
 
 
@@ -181,27 +214,27 @@ function generateFunctionFiles(inputDir, outputDir, target) {
         // Adiciona o código para gerar com EventSourceGenerator
 
         // tree -> generateFunctions
-        const EventSourceGen = new EventSourceGenerator();
-        const modifiedEventSource = EventSourceGen.generateFunctions(tree);
+        // const EventSourceGen = new EventSourceGenerator();
+        // const modifiedEventSource = EventSourceGen.generateFunctions(tree);
 
-        modifiedEventSource.forEach(function(code, i) {
-          let outputFile = path.join(outputDir, filename);
-          outputFile = `${outputFile.slice(0, -3)}-modifiedES-${i}.js`;
+        // modifiedEventSource.forEach(function(code, i) {
+        //   let outputFile = path.join(outputDir, filename);
+        //   outputFile = `${outputFile.slice(0, -3)}-modifiedES-${i}.js`;
 
-          if (fs.existsSync(outputFile)) {
-            fs.rmSync(outputFile);
-          }
+        //   if (fs.existsSync(outputFile)) {
+        //     fs.rmSync(outputFile);
+        //   }
 
-          if (code !== null) {
-            fs.writeFileSync(
-              outputFile,
-              beautify(code, {
-                indent_size: 4,
-                space_in_empty_paren: true,
-              })
-            );
-          }
-        });
+        //   if (code !== null) {
+        //     fs.writeFileSync(
+        //       outputFile,
+        //       beautify(code, {
+        //         indent_size: 4,
+        //         space_in_empty_paren: true,
+        //       })
+        //     );
+        //   }
+        // });
       } catch (e) {
         console.log(e);
       }

@@ -1,0 +1,38 @@
+# Definição dos servidores
+servers:
+  - id: beta
+    port: 3000
+    url: url-beta
+  - id: alfa
+    port: 8080
+    url: url-alfa
+  - id: gama
+    port: 5000
+    url: url-gama
+
+# Definição das funções
+functions:
+  - name: sub
+    server: beta
+    parameters: 
+      - name: a
+        type: number
+      - name: b
+        type: number
+  - name: sum
+    server: beta
+    parameters: 
+      - name: a
+        type: number
+      - name: b
+        type: number
+  - name: calculateRectangleArea
+    server: gama
+    parameters:
+      - name: length
+        type: number
+      - name: width
+        type: number
+  - name: foo
+    server: alfa
+    parameters: []

@@ -1,0 +1,20 @@
+{
+  "name": "ordenacaolistas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "generate-single": "distributor-scripts single copypaste src src-gen",
+    "generate-watch": "distributor-scripts watch copypaste src src-gen",
+    "start": "node src/main.js",
+    "test": "jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "antlr4": "^4.13.1",
+    "distributor": "file:../distributor",
+    "jest": "^29.7.0"
+  }
+}

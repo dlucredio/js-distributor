@@ -1,0 +1,28 @@
+# Definição dos servidores
+servers:
+  - id: main
+    port: 3000
+    url: main
+  - id: sort
+    port: 8080
+    url: sort
+  - id: random
+    port: 5000
+    url: random
+
+# Definição das funções
+functions:
+  - name: main
+    server: main
+    parameters: []
+  - name: sorteiaNumero
+    server: random
+    parameters: []
+  - name: sorteiaLista
+    server: random
+    parameters: []
+  - name: insertionSort
+    server: sort
+    parameters:
+      - name: inputArr
+        type: list
