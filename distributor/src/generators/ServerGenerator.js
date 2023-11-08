@@ -1,5 +1,6 @@
 import { StringBuilder } from "./generator-utils.js";
 import FunctionGenerator from "./function-generator.js";
+import path from "path"
 
 export default class ServerGenerator extends FunctionGenerator {
   constructor() {
@@ -43,15 +44,15 @@ export default class ServerGenerator extends FunctionGenerator {
     }
   }
 
-  // visitArgumentsExpression(ctx) {
-  //   const functionName = ctx.children[0].getText();
-  //   // tester se teste é uma funcao do servidor ou uma funcao de outro servidor
-  //   const functionInfo = this.functions.find((func) => func.name === functionName);
-  //   if (functionInfo && functionInfo.server !== this.currentServerName) {
-  //     this.generateFetchCode(functionName, ctx.children[1]);    
-  //   }
-  //   else super.visitArgumentsExpression(ctx);
-  // }
+  visitArgumentsExpression(ctx) {
+    const functionName = ctx.children[0].getText();
+    // tester se teste é uma funcao do servidor ou uma funcao de outro servidor
+    const functionInfo = this.functions.find((func) => func.name === functionName);
+    if (functionInfo && functionInfo.server !== this.currentServerName) {
+      this.generateImports(functionInfo, ctx.children[1]);    
+    }
+    super.visitArgumentsExpression(ctx);
+  }
 
   // generateFetchCode(functionName, argsCtx) {
   //   const args = argsCtx.argument();
@@ -76,12 +77,17 @@ export default class ServerGenerator extends FunctionGenerator {
   //   this.appendString("})()"); 
   // }
 
+  generateImports(functionInfo) {
+    const filename = `${this.nameOfProject}-functions-${functionInfo.server}.js`;
+    const importPath = `./${filename}`;
+
+    let code = `import ${functionInfo.name} from "${importPath}";` + this.codeGenerated.get(this.currentServerName);
+    this.codeGenerated.set(this.currentServerName, code);
+  }
+
 
   generateFunctions(ctx) {
-    const serverCodes = new Map();
-
     for (let i = 0; i < this.numServers; i++) {
-      this.appendString(`/*---servidor ${this.servers[i].id}---*/`)
       this.appendString(`const express = require('express');`);
       this.appendString(`const app = express();`);
       this.appendString(`const port = ${this.servers[i].port};`); 
@@ -95,29 +101,30 @@ export default class ServerGenerator extends FunctionGenerator {
       let codeGenerated = this.stringBuilder.toString();
       this.stringBuilder = new StringBuilder();
 
-      serverCodes.set(this.servers[i].id, codeGenerated);
+      // serverCodes.set(this.servers[i].id, codeGenerated);
+      this.codeGenerated.set(this.servers[i].id, codeGenerated);
     }
     
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
           if (sourceElements[i].statement().functionDeclaration()) {
-            // // reinicio de stringBuilder
+            // reinicio de stringBuilder
             this.stringBuilder = new StringBuilder();
             for (let funct of this.functions) {
               if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
                 this.currentFunction  = funct;
                 this.currentServerName = funct.server;
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
-                let newCode = serverCodes.get(funct.server);
+                let newCode = this.codeGenerated.get(funct.server);
                 newCode += this.stringBuilder.toString();
-                serverCodes.set(funct.server, newCode);
+                this.codeGenerated.set(funct.server, newCode);
                 this.currentServerName = "";
               }
             }
           }
       }   
     }
-    return serverCodes;
+    return this.codeGenerated;
   }
 }

@@ -6,9 +6,9 @@ function main() {
     console.log("lista ordenada: ", listaOrdenada);
 }
 
-// sorteia numero entre 2 e 20
-function sorteiaNumero() {
-    return Math.floor(Math.random() * 20) + 2;
+// sorteia numero entre 2 e n
+function sorteiaNumero(n) {
+    return Math.floor(Math.random() * n) + 2;
 
 }
 

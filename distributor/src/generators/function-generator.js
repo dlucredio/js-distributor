@@ -13,6 +13,8 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     this.servers = [];
     this.functions = [];
     this.numServers = 0;
+    this.nameOfProject = "";
+    this.codeGenerated = new Map();
     this.loadYAML();
   }
 
@@ -23,6 +25,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.servers = config.servers;
       this.functions = config.functions;
       this.numServers = this.servers.length;
+      this.nameOfProject = config.project.name;
     } catch (e) {
       console.error('Erro ao carregar o arquivo YAML:', e);
     }
@@ -39,7 +42,8 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       const isAsync = ctx.Async() !== null;
     
       // declaração da função
-      this.appendString(`${isAsync ? 'async ' : ''}function ${functionName}(`);
+      // this.appendString(`${isAsync ? 'async ' : ''}function ${functionName}(`);
+      this.appendString(`export async function ${functionName}(`);
     
       if (ctx.formalParameterList()) {
         this.visitFormalParameterList(ctx.formalParameterList());
@@ -51,26 +55,25 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       // Puxando infos do YAML para gerar a URL
       const serverName = (this.functions.find((func) => func.name === functionName)).server;
       const server = this.servers.find((server) => server.id === serverName);
-      if (server) {
-        const serverURL = `http://${server.url}:${server.port}/${functionName}`;
-        const fetchCode = isAsync
-          ? `const response = await fetch('${serverURL}');`
-          : `const response = fetch('${serverURL}');`;
+      // if (server) {
+      //   const serverURL = `http://${server.url}:${server.port}/${functionName}`;
+      //   const fetchCode = isAsync
+      //     ? `const response = await fetch('${serverURL}');`
+      //     : `const response = fetch('${serverURL}');`;
+
+      const serverURL = `http://${server.url}:${server.port}/${functionName}`;
+      const fetchCode = `const response = await fetch('${serverURL}');`
   
-        this.appendString(fetchCode);
-        this.appendString(isAsync ? 'const result = await response.json();' : 'const result = response.json();');
-        this.appendString("return result;");
-      }
+        
+      this.appendString(fetchCode);
+      this.appendString(isAsync ? 'const result = await response.json();' : 'const result = response.json();');
+      this.appendString("return result;");
       this.appendNewLine();  
       this.appendString(`}`);
     }
 
-    generateFetchCode() {
-      
-    }
-
   generateFunctions(ctx) {
-    const functionCode = new Map();
+    // const functionCode = new Map();
     /*
       todos codigos gerados:
         - posicao 0: todas chamadas de funcoes
@@ -81,7 +84,8 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     this.visitProgram(ctx);
     // colocar codigo gerado em array
     // generatedCode[0] = this.stringBuilder.toString();
-    functionCode.set("allfunctions", this.stringBuilder.toString())
+    // functionCode.set("allfunctions", this.stringBuilder.toString())
+    this.codeGenerated.set("allfunctions", this.stringBuilder.toString())
 
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
@@ -92,19 +96,21 @@ export default class FunctionGenerator extends CopyPasteGenerator {
             for (let funct of this.functions) {
               if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
-                let newCode = functionCode.get(funct.server);
+                // let newCode = functionCode.get(funct.server);
+                let newCode = this.codeGenerated.get(funct.server);
                 if (newCode === undefined) {
                   newCode = this.stringBuilder.toString();
                 } else {
                   newCode += this.stringBuilder.toString();
                 }
-                functionCode.set(funct.server, newCode);
+                // functionCode.set(funct.server, newCode);
+                this.codeGenerated.set(funct.server, newCode);
               }
             }
           }
       }   
     }
-    return functionCode;
+    return this.codeGenerated;
   }
 }
 

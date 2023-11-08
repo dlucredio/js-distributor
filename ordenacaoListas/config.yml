@@ -1,3 +1,7 @@
+# Prefixos dos arquivos de saída (sem a extensao .js)
+project:
+  name: ordenaListas
+
 # Definição dos servidores
 servers:
   - id: main
@@ -17,7 +21,9 @@ functions:
     parameters: []
   - name: sorteiaNumero
     server: random
-    parameters: []
+    parameters:
+      - name: n 
+        type: number
   - name: sorteiaLista
     server: random
     parameters: []
