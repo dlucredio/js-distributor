@@ -1,6 +1,5 @@
 import { StringBuilder } from "./generator-utils.js";
-import FunctionGenerator from "./function-generator.js";
-import path from "path"
+import FunctionGenerator from "./FunctionGenerator.js";
 
 export default class ServerGenerator extends FunctionGenerator {
   constructor() {
@@ -54,31 +53,8 @@ export default class ServerGenerator extends FunctionGenerator {
     super.visitArgumentsExpression(ctx);
   }
 
-  // generateFetchCode(functionName, argsCtx) {
-  //   const args = argsCtx.argument();
-  //   this.appendString("(() => {");
-  //   const functionInfo = this.functions.find((func) => func.name === functionName);
-  //     // console.log("serverName", serverName, "para funcao", functionName)
-  //     const server = this.servers.find((server) => server.id === functionInfo.server);
-  //     if (server) {
-  //       // console.log(server)
-  //       let serverURL = `http://${server.url}:${server.port}/${functionName}`;
-  //       if (functionInfo.parameters.length > 0) serverURL += `?`;
-  //       for (let i = 0; i < functionInfo.parameters.length; i++) {
-  //           serverURL += `${functionInfo.parameters[i].name}=`+args[i].getText();
-  //           if (i+1 < functionInfo.parameters.length) serverURL += "&";
-  //       }
-  //       const fetchCode = `const response = fetch('${serverURL}');`;
-  
-  //       this.appendString(fetchCode);
-  //       this.appendString('const result = response.json();');
-  //       this.appendString("return result;");
-  //     }
-  //   this.appendString("})()"); 
-  // }
-
   generateImports(functionInfo) {
-    const filename = `${this.nameOfProject}-functions-${functionInfo.server}.js`;
+    const filename = `${this.nameOfProject}-modifiedNode-${functionInfo.server}.js`;
     const importPath = `./${filename}`;
 
     let code = `import ${functionInfo.name} from "${importPath}";` + this.codeGenerated.get(this.currentServerName);

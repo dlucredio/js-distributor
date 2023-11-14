@@ -1,7 +1,7 @@
 // gera lista aleatoriamente e ordena
 
 function main() {
-    const lista = sorteiaLista()
+    const lista = sorteiaLista();
     const listaOrdenada = insertionSort(lista);
     console.log("lista ordenada: ", listaOrdenada);
 }
@@ -14,8 +14,8 @@ function sorteiaNumero(n) {
 
 // retorna uma lista aleatoria de tamanho "tam" e elementos entre 1 e 100
 function sorteiaLista() {
+    const tam = sorteiaNumero(20);
     const lista = [];
-    const tam = sorteiaNumero();
     for (let i = 0; i < tam; i++) {
         lista.push(Math.floor(Math.random() * 100) + 1);
     }
@@ -36,7 +36,10 @@ function insertionSort(inputArr) {
             }
             inputArr[j+1] = current;
         }
+    imprimeLista("resultado da lista ordenada:", inputArr);
     return inputArr;
 }
 
-main();
+function imprimeLista(msg, lista) {
+    console.log(msg, lista);
+}

@@ -5,7 +5,7 @@ import beautify from "js-beautify";
 import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
 import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 import CopyPasteGenerator from "./generators/copypaste-generator.js";
-import FunctionGenerator from "../src/generators/function-generator.js";
+import FunctionGenerator from "./generators/FunctionGenerator.js";
 import EventSourceGenerator from "./generators/EventSourceGenerator.js";
 import ServerGenerator from "./generators/ServerGenerator.js";
 

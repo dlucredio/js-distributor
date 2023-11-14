@@ -37,54 +37,83 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     visitFunctionDeclaration(ctx) {
       // Obtém o nome da função
       const functionName = ctx.identifier().getText();
-    
-      // Verifica se a função é assíncrona
-      const isAsync = ctx.Async() !== null;
+      const functionInfo = this.functions.find((func) => func.name === functionName);
+      const serverName = functionInfo.server
+      const server = this.servers.find((server) => server.id === serverName);
+      let args = [];
     
       // declaração da função
       // this.appendString(`${isAsync ? 'async ' : ''}function ${functionName}(`);
       this.appendString(`export async function ${functionName}(`);
     
       if (ctx.formalParameterList()) {
-        this.visitFormalParameterList(ctx.formalParameterList());
+        args = this.visitFormalParameterList(ctx.formalParameterList());
       }
     
       this.appendString(`) {`);
       this.appendNewLine();
     
       // Puxando infos do YAML para gerar a URL
-      const serverName = (this.functions.find((func) => func.name === functionName)).server;
-      const server = this.servers.find((server) => server.id === serverName);
       // if (server) {
       //   const serverURL = `http://${server.url}:${server.port}/${functionName}`;
       //   const fetchCode = isAsync
       //     ? `const response = await fetch('${serverURL}');`
       //     : `const response = fetch('${serverURL}');`;
+      let serverURL = `http://${server.url}:${server.port}/${functionName}`;
 
-      const serverURL = `http://${server.url}:${server.port}/${functionName}`;
-      const fetchCode = `const response = await fetch('${serverURL}');`
+      // (!!!) adicao de query nas chamadas fetchs - retirar dps se tiver errado
+      if (functionInfo.parameters.length > 0) {
+        serverURL += "?";
+        for (let i = 0; i < functionInfo.parameters.length; i++) {
+          serverURL += `${functionInfo.parameters[i].name}=' + ${args[i]}`
+          if (functionInfo.parameters.length > 0 && i !== functionInfo.parameters.length-1) {
+            serverURL += "+ '&"
+          }
+        }
+      }
+      const fetchCode = functionInfo.parameters.length > 0 ? `const response = await fetch('${serverURL});` : `const response = await fetch('${serverURL}');` ;
   
         
       this.appendString(fetchCode);
-      this.appendString(isAsync ? 'const result = await response.json();' : 'const result = response.json();');
+      this.appendString('const result = await response.json();');
       this.appendString("return result;");
       this.appendNewLine();  
       this.appendString(`}`);
     }
 
-  generateFunctions(ctx) {
-    // const functionCode = new Map();
-    /*
-      todos codigos gerados:
-        - posicao 0: todas chamadas de funcoes
-        - posicao i | i != 0: chamadas de funcoes do server i
+    /* (!!!) serve para retornar args pra poder usar na query da chamada fetch - talvez retirar se tiver errado 
+    formalParameterArg
+    : assignable ('=' singleExpression)?      // ECMAScript 6: Initialization
+    ;
+
+    lastFormalParameterArg                        // ECMAScript 6: Rest Parameter
+    : Ellipsis singleExpression
+    ;
     */
-    // console.log(this.servers[0].id)
-    // visitar programa para gerar codigo do arquivo de entrada sem declaracao da funcao
+    visitFormalParameterList(ctx) {
+      const args = [];
+      if (ctx.formalParameterArg().length !== 0) {
+        for (let i = 0; i < ctx.formalParameterArg().length; i++) {
+          this.visitFormalParameterArg(ctx.formalParameterArg(i));
+          args.push(ctx.formalParameterArg(i).assignable().getText());
+          if (i !== ctx.formalParameterArg().length - 1) this.appendString(", ");
+        }
+    
+        if (ctx.lastFormalParameterArg()) { 
+          this.appendString("," );
+          this.visitLastFormalParameterArg(ctx.lastFormalParameterArg());
+          args.push(ctx.formalParameterArg(i).assignable().getText());
+        }
+      } else {
+        this.visitLastFormalParameterArg(ctx.lastFormalParameterArg());
+        args.push(ctx.formalParameterArg(i).assignable().getText());
+      }
+
+      return args;
+    }
+
+  generateFunctions(ctx) {
     this.visitProgram(ctx);
-    // colocar codigo gerado em array
-    // generatedCode[0] = this.stringBuilder.toString();
-    // functionCode.set("allfunctions", this.stringBuilder.toString())
     this.codeGenerated.set("allfunctions", this.stringBuilder.toString())
 
     if (ctx.sourceElements()) {
