@@ -12,10 +12,22 @@ export default class ServerGenerator extends FunctionGenerator {
     const functionInfo = this.functions.find((func) => func.name === functionName);
     // this.currentServerName = functionInfo.server;
     const isAsync = ctx.identifier().Async() !== null;
-  
+    const hasComplexArgs = this.testComplexParameters(functionInfo);
+    console.log(`funcao ${functionName} tem argumentos complexos? ${hasComplexArgs}`);
     if (functionInfo) {
-      this.appendString(`app.get('/${functionName}', async (req, res) => {`);
-      
+      // if (!hasComplexArgs) {
+      //   this.appendString(`app.get('/${functionName}', async (req, res) => {`);
+      // } else {
+      //   this.appendString(`app.post('/${functionName}', async (req, res) => {`);
+      // }
+
+      this.appendString(`app.get('/${functionName}`);
+      for (let param of functionInfo.parameters) {
+        this.appendString(`/:${param.name}`);
+      }
+      this.appendString("'")
+      this.appendString(`,async (req, res) => {`);
+
       // Processar parâmetros da função vindas do yml
       functionInfo.parameters.forEach((param) => {
         this.appendString(`  const ${param.name} = req.query.${param.name};`);
@@ -41,6 +53,18 @@ export default class ServerGenerator extends FunctionGenerator {
     } else {
       console.error(`Servidor com ID "${functionName}" não encontrado no arquivo YAML.`);
     }
+  }
+
+  testComplexParameters(functionInfo) {
+    let hasComplexArgs = false;
+
+    for (let param of functionInfo.parameters) {
+      if (param.type !== 'number' && param.type !== 'string') {
+        hasComplexArgs = true;
+        break;
+      }
+    }
+    return hasComplexArgs;
   }
 
   visitArgumentsExpression(ctx) {
