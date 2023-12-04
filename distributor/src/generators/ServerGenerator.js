@@ -7,30 +7,49 @@ export default class ServerGenerator extends FunctionGenerator {
     this.currentServerName = "";
   }
 
+  generateRouteCode(functionInfo) {
+    if (functionInfo.method.toUpperCase() === 'GET') {
+      this.appendString(`app.get('/${functionInfo.name}`);
+      this.appendString("'")
+      this.appendString(`,async (req, res) => {`);
+    } else if (functionInfo.method.toUpperCase() === 'POST') {
+      this.appendString(`app.post('/${functionInfo.name}', async (req, res) => {`);
+    } else {
+      console.error("Invalid HTTP method. It must be get or post");
+    }
+  }
+
+  // erro porque declaracao da funcao esta sendo confundida com import
+  checkAsyncFunction(functionInfo, functionDeclCtx) {
+    // console.log('current func', functionInfo)
+    // console.log('current server', this.currentServerName)
+    for (let funct of this.functions) {
+      // let functServer = (this.functions.find((func) => func.name === funct.name)).server;
+      if (funct.name !== functionInfo.name && 
+          functionDeclCtx.functionBody().getText().includes(funct.name) && 
+          funct.server !== functionInfo.server
+          ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   visitFunctionDeclaration(ctx) {
     const functionName = ctx.identifier().getText();
     const functionInfo = this.functions.find((func) => func.name === functionName);
-    // this.currentServerName = functionInfo.server;
-    const isAsync = ctx.identifier().Async() !== null;
-    const hasComplexArgs = this.testComplexParameters(functionInfo);
-    console.log(`funcao ${functionName} tem argumentos complexos? ${hasComplexArgs}`);
+    const isAsync = ctx.identifier().Async() !== null || this.checkAsyncFunction(functionInfo, ctx);
+    console.log(functionName, 'is async?', isAsync);
     if (functionInfo) {
-      // if (!hasComplexArgs) {
-      //   this.appendString(`app.get('/${functionName}', async (req, res) => {`);
-      // } else {
-      //   this.appendString(`app.post('/${functionName}', async (req, res) => {`);
-      // }
 
-      this.appendString(`app.get('/${functionName}`);
-      for (let param of functionInfo.parameters) {
-        this.appendString(`/:${param.name}`);
-      }
-      this.appendString("'")
-      this.appendString(`,async (req, res) => {`);
+      // geracao do codigo da rota post ou get
+      this.generateRouteCode(functionInfo);
+      this.appendString(`console.log("chegou na rota da funcao ${functionName}");`);
+      const queryOrBody = functionInfo.method.toUpperCase() === 'POST' ? 'body' : 'query';
 
       // Processar parâmetros da função vindas do yml
       functionInfo.parameters.forEach((param) => {
-        this.appendString(`  const ${param.name} = req.query.${param.name};`);
+        this.appendString(`  const ${param.name} = req.${queryOrBody}.${param.name};`);
       });
 
       this.appendString();
@@ -55,24 +74,14 @@ export default class ServerGenerator extends FunctionGenerator {
     }
   }
 
-  testComplexParameters(functionInfo) {
-    let hasComplexArgs = false;
-
-    for (let param of functionInfo.parameters) {
-      if (param.type !== 'number' && param.type !== 'string') {
-        hasComplexArgs = true;
-        break;
-      }
-    }
-    return hasComplexArgs;
-  }
-
   visitArgumentsExpression(ctx) {
     const functionName = ctx.children[0].getText();
-    // tester se teste é uma funcao do servidor ou uma funcao de outro servidor
+    // tester se é uma funcao do servidor ou uma funcao de outro servidor
     const functionInfo = this.functions.find((func) => func.name === functionName);
     if (functionInfo && functionInfo.server !== this.currentServerName) {
-      this.generateImports(functionInfo, ctx.children[1]);    
+      this.generateImports(functionInfo, ctx.children[1]);
+      this.appendString("await ");    
+      // this.addAsyncAndAwait()
     }
     super.visitArgumentsExpression(ctx);
   }
@@ -81,14 +90,14 @@ export default class ServerGenerator extends FunctionGenerator {
     const filename = `${this.nameOfProject}-modifiedNode-${functionInfo.server}.js`;
     const importPath = `./${filename}`;
 
-    let code = `import ${functionInfo.name} from "${importPath}";` + this.codeGenerated.get(this.currentServerName);
+    let code = `import { ${functionInfo.name} } from "${importPath}";` + this.codeGenerated.get(this.currentServerName);
     this.codeGenerated.set(this.currentServerName, code);
   }
 
 
   generateFunctions(ctx) {
     for (let i = 0; i < this.numServers; i++) {
-      this.appendString(`const express = require('express');`);
+      this.appendString("import express from 'express';")
       this.appendString(`const app = express();`);
       this.appendString(`const port = ${this.servers[i].port};`); 
       this.appendString();

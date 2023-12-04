@@ -4,6 +4,8 @@ function main() {
     const lista = sorteiaLista();
     const listaOrdenada = insertionSort(lista);
     console.log("lista ordenada: ", listaOrdenada);
+
+    return 'sucesso';
 }
 
 // sorteia numero entre 2 e n

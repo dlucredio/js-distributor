@@ -20,7 +20,9 @@ export default class FunctionGenerator extends CopyPasteGenerator {
 
   loadYAML() {
     try {
-      const yamlPath = path.resolve('config.yml')
+      // const yamlPath = path.resolve('config.yml')
+      // const yamlPath = path.resolve('config2.yml')
+      const yamlPath = path.resolve('config3.yml')
       const config = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
       this.servers = config.servers;
       this.functions = config.functions;
@@ -30,6 +32,33 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       console.error('Erro ao carregar o arquivo YAML:', e);
     }
   }
+
+    // gera url com parametros por body do post ou query para get
+    generateServerUrl(server, functionInfo, args) {
+      let serverURL = `http://${server.url}:${server.port}/${functionInfo.name}`;
+      
+      if (functionInfo.method.toUpperCase() === 'POST' && functionInfo.parameters.length > 0) {
+        let body = `{`;
+        for (let parameter of functionInfo.parameters) {
+          body += `${parameter.name}: ${parameter.name},`
+        }
+        body += `};`;
+        this.appendString(`let body = ${body}`);
+        this.appendString(`body = JSON.stringify(body);`)
+        let reqPostBody = `\nmethod: "POST",\nbody:body,\nheaders: {`;
+        reqPostBody += `"Content-type": "application/json",\n}`
+        serverURL += `', { ${reqPostBody}}`;
+      } else if (functionInfo.method.toUpperCase() === 'GET' && functionInfo.parameters.length > 0) { // get e query
+        serverURL += "?";
+        for (let i = 0; i < functionInfo.parameters.length; i++) {
+          serverURL += `${functionInfo.parameters[i].name}=' + ${args[i]}`
+          if (functionInfo.parameters.length > 0 && i !== functionInfo.parameters.length-1) {
+            serverURL += "+ '&"
+          }
+        }
+      }
+      return serverURL;
+    }
 
   /* 
     sobreposicao de visitFunctionDeclaration   
@@ -41,9 +70,8 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       const serverName = functionInfo.server
       const server = this.servers.find((server) => server.id === serverName);
       let args = [];
-    
+      
       // declaração da função
-      // this.appendString(`${isAsync ? 'async ' : ''}function ${functionName}(`);
       this.appendString(`export async function ${functionName}(`);
     
       if (ctx.formalParameterList()) {
@@ -52,30 +80,13 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     
       this.appendString(`) {`);
       this.appendNewLine();
-    
-      // Puxando infos do YAML para gerar a URL
-      // if (server) {
-      //   const serverURL = `http://${server.url}:${server.port}/${functionName}`;
-      //   const fetchCode = isAsync
-      //     ? `const response = await fetch('${serverURL}');`
-      //     : `const response = fetch('${serverURL}');`;
-      let serverURL = `http://${server.url}:${server.port}/${functionName}`;
-
-      // (!!!) adicao de query nas chamadas fetchs - retirar dps se tiver errado
-      if (functionInfo.parameters.length > 0) {
-        serverURL += "?";
-        for (let i = 0; i < functionInfo.parameters.length; i++) {
-          serverURL += `${functionInfo.parameters[i].name}=' + ${args[i]}`
-          if (functionInfo.parameters.length > 0 && i !== functionInfo.parameters.length-1) {
-            serverURL += "+ '&"
-          }
-        }
-      }
+      let serverURL = this.generateServerUrl(server, functionInfo, args);
+      
       const fetchCode = functionInfo.parameters.length > 0 ? `const response = await fetch('${serverURL});` : `const response = await fetch('${serverURL}');` ;
   
         
       this.appendString(fetchCode);
-      this.appendString('const result = await response.json();');
+      this.appendString('const { result } = await response.json();');
       this.appendString("return result;");
       this.appendNewLine();  
       this.appendString(`}`);
@@ -112,16 +123,27 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       return args;
     }
 
+  generateImportFetch() {
+    let importFetchString = "import fetch from 'node-fetch';";
+    this.codeGenerated.set('allfunctions', importFetchString + this.codeGenerated.get('allfunctions'));
+    
+    for (let server of this.servers) {
+      this.codeGenerated.set(server.id, importFetchString );
+    } 
+  }
+
   generateFunctions(ctx) {
     this.visitProgram(ctx);
     this.codeGenerated.set("allfunctions", this.stringBuilder.toString())
+    this.generateImportFetch();
 
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
-          if (sourceElements[i].statement().functionDeclaration()) {
-            // // reinicio de stringBuilder
+          if (sourceElements[i].statement().functionDeclaration()) { // achou um servidor
+            // reinicio de stringBuilder
             this.stringBuilder = new StringBuilder();
+            // this.appendString("import fetch from 'node-fetch'");
             for (let funct of this.functions) {
               if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
@@ -139,14 +161,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
           }
       }   
     }
+    // this.generateImportFetch();
     return this.codeGenerated;
   }
 }
-
-// {
-
-    // definicao de servers com urls, porta, etc
-    // definicao de funcoes, seu argumentos e o server
-
-
-// }
