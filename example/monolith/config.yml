@@ -1,19 +1,31 @@
 # Definição dos servidores
 servers:
-  - id: beta
+  - id: sub
     port: 3000
-    url: url-beta
+    url: url-sub
+    rabbitmq:
+      exchange: sub_exchange
+      queue: sub_queue
+      connectionUrl: amqp://localhost/rabbit
   - id: alfa
     port: 8080
     url: url-alfa
+    rabbitmq:
+      exchange: alfa_exchange
+      queue: alfa_queue
+      connectionUrl: amqp://localhost/rabbit
   - id: gama
     port: 5000
     url: url-gama
+    rabbitmq:
+      exchange: gama_exchange
+      queue: gama_queue
+      connectionUrl: amqp://localhost/rabbit  
 
 # Definição das funções
 functions:
   - name: sub
-    server: beta
+    server: sub
     parameters: 
       - name: a
         type: number
