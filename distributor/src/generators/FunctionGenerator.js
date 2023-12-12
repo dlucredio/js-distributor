@@ -22,7 +22,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     try {
       // const yamlPath = path.resolve('config.yml')
       // const yamlPath = path.resolve('config2.yml')
-      const yamlPath = path.resolve('config3.yml')
+      const yamlPath = path.resolve('config4.yml')
       const config = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
       this.servers = config.servers;
       this.functions = config.functions;
@@ -37,16 +37,20 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     generateServerUrl(server, functionInfo, args) {
       let serverURL = `http://${server.url}:${server.port}/${functionInfo.name}`;
       
-      if (functionInfo.method.toUpperCase() === 'POST' && functionInfo.parameters.length > 0) {
-        let body = `{`;
-        for (let parameter of functionInfo.parameters) {
-          body += `${parameter.name}: ${parameter.name},`
+      if (functionInfo.method.toUpperCase() === 'POST') {
+        let bodyCallInsideReq = '';
+        if (functionInfo.parameters.length > 0) {
+          let body = `{`;
+          for (let parameter of functionInfo.parameters) {
+            body += `${parameter.name}: ${parameter.name},`
+          }
+          body += `};`;
+          this.appendString(`let body = ${body}`);
+          this.appendString(`body = JSON.stringify(body);`)
+          bodyCallInsideReq = 'body: body';
         }
-        body += `};`;
-        this.appendString(`let body = ${body}`);
-        this.appendString(`body = JSON.stringify(body);`)
-        let reqPostBody = `\nmethod: "POST",\nbody:body,\nheaders: {`;
-        reqPostBody += `"Content-type": "application/json",\n}`
+        let reqPostBody = `\nmethod: "POST", \nheaders: {`;
+        reqPostBody += `"Content-type": "application/json",\n}, ${bodyCallInsideReq}`
         serverURL += `', { ${reqPostBody}}`;
       } else if (functionInfo.method.toUpperCase() === 'GET' && functionInfo.parameters.length > 0) { // get e query
         serverURL += "?";
@@ -82,8 +86,14 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.appendNewLine();
       let serverURL = this.generateServerUrl(server, functionInfo, args);
       
-      const fetchCode = functionInfo.parameters.length > 0 ? `const response = await fetch('${serverURL});` : `const response = await fetch('${serverURL}');` ;
-  
+      let fetchCode = '';
+      if (functionInfo.method.toUpperCase() === 'POST') {
+        fetchCode = `const response = await fetch('${serverURL});`
+      } else if (functionInfo.method.toUpperCase() === 'GET' && functionInfo.parameters.length > 0) {
+        fetchCode = `const response = await fetch('${serverURL});`
+      } else if (functionInfo.method.toUpperCase() === 'GET' && functionInfo.parameters.length === 0) {
+        fetchCode = `const response = await fetch('${serverURL}');` ;
+      }
         
       this.appendString(fetchCode);
       this.appendString('const { result } = await response.json();');
@@ -92,15 +102,6 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.appendString(`}`);
     }
 
-    /* (!!!) serve para retornar args pra poder usar na query da chamada fetch - talvez retirar se tiver errado 
-    formalParameterArg
-    : assignable ('=' singleExpression)?      // ECMAScript 6: Initialization
-    ;
-
-    lastFormalParameterArg                        // ECMAScript 6: Rest Parameter
-    : Ellipsis singleExpression
-    ;
-    */
     visitFormalParameterList(ctx) {
       const args = [];
       if (ctx.formalParameterArg().length !== 0) {
@@ -143,7 +144,6 @@ export default class FunctionGenerator extends CopyPasteGenerator {
           if (sourceElements[i].statement().functionDeclaration()) { // achou um servidor
             // reinicio de stringBuilder
             this.stringBuilder = new StringBuilder();
-            // this.appendString("import fetch from 'node-fetch'");
             for (let funct of this.functions) {
               if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
