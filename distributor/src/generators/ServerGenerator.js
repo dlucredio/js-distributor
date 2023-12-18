@@ -39,12 +39,10 @@ export default class ServerGenerator extends FunctionGenerator {
     const functionName = ctx.identifier().getText();
     const functionInfo = this.functions.find((func) => func.name === functionName);
     const isAsync = ctx.identifier().Async() !== null || this.checkAsyncFunction(functionInfo, ctx);
-    console.log(functionName, 'is async?', isAsync);
     if (functionInfo) {
 
       // geracao do codigo da rota post ou get
       this.generateRouteCode(functionInfo);
-      this.appendString(`console.log("chegou na rota da funcao ${functionName}");`);
       const queryOrBody = functionInfo.method.toUpperCase() === 'POST' ? 'body' : 'query';
 
       // Processar parâmetros da função vindas do yml

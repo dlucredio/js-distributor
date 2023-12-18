@@ -134,8 +134,6 @@ export default class FunctionGenerator extends CopyPasteGenerator {
   }
 
   generateFunctions(ctx) {
-    this.visitProgram(ctx);
-    this.codeGenerated.set("allfunctions", this.stringBuilder.toString())
     this.generateImportFetch();
 
     if (ctx.sourceElements()) {

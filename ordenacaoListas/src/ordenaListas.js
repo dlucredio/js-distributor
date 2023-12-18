@@ -5,7 +5,7 @@ function main() {
     const listaOrdenada = ordenaListas(lista, 'selectionSort', 'selection sort');
     console.log("lista ordenada: ", listaOrdenada);
 
-    return 'sucesso';
+    return listaOrdenada;
 }
 
 function ordenaListas(lista, metodo, msg) {

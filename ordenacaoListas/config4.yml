@@ -34,7 +34,7 @@ functions:
         type: string
     method: get
   - name: sorteiaLista
-    server: server3
+    server: server4
     parameters: []
     method: post
   - name: insertionSort
@@ -52,7 +52,7 @@ functions:
         type: list
     method: post
   - name: ordenaListas
-    server: server5
+    server: server2
     parameters:
       - name: lista
         type: list
@@ -68,6 +68,6 @@ functions:
         type: list
     method: post
   - name: deTeste
-    server: server5
+    server: server1
     parameters: []
     method: GET
