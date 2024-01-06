@@ -19,12 +19,8 @@ export default class ServerGenerator extends FunctionGenerator {
     }
   }
 
-  // erro porque declaracao da funcao esta sendo confundida com import
   checkAsyncFunction(functionInfo, functionDeclCtx) {
-    // console.log('current func', functionInfo)
-    // console.log('current server', this.currentServerName)
     for (let funct of this.functions) {
-      // let functServer = (this.functions.find((func) => func.name === funct.name)).server;
       if (funct.name !== functionInfo.name && 
           functionDeclCtx.functionBody().getText().includes(funct.name) && 
           funct.server !== functionInfo.server
@@ -84,49 +80,81 @@ export default class ServerGenerator extends FunctionGenerator {
     super.visitArgumentsExpression(ctx);
   }
 
-  generateImports(functionInfo) {
-    const filename = `${this.nameOfProject}-modifiedNode-${functionInfo.server}.js`;
-    const importPath = `./${filename}`;
 
-    let code = `import { ${functionInfo.name} } from "${importPath}";` + this.codeGenerated.get(this.currentServerName);
-    this.codeGenerated.set(this.currentServerName, code);
+
+  visitExportStatement(ctx, funct) {
+    if (ctx.declaration().functionDeclaration() && ctx.declaration().functionDeclaration().identifier().getText() === funct.name) {
+      this.currentFunction  = funct;
+      this.currentServerName = funct.server;
+      this.visitFunctionDeclaration(ctx.declaration().functionDeclaration());
+      let newCode = this.codeGenerated.get(funct.server);
+      if (!newCode) newCode = this.stringBuilder.toString();
+      else  newCode += this.stringBuilder.toString();
+      this.codeGenerated.set(funct.server, newCode);
+      this.currentServerName = "";
+      console.log("salvou para", funct.server);
+    }
+  }
+
+  checkExportFunctionsDeclarations(sourceElementCtx, funct) {
+    if (sourceElementCtx.statement().exportStatement()) {
+      const exportStatementCtx = sourceElementCtx.statement().exportStatement();
+      this.visitExportStatement(exportStatementCtx, funct);
+    }
+  }
+
+  // visitAnonymousFunction(ctx) {
+  //   super.visitAnonymousFunction(ctx);
+  // }
+
+  generateImports(functionInfo) {
+    const filename = `./modifiedNode-${functionInfo.server}.js`;
+    const importPath = `./${filename}`;
+    let importCode = `import { ${functionInfo.name} } from "${importPath}";`;
+    if (this.codeGenerated.get(this.currentServerName)) importCode += this.codeGenerated.get(this.currentServerName);
+    this.codeGenerated.set(this.currentServerName, importCode);
   }
 
 
   generateFunctions(ctx) {
-    for (let i = 0; i < this.numServers; i++) {
-      this.appendString("import express from 'express';")
-      this.appendString(`const app = express();`);
-      this.appendString(`const port = ${this.servers[i].port};`); 
-      this.appendString();
-      this.appendString(`app.use(express.json());`);
-      this.appendString();
-      this.appendString(`app.listen(port, () => {`);
-      this.appendString(`  console.log('Servidor rodando na porta ' + port);`);
-      this.appendString(`});`);
-      this.appendNewLine();
-      let codeGenerated = this.stringBuilder.toString();
-      this.stringBuilder = new StringBuilder();
+    // for (let i = 0; i < this.numServers; i++) {
+    //   this.appendString("import express from 'express';")
+    //   this.appendString(`const app = express();`);
+    //   this.appendString(`const port = ${this.servers[i].port};`); 
+    //   this.appendString();
+    //   this.appendString(`app.use(express.json());`);
+    //   this.appendString();
+    //   this.appendString(`app.listen(port, () => {`);
+    //   this.appendString(`  console.log('Servidor rodando na porta ' + port);`);
+    //   this.appendString(`});`);
+    //   this.appendNewLine();
+    //   let codeGenerated = this.stringBuilder.toString();
+    //   this.stringBuilder = new StringBuilder();
 
-      // serverCodes.set(this.servers[i].id, codeGenerated);
-      this.codeGenerated.set(this.servers[i].id, codeGenerated);
-    }
+    //   // serverCodes.set(this.servers[i].id, codeGenerated);
+    //   this.codeGenerated.set(this.servers[i].id, codeGenerated);
+    // }
     
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
-          if (sourceElements[i].statement().functionDeclaration()) {
+          if (sourceElements[i].statement().functionDeclaration() ||
+              sourceElements[i].statement().exportStatement()) {
             // reinicio de stringBuilder
             this.stringBuilder = new StringBuilder();
             for (let funct of this.functions) {
-              if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
+              if (sourceElements[i].statement().functionDeclaration() && 
+                  funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
                 this.currentFunction  = funct;
                 this.currentServerName = funct.server;
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
                 let newCode = this.codeGenerated.get(funct.server);
-                newCode += this.stringBuilder.toString();
+                if (!newCode) newCode = this.stringBuilder.toString();
+                else  newCode += this.stringBuilder.toString();
                 this.codeGenerated.set(funct.server, newCode);
                 this.currentServerName = "";
+              } else if (sourceElements[i].statement().exportStatement()){
+                this.checkExportFunctionsDeclarations(sourceElements[i], funct)
               }
             }
           }

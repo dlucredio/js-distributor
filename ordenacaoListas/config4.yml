@@ -19,6 +19,12 @@ servers:
   - id: server5
     port: 3333
     url: localhost
+  - id: gama
+    port: 4444
+    url: localhost
+  - id: alfa
+    port: 5555
+    url: localhost
 
 functions:
   - name: main
@@ -28,7 +34,7 @@ functions:
   - name: sorteiaNumero
     server: server2
     parameters:
-      - name: n 
+      - name: x
         type: number
       - name: argTeste
         type: string
@@ -69,5 +75,71 @@ functions:
     method: post
   - name: deTeste
     server: server1
-    parameters: []
+    parameters:
+      - name: booleano
+        type: bool
     method: GET
+  - name: somarNumeros
+    server: gama
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+    method: POST
+  - name: ehPar
+    server: gama
+    parameters:
+      - name: numero
+        type: number
+    method: GET
+  - name: multiplicaNumeros
+    server: alfa
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+    method: GET
+  - name: doisValores
+    server: server3
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+    method: POST
+  - name: inverterString
+    server: server2
+    parameters:
+      - name: str
+        type: string
+    method: POST
+  - name: imprimeTresValores
+    server: alfa
+    parameters:
+      - name: value1
+        type: number
+      - name: value2
+        type: number
+      - name: value3
+        type: string
+    method: GET
+  - name: randomZeroUm
+    server: server5
+    parameters: []
+    method: POST
+  - name: multiplicaLista
+    server: server3
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+    method: GET
+  - name: multiplicaListaPassada
+    server: gama
+    parameters:
+      - name: lista
+        type: list
+    method: POST

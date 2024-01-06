@@ -8,8 +8,9 @@ import path from "path";
 let isFunctionDeclaration = false;
 
 export default class FunctionGenerator extends CopyPasteGenerator {
-  constructor() {
+  constructor(outputDir) {
     super();
+    this.outputDir = outputDir;
     this.servers = [];
     this.functions = [];
     this.numServers = 0;
@@ -20,9 +21,9 @@ export default class FunctionGenerator extends CopyPasteGenerator {
 
   loadYAML() {
     try {
-      // const yamlPath = path.resolve('config.yml')
-      // const yamlPath = path.resolve('config2.yml')
       const yamlPath = path.resolve('config4.yml')
+      // const yamlPath = path.resolve('config2.yml')
+      // const yamlPath = path.resolve('config4.yml')
       const config = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
       this.servers = config.servers;
       this.functions = config.functions;
@@ -124,36 +125,64 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       return args;
     }
 
-  generateImportFetch() {
-    let importFetchString = "import fetch from 'node-fetch';";
-    this.codeGenerated.set('allfunctions', importFetchString + this.codeGenerated.get('allfunctions'));
-    
-    for (let server of this.servers) {
-      this.codeGenerated.set(server.id, importFetchString );
-    } 
+  // generateImportFetch() {
+  //   let importFetchString = "import fetch from 'node-fetch';";
+     
+  //   for (let server of this.servers) {
+      
+  //     console.log(!code.includes(importFetchString))
+  //     if (!code || !code.includes(importFetchString))
+  //       this.codeGenerated.set(server.id, importFetchString );
+  //   } 
+  // }
+
+  visitExportStatement(ctx, funct) {
+    // console.log("ao menos chegou aui")
+    if (ctx.declaration().functionDeclaration() && ctx.declaration().functionDeclaration().identifier().getText() === funct.name) {
+      this.currentFunction  = funct;
+      this.currentServerName = funct.server;
+      this.visitFunctionDeclaration(ctx.declaration().functionDeclaration());
+      let newCode = this.codeGenerated.get(funct.server);
+      if (!newCode) newCode = this.stringBuilder.toString();
+      else  newCode += this.stringBuilder.toString();
+      this.codeGenerated.set(funct.server, newCode);
+      this.currentServerName = "";
+      console.log("salvou para", funct.server);
+    }
+  }
+
+  checkExportFunctionsDeclarations(sourceElementCtx, funct) {
+    // console.log("check", sourceElementCtx.statement().getText())
+    if (sourceElementCtx.statement().exportStatement()) {
+      const exportStatementCtx = sourceElementCtx.statement().exportStatement();
+      this.visitExportStatement(exportStatementCtx, funct);
+    }
   }
 
   generateFunctions(ctx) {
-    this.generateImportFetch();
+    // this.generateImportFetch();
 
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
-          if (sourceElements[i].statement().functionDeclaration()) { // achou um servidor
+          if (sourceElements[i].statement().functionDeclaration() ||
+              sourceElements[i].statement().exportStatement()) { // achou um servidor
+            // console.log('examinando funcao', sourceElements[i].statement().functionDeclaration().identifier().getText());
             // reinicio de stringBuilder
             this.stringBuilder = new StringBuilder();
             for (let funct of this.functions) {
-              if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
+              if (sourceElements[i].statement().functionDeclaration() && 
+                  funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
-                // let newCode = functionCode.get(funct.server);
                 let newCode = this.codeGenerated.get(funct.server);
                 if (newCode === undefined) {
                   newCode = this.stringBuilder.toString();
                 } else {
                   newCode += this.stringBuilder.toString();
                 }
-                // functionCode.set(funct.server, newCode);
                 this.codeGenerated.set(funct.server, newCode);
+              } else if (sourceElements[i].statement().exportStatement()) {
+                this.checkExportFunctionsDeclarations(sourceElements[i], funct);
               }
             }
           }

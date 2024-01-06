@@ -39,14 +39,14 @@ function selectionSort(arr) {
   
 
 // sorteia numero entre 2 e n
-function sorteiaNumero(n, argTeste) {
-    console.log(argTeste)
-    return Math.floor(Math.random() * n) + 2;
+function sorteiaNumero(x, argTeste) {
+    console.log('argumentos', x, argTeste)
+    return Math.floor(Math.random() * x) + 2;
 
 }
 
 // retorna uma lista aleatoria de tamanho "tam" e elementos entre 1 e 100
-function sorteiaLista() {
+export function sorteiaLista() {
     const tam = sorteiaNumero(20, "argumento de teste chegou");
     const lista = [];
     for (let i = 0; i < tam; i++) {
@@ -78,6 +78,5 @@ function imprimeLista(msg, lista) {
     console.log("funcao de teste retornou: ", deTeste())
 }
 
-function deTeste() {
-    return True;
-}
+
+main();
