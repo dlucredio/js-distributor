@@ -248,10 +248,10 @@ visitAnonymousFunctionDecl(ctx) {
 }
 
 visitArrowFunction(ctx) {
-if (ctx.Async()) this.appendTokens(ctx.Async());
-this.visitArrowFunctionParameters(ctx.arrowFunctionParameters());
-this.appendString(" => ");
-this.visitArrowFunctionBody(ctx.arrowFunctionBody());
+  if (ctx.Async()) this.appendTokens(ctx.Async());
+  this.visitArrowFunctionParameters(ctx.arrowFunctionParameters());
+  this.appendString(" => ");
+  this.visitArrowFunctionBody(ctx.arrowFunctionBody());
 }
 
 /*

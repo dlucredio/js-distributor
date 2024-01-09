@@ -40,11 +40,11 @@ functions:
         type: string
     method: get
   - name: sorteiaLista
-    server: server4
+    server: gama
     parameters: []
     method: post
   - name: insertionSort
-    server: server4
+    server: server2
     parameters:
       - name: inputArr
         type: list
@@ -74,7 +74,7 @@ functions:
         type: list
     method: post
   - name: deTeste
-    server: server1
+    server: server4
     parameters:
       - name: booleano
         type: bool
@@ -92,7 +92,7 @@ functions:
     parameters:
       - name: numero
         type: number
-    method: GET
+    method: POST
   - name: multiplicaNumeros
     server: alfa
     parameters:
@@ -116,7 +116,7 @@ functions:
         type: string
     method: POST
   - name: imprimeTresValores
-    server: alfa
+    server: server1
     parameters:
       - name: value1
         type: number
@@ -143,3 +143,47 @@ functions:
       - name: lista
         type: list
     method: POST
+  - name: deltaFunction
+    server: server1
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+      - name: c
+        type: number
+    method: POST
+  - name: testeDeltaMaiorQueZero
+    server: alfa
+    parameters:
+      - name: delta
+        type: number
+    method: GET
+  - name: calcularBhaskara
+    server: server5
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+      - name: c
+        type: number
+    method: GET
+  - name: fazTudoComLista
+    server: server2
+    parameters: []
+    method: POST
+  - name: subtraiNumero
+    server: server3
+    parameters: 
+      - name: a
+        type: number
+      - name: b
+        type: number
+    method: GET
+  - name: calculaQuadrado
+    server: alfa
+    parameters: 
+      - name: a
+        type: number
+    method: GET

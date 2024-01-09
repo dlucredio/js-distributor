@@ -21,6 +21,11 @@ function doisValores(a, b) {
         console.log('a, b, a eh par?');
         imprimeTresValores(a, b, ehPar(a));
     }
+
+    let teste2 = function() {
+        console.log("apenas um teste de funcao anonima");
+    }
+
     teste();
     console.log("a eh par?", ehPar(a));
     console.log("b eh par?", ehPar(b));
@@ -38,4 +43,8 @@ function imprimeTresValores(value1, value2, value3) {
     teste(value1);
     teste(value2);
     teste(value3);
+}
+
+function calculaQuadrado(a) {
+    return multiplicaNumeros(a, a);
 }

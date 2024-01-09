@@ -137,7 +137,6 @@ export default class FunctionGenerator extends CopyPasteGenerator {
   // }
 
   visitExportStatement(ctx, funct) {
-    // console.log("ao menos chegou aui")
     if (ctx.declaration().functionDeclaration() && ctx.declaration().functionDeclaration().identifier().getText() === funct.name) {
       this.currentFunction  = funct;
       this.currentServerName = funct.server;
@@ -147,12 +146,10 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       else  newCode += this.stringBuilder.toString();
       this.codeGenerated.set(funct.server, newCode);
       this.currentServerName = "";
-      console.log("salvou para", funct.server);
     }
   }
 
   checkExportFunctionsDeclarations(sourceElementCtx, funct) {
-    // console.log("check", sourceElementCtx.statement().getText())
     if (sourceElementCtx.statement().exportStatement()) {
       const exportStatementCtx = sourceElementCtx.statement().exportStatement();
       this.visitExportStatement(exportStatementCtx, funct);

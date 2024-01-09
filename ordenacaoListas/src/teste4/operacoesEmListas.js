@@ -4,8 +4,13 @@ import { multiplicaNumeros } from '../teste3/teste3.3/operacoes.js'
 function multiplicaLista(){
     const lista = sorteiaLista();
     let mult = 1;
-    lista.forEach((item) => {
+
+    for (let item of lista) {
         mult = multiplicaNumeros(mult, item);
+    }
+
+    lista.forEach((item) => {
+        console.log("apenas um teste de forEach");
     })
     console.log('lista', lista);
     console.log('mult', mult);
@@ -14,9 +19,9 @@ function multiplicaLista(){
 
 function multiplicaListaPassada(lista) {
     let mult = 1;
-    lista.forEach((item) => {
+    for (let item of lista) {
         mult = multiplicaNumeros(mult, item);
-    })
+    }
 
     console.log('lista', lista);
     console.log('mult', mult);

@@ -1,10 +1,15 @@
 import { StringBuilder } from "./generator-utils.js";
 import FunctionGenerator from "./FunctionGenerator.js";
+import path from "path";
+import fs from "fs";
+import beautify from "js-beautify";
 
 export default class ServerGenerator extends FunctionGenerator {
   constructor() {
     super();
     this.currentServerName = "";
+    this.functionsImportedInsideServer = new Map();
+    this.filesInitialized = [];
   }
 
   generateRouteCode(functionInfo) {
@@ -22,14 +27,64 @@ export default class ServerGenerator extends FunctionGenerator {
   checkAsyncFunction(functionInfo, functionDeclCtx) {
     for (let funct of this.functions) {
       if (funct.name !== functionInfo.name && 
-          functionDeclCtx.functionBody().getText().includes(funct.name) && 
-          funct.server !== functionInfo.server
+          functionDeclCtx.functionBody().getText().includes(funct.name)
           ) {
         return true;
       }
     }
     return false;
   }
+  // && funct.server !== functionInfo.server
+
+  // checkAsyncAnounymousFunctionDecl(ctx) {
+  //   // console.log("chegou", anonymousFunctionCtx)
+  //   let isAsync = false;
+  //   if (anonymousFunctionCtx.functionBody()) {
+  //     for (let functionInfo of this.functions) {
+  //       let functionServer = functionInfo.server;
+  //       if (anonymousFunctionCtx.functionBody().getText().includes(functionInfo.name) &&
+  //         (functionServer !== this.currentServerName)) 
+  //           isAsync = true;
+  //     }
+  //   } else if (anonymousFunctionCtx.arrowFunctionBody()) {
+  //     for (let functionInfo of this.functions) {
+  //       let functionServer = functionInfo.server;
+  //       if (anonymousFunctionCtx.arrowFunctionBody().getText().includes(functionInfo.name) &&
+  //         (functionServer !== this.currentServerName)) 
+  //           isAsync = true;
+  //     }
+  //   }
+  //   return isAsync;
+  // }
+
+  checkAsyncAnounymousArrowFunction(ctx) {
+    let isAsync = false;
+    if (ctx.arrowFunctionBody()) {
+      for (let functionInfo of this.functions) {
+        let functionServer = functionInfo.server;
+        if (ctx.arrowFunctionBody().getText().includes(functionInfo.name) &&
+          (functionServer !== this.currentServerName)) 
+            isAsync = true;
+      }
+    }
+
+    return isAsync;
+  }
+
+  checkAsyncAnounymousFunctionDecl(ctx) {
+    let isAsync = false;
+    if (ctx.functionBody()) {
+      for (let functionInfo of this.functions) {
+        let functionServer = functionInfo.server;
+        if (ctx.functionBody().getText().includes(functionInfo.name) &&
+          (functionServer !== this.currentServerName)) 
+            isAsync = true;
+      }
+    }
+
+    return isAsync;
+  }
+  
 
   visitFunctionDeclaration(ctx) {
     const functionName = ctx.identifier().getText();
@@ -72,11 +127,15 @@ export default class ServerGenerator extends FunctionGenerator {
     const functionName = ctx.children[0].getText();
     // tester se é uma funcao do servidor ou uma funcao de outro servidor
     const functionInfo = this.functions.find((func) => func.name === functionName);
+
     if (functionInfo && functionInfo.server !== this.currentServerName) {
       this.generateImports(functionInfo, ctx.children[1]);
-      this.appendString("await ");    
-      // this.addAsyncAndAwait()
     }
+
+    // para evitar await repetidos em funcoes async com chamada await
+    if (functionInfo && !ctx.parentCtx.getText().includes("await"))
+      this.appendString("await ");      
+    
     super.visitArgumentsExpression(ctx);
   }
 
@@ -92,7 +151,6 @@ export default class ServerGenerator extends FunctionGenerator {
       else  newCode += this.stringBuilder.toString();
       this.codeGenerated.set(funct.server, newCode);
       this.currentServerName = "";
-      console.log("salvou para", funct.server);
     }
   }
 
@@ -103,20 +161,82 @@ export default class ServerGenerator extends FunctionGenerator {
     }
   }
 
-  // visitAnonymousFunction(ctx) {
-  //   super.visitAnonymousFunction(ctx);
-  // }
+  // anonymousFunction
+  //   : Async? Function_ '*'? '(' formalParameterList? ')' functionBody    # AnonymousFunctionDecl
+  //   | Async? arrowFunctionParameters '=>' arrowFunctionBody                     # ArrowFunction
+  //   ;
 
+  visitAnonymousFunctionDecl(ctx) {
+    if (ctx.Async() || this.checkAsyncAnounymousFunctionDecl(ctx)) this.appendString("async ");
+    this.appendTokens(ctx.Function_());
+    if (ctx.children[0].getText().includes("*") || ctx.children[1].getText().includes("*")) this.appendString("*");
+    this.appendString("(");
+    if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
+    this.appendString(")");
+    this.visitFunctionBody(ctx.functionBody());
+  }
+
+  visitArrowFunction(ctx) {
+    if (ctx.Async() || this.checkAsyncAnounymousArrowFunction(ctx)) this.appendString("async ");
+    this.visitArrowFunctionParameters(ctx.arrowFunctionParameters());
+    this.appendString(" => ");
+    this.visitArrowFunctionBody(ctx.arrowFunctionBody());
+
+  }
+  
+  checkDoubleImport(importSearched, functionInfo) {
+    let isAlreadyImported = false;
+    const functionsImported = this.functionsImportedInsideServer.get(this.currentServerName); 
+    
+    if (functionsImported) 
+      isAlreadyImported = functionsImported.includes(functionInfo.name);
+
+    return isAlreadyImported || this.checkDoubleImportAux(importSearched);
+  }
+
+  // checkar se importacao de uma funcao nao foi feita no servidor por outro arquivo anterior
+  checkDoubleImportAux(importSearched) {
+    // le arquivo do servidor correspondente
+    const filepath = `./src-gen/modifiedNodeServer-${this.currentServerName}.js`;
+    
+    // se arquivo existe e servidor ja foi inicializado (garante que nao esta executando novamente com arquivos existentes em src-gen)
+    if (fs.existsSync(filepath) && this.filesInitialized.includes(filepath)) {
+        
+      try {
+        const code = fs.readFileSync(filepath, 'utf8');
+
+        // testa se import sendo feito ja esta nesse arquivo
+        if (code.includes(beautify(importSearched, {
+          indent_size: 4,
+          space_in_empty_paren: true,
+        }))) { 
+          return true; // se tiver, return true
+        } else return false; // se nao tiver, retorna false
+      } catch(e) { 
+        console.log(e);
+        return; 
+      }
+    } 
+    
+    return false;
+  }
+
+  // gera imports necessarios
   generateImports(functionInfo) {
-    const filename = `./modifiedNode-${functionInfo.server}.js`;
+    const filename = `modifiedNode-${functionInfo.server}.js`;
     const importPath = `./${filename}`;
     let importCode = `import { ${functionInfo.name} } from "${importPath}";`;
-    if (this.codeGenerated.get(this.currentServerName)) importCode += this.codeGenerated.get(this.currentServerName);
-    this.codeGenerated.set(this.currentServerName, importCode);
+    
+    if (!this.checkDoubleImport(importCode, functionInfo)) {
+      if (this.codeGenerated.get(this.currentServerName)) importCode += this.codeGenerated.get(this.currentServerName);
+      this.codeGenerated.set(this.currentServerName, importCode);
+      this.functionsImportedInsideServer.set(this.currentServerName, functionInfo.name);
+    }
   }
 
 
-  generateFunctions(ctx) {
+
+  generateFunctions(ctx, filesInitialized) {
     // for (let i = 0; i < this.numServers; i++) {
     //   this.appendString("import express from 'express';")
     //   this.appendString(`const app = express();`);
@@ -134,7 +254,7 @@ export default class ServerGenerator extends FunctionGenerator {
     //   // serverCodes.set(this.servers[i].id, codeGenerated);
     //   this.codeGenerated.set(this.servers[i].id, codeGenerated);
     // }
-    
+    this.filesInitialized = filesInitialized;
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {

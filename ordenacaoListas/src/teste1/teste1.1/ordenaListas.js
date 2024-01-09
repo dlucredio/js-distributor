@@ -46,8 +46,8 @@ function sorteiaNumero(x, argTeste) {
 }
 
 // retorna uma lista aleatoria de tamanho "tam" e elementos entre 1 e 100
-export function sorteiaLista() {
-    const tam = sorteiaNumero(20, "argumento de teste chegou");
+export async function sorteiaLista() {
+    const tam = await sorteiaNumero(20, "argumento de teste chegou");
     const lista = [];
     for (let i = 0; i < tam; i++) {
         lista.push(Math.floor(Math.random() * 100) + 1);
@@ -75,7 +75,7 @@ function insertionSort(inputArr) {
 
 function imprimeLista(msg, lista) {
     console.log(msg, lista);
-    console.log("funcao de teste retornou: ", deTeste())
+    console.log("funcao de teste retornou: ", deTeste("true"))
 }
 
 

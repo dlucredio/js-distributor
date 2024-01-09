@@ -141,84 +141,42 @@ function getPortOfServer(serverName) {
   return serverInfo.port;
 }
 
-function generateFunctionFiles(inputDir, outputDir, target) {
-  console.log(`Generating function files from directory ${inputDir}`);
-  
-  let serversInitialized = [];
-  fs.readdir(inputDir, (err, items) => {
-    if (err) {
-      console.error(`Error reading directory ${inputDir}: ${err}`);
-      return;
-    }
+function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[]) {
+  let items = fs.readdirSync(inputDir);
+  for (let item of items) {
+    const itemPath = path.join(inputDir, item);
+    if (fs.statSync(itemPath).isDirectory()) {
+      filesInicialized = generateFunctionFiles(itemPath, outputDir, target, filesInicialized)
+    } else {
+      try {
+        const input = fs.readFileSync(itemPath, { encoding: "utf8" });
+        const chars = new antlr4.InputStream(input);
+        const lexer = new JavaScriptLexer(chars);
+        const tokens = new antlr4.CommonTokenStream(lexer);
+        const parser = new JavaScriptParser(tokens);
+        parser.buildParseTrees = true;
+        const tree = parser.program();
 
-    items.forEach((item) => {
-      const itemPath = path.join(inputDir, item);
-
-      if (fs.statSync(itemPath).isDirectory()) generateFunctionFiles(itemPath, outputDir, target)
-      else { 
-        try {
-          const input = fs.readFileSync(itemPath, { encoding: "utf8" });
-          const chars = new antlr4.InputStream(input);
-          const lexer = new JavaScriptLexer(chars);
-          const tokens = new antlr4.CommonTokenStream(lexer);
-          const parser = new JavaScriptParser(tokens);
-          parser.buildParseTrees = true;
-          const tree = parser.program();
-
-          // Gerador das funcoes de cada servidor isoladas
-          const functionGenerator = new FunctionGenerator();
-          const modifiedNodeCode = functionGenerator.generateFunctions(tree);
-          
-          // percorre todos codigos de funcoes gerados para todos servidores
-          for (var [key, code] of modifiedNodeCode) {
-            let outputFile = path.join(outputDir, item);
-            outputFile = `./src-gen/modifiedNode-${key}.js`;
-            
-            // se arquivo nao existe ou execucao esta sendo feito novamente, cria outro
-            if (!fs.existsSync(outputFile) || !serversInitialized.includes(key)) {
-              fs.writeFileSync(
-                outputFile,
-                generateInitialCode("function"),
-              );
-              serversInitialized.push(key);
-            }
-
-            if (code !== null) {
-              fs.appendFile(
-                outputFile, 
-                '\n'+beautify(code, {
-                  indent_size: 4,
-                  space_in_empty_paren: true,
-                }), 
-                (err) => {
-                if (err) {
-                  console.error('Erro ao adicionar conteúdo ao arquivo:', err);
-                }
-              });
-            }
-          }
-
-
-        // Gerador de servidor node
-        serversInitialized = [];
+        // Gerador das funcoes de cada servidor isoladas
+        const functionGenerator = new FunctionGenerator();
+        const modifiedNodeCode = functionGenerator.generateFunctions(tree);
         
-        const serverGenerator = new ServerGenerator();  
-        const modifiedServerCode = serverGenerator.generateFunctions(tree); 
-
-        // percorre todos codigos de servidores gerados
-        for (var [key, code] of modifiedServerCode) {
+        // percorre todos codigos de funcoes gerados para todos servidores
+        for (var [key, code] of modifiedNodeCode) {
           let outputFile = path.join(outputDir, item);
-          outputFile = `./src-gen/modifiedNodeServer-${key}.js`;
-          if (!fs.existsSync(outputFile)|| !serversInitialized.includes(key)) {
+          outputFile = `./src-gen/modifiedNode-${key}.js`;
+          
+          // se arquivo nao existe ou execucao esta sendo feito novamente, cria outro
+          if (!fs.existsSync(outputFile) || !filesInicialized.includes(outputFile)) {
             fs.writeFileSync(
               outputFile,
-              generateInitialCode("server", key),
+              generateInitialCode("function"),
             );
-            serversInitialized.push(key);
-          } 
-          
+            filesInicialized.push(outputFile);
+          }
+
           if (code !== null) {
-            fs.appendFile(
+            fs.appendFileSync(
               outputFile, 
               '\n'+beautify(code, {
                 indent_size: 4,
@@ -232,35 +190,70 @@ function generateFunctionFiles(inputDir, outputDir, target) {
           }
         }
 
-          // Adiciona o código para gerar com EventSourceGenerator
 
-          // tree -> generateFunctions
-          // const EventSourceGen = new EventSourceGenerator();
-          // const modifiedEventSource = EventSourceGen.generateFunctions(tree);
-
-          // modifiedEventSource.forEach(function(code, i) {
-          //   let outputFile = path.join(outputDir, filename);
-          //   outputFile = `${outputFile.slice(0, -3)}-modifiedES-${i}.js`;
-
-          //   if (fs.existsSync(outputFile)) {
-          //     fs.rmSync(outputFile);
-          //   }
-
-          //   if (code !== null) {
-          //     fs.writeFileSync(
-          //       outputFile,
-          //       beautify(code, {
-          //         indent_size: 4,
-          //         space_in_empty_paren: true,
-          //       })
-          //     );
-          //   }
-          // });
-        } catch (e) {
-          console.log(e);
+      // Gerador de servidor node
+      // serversInitialized = [];
+      
+      const serverGenerator = new ServerGenerator();  
+      const modifiedServerCode = serverGenerator.generateFunctions(tree, filesInicialized);
+      // necessario passar codigo gerado na iteracao anterior para gerador
+      // modifiedServerCode = serverGenerator.generateFunctions(tree, modifiedServerCode); 
+      // percorre todos codigos de servidores gerados
+      for (var [key, code] of modifiedServerCode) {
+        let outputFile = path.join(outputDir, item);
+        outputFile = `./src-gen/modifiedNodeServer-${key}.js`;
+        if (!fs.existsSync(outputFile)|| !filesInicialized.includes(outputFile)) {
+          fs.writeFileSync(
+            outputFile,
+            generateInitialCode("server", key),
+          );
+          filesInicialized.push(outputFile);
+        } 
+        
+        if (code !== null) {
+          fs.appendFileSync(
+            outputFile, 
+            '\n'+beautify(code, {
+              indent_size: 4,
+              space_in_empty_paren: true,
+            }), 
+            (err) => {
+            if (err) {
+              console.error('Erro ao adicionar conteúdo ao arquivo:', err);
+            }
+          });
         }
       }
-    });
-  });
-}
 
+
+        // Adiciona o código para gerar com EventSourceGenerator
+
+        // tree -> generateFunctions
+        // const EventSourceGen = new EventSourceGenerator();
+        // const modifiedEventSource = EventSourceGen.generateFunctions(tree);
+
+        // modifiedEventSource.forEach(function(code, i) {
+        //   let outputFile = path.join(outputDir, filename);
+        //   outputFile = `${outputFile.slice(0, -3)}-modifiedES-${i}.js`;
+
+        //   if (fs.existsSync(outputFile)) {
+        //     fs.rmSync(outputFile);
+        //   }
+
+        //   if (code !== null) {
+        //     fs.writeFileSync(
+        //       outputFile,
+        //       beautify(code, {
+        //         indent_size: 4,
+        //         space_in_empty_paren: true,
+        //       })
+        //     );
+        //   }
+        // });
+      } catch (e) {
+        console.log(e);
+      }
+    }
+  }
+  return filesInicialized;
+}
