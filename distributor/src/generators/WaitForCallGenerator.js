@@ -99,4 +99,33 @@ export default class WaitForCallGenerator extends FunctionGenerator {
     }
   }
 
+  generateFunctions(ctx) {
+    this.visitProgram(ctx);
+    this.codeGenerated.set("allfunctions", this.stringBuilder.toString());
+
+    if (ctx.sourceElements()) {
+      const sourceElements = ctx.sourceElements().children;
+      for (let i in sourceElements) {
+        if (sourceElements[i].statement().functionDeclaration()) {
+          // reinicio de stringBuilder
+          this.stringBuilder = new StringBuilder();
+          for (let funct of this.functions) {
+            if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
+              // Verifica se o código para este servidor já foi gerado
+              if (!this.codeGenerated.has(funct.server)) {
+                this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
+                let newCode = this.stringBuilder.toString();
+                let existingCode = this.codeGenerated.get(funct.server);
+                if (existingCode) {
+                  newCode = existingCode + newCode;
+                }
+                this.codeGenerated.set(funct.server, newCode);
+              }
+            }
+          }
+        }
+      }
+    }
+    return this.codeGenerated;
+  }
 }
