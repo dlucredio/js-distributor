@@ -1,98 +1,144 @@
 import { StringBuilder } from "./generator-utils.js";
 import FunctionGenerator from "./FunctionGenerator.js";
-
+var amqpImportAdded = false;
 export default class RabbitMQGenerator extends FunctionGenerator {
   constructor() {
     super();
+    this.functionMap = this.buildFunctionMap(this.functions);
+  }
+  buildFunctionMap(functions) {
+    const functionMap = {};
+    functions.forEach((func) => {
+      if (!functionMap[func.server]) {
+        functionMap[func.server] = [];
+      }
+      functionMap[func.server].push(func);
+    });
+    return functionMap;
   }
 
   visitFunctionDeclaration(ctx) {
+   
     const functionName = ctx.identifier().getText();
-    const functionInfo = this.functions.find((func) => func.name === functionName);
+    const functionInfo = this.functions.find(
+      (func) => func.name === functionName
+    );
     const server = this.servers.find((s) => s.id === functionInfo.server);
-    const paramNames = functionInfo.parameters.map((param) => param.name).join(', ');
-    const connectionUrl = server.rabbitmq.connectionUrl || 'amqp://localhost';
-    if (functionInfo && server && server.rabbitmq) {
+    const paramNames = functionInfo.parameters
+      .map((param) => param.name)
+      .join(", ");
+    const connectionUrl = server.rabbitmq.connectionUrl || "amqp://localhost";
+
+
+    this.appendString(`import amqp from 'amqplib';`);
+    for (const func of this.functionMap[server.id]) {
+      this.appendString(`export{${func.name}};`);
+    
+    if (functionInfo) {
       const exchange = server.rabbitmq.exchange;
       const queue = server.rabbitmq.queue;
 
-      this.appendString(`const express = require('express');`);
-      this.appendString(`const amqp = require('amqplib');`);
-      this.appendString(`const bodyParser = require('body-parser');`);
-      this.appendString();
-      this.appendString(`const app = express();`);
-      this.appendString(`const port = ${ 3000};`);
-      this.appendString();
-      this.appendString(`app.use(bodyParser.json());`);
-      this.appendString();
-
-      this.appendString(`async function publishToRabbitMQ(message) {`);
-      this.appendString(`const connection = await amqp.connect('${connectionUrl}');`);
-      this.appendString(`  const channel = await connection.createChannel();`);
-      this.appendString(`  await channel.assertExchange('${exchange}', 'fanout', { durable: false });`);
-      this.appendString(`  await channel.assertQueue('${queue}', { durable: false });`);
-      this.appendString(`  await channel.bindQueue('${queue}', '${exchange}', '');`);
-      this.appendString(`  channel.sendToQueue('${queue}', Buffer.from(JSON.stringify(message)));`);
-      this.appendString(`  setTimeout(() => connection.close(), 500);`);
-      this.appendString(`}`);
-      this.appendNewLine();
-
-      this.appendString(`async function consumeFromRabbitMQ(callback) {`);
-      this.appendString(`const connection = await amqp.connect('${connectionUrl}');`);
-      this.appendString(`  const channel = await connection.createChannel();`);
-      this.appendString(`  await channel.assertQueue('${queue}', { durable: false });`);
-      this.appendString(`  channel.consume('${queue}', (msg) => {`);
-      this.appendString(`    if (msg) {`);
-      this.appendString(`      const message = JSON.parse(msg.content.toString());`);
-      this.appendString(`      callback(message);`);
-      this.appendString(`    }`);
-      this.appendString(`  }, { noAck: true });`);
-      this.appendString(`}`);
-      this.appendNewLine();
-
-      this.appendString(`app.post('/publish', async (req, res) => {`);
-      this.appendString(`  try {`);
-      if(paramNames != undefined && paramNames != null){
-        this.appendString(`const { ${paramNames} }= req.body`)
+      // publish
+      this.appendString(`async function ${functionName}(${paramNames}) {`);
+      this.appendString(`  const p = new Promise(async (resolve, reject) => {`);
+      this.appendString(`    try {`);
+      this.appendString(`      console.log("Conectando ao RabbitMQ...");`);
+      this.appendString(
+        `      const connection = await amqp.connect("${connectionUrl}");`
+      );
+      this.appendString(`      console.log("Conexão bem-sucedida!");`);
+      this.appendString(
+        `      console.log("Enviando chamada para a função ${functionName}");`
+      );
+      this.appendString(
+        `      const channel = await connection.createChannel();`
+      );
+      this.appendString(`      let queueName = "${queue}";`);
+      this.appendString(`      console.log("Declarando fila: ${queue}");`);
+      this.appendString(`      await channel.assertQueue(queueName, {`);
+      this.appendString(`        durable: false,`);
+      this.appendString(`      });`);
+      this.appendString(`      const callObj = {`);
+      this.appendString(`        funcName: "${functionName}",`);
+      this.appendString(`        type: "call",`);
+      this.appendString(`        parameters: {`);
+      for (const paramName of functionInfo.parameters) {
+        this.appendString(`          ${paramName.name}: ${paramName.name},`);
       }
-      this.appendString(`    const { message } = await ${functionName}(${paramNames});`);
-      this.appendString(`const exchange = ${exchange};`);
-      this.appendString(`const queue = ${queue};`);
-      this.appendString(`    await publishToRabbitMQ({message}, exchange, queue);`);
-      this.appendString(`    res.json({ message });`);
-      this.appendString(`  } catch (error) {`);
-      this.appendString(`    res.status(500).send('Error publishing message to RabbitMQ.');`);
-      this.appendString(`  }`);
-      this.appendString(`});`);
+      this.appendString(`        },`);
+      this.appendString(`      };`);
+      this.appendString(`      channel.consume(`);
+      this.appendString(`        queueName,`);
+      this.appendString(`        (msg) => {`);
+      this.appendString(`          if (msg) {`);
+      this.appendString(
+        `            const message = JSON.parse(msg.content.toString());`
+      );
+      this.appendString(
+        `            console.log("Recebendo resposta para a função ${functionName}");`
+      );
+      this.appendString(
+        `            if (message.funcName === "${functionName}" && message.type === "response") {`
+      );
+      this.appendString(`              const result = message.result;`);
+      this.appendString(
+        `              console.log("Resposta recebida:", result);`
+      );
+      this.appendString(`              resolve(result);`);
+      this.appendString(`            }`);
+      this.appendString(`          }`);
+      this.appendString(`        },`);
+      this.appendString(`        {`);
+      this.appendString(`          noAck: true,`);
+      this.appendString(`        }`);
+      this.appendString(`      );`);
+      this.appendString(
+        `      console.log("Enviando mensagem para a fila: ${queue}");`
+      );
+      this.appendString(
+        `      channel.sendToQueue(queueName, Buffer.from(JSON.stringify(callObj)));`
+      );
+      this.appendString(`    } catch (error) {`);
+      this.appendString(
+        `      console.error("Erro ao processar chamada para a função ${functionName}:", error);`
+      );
+      this.appendString(`      reject(error);`);
+      this.appendString(`    }`);
+      this.appendString(`  });`);
+      this.appendString(`  return p;`);
+      this.appendString(`}`);
       this.appendNewLine();
 
-      this.appendString(`app.get('/consume', (req, res) => {`);
-      this.appendString(`  try {`);
-      this.appendString(`    consumeFromRabbitMQ((message) => {`);
-      this.appendString(`      res.json(message);`);
-      this.appendString(`    }, ${queue});`);
-      this.appendString(`  } catch (error) {`);
-      this.appendString(`    res.status(500).send('Error consuming message from RabbitMQ.');`);
-      this.appendString(`  }`);
-      this.appendString(`});`);
-      this.appendNewLine();
-
-      this.appendString(`app.listen(port, () => {`);
-      this.appendString(`  console.log(\`Server listening at http://localhost:${3000}\`);`);
-      this.appendString(`});`);
-      this.appendNewLine();
-    
-      this.appendString(`async function ${functionName}(${paramNames})`)
-      this.appendString("{")
-      if (ctx.functionBody()) {
-        this.visitFunctionBody(ctx.functionBody());
-        }
-      this.appendString("}") 
-
-    } else {
-      console.error(`Configuração RabbitMQ não encontrada para o servidor "${functionInfo.server}".`);
+    }
     }
   }
+  generateFunctions(ctx) {
+    this.visitProgram(ctx);
+    this.codeGenerated.set("allfunctions", this.stringBuilder.toString());
+
+    if (ctx.sourceElements()) {
+      const sourceElements = ctx.sourceElements().children;
+      for (let i in sourceElements) {
+        if (sourceElements[i].statement().functionDeclaration()) {
+          // reinicio de stringBuilder
+          this.stringBuilder = new StringBuilder();
+          for (let funct of this.functions) {
+            if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
+              // Verifica se o código para este servidor já foi gerado
+              if (!this.codeGenerated.has(funct.server)) {
+                this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
+                let newCode = this.stringBuilder.toString();
+                let existingCode = this.codeGenerated.get(funct.server);
+                if (existingCode) {
+                  newCode = existingCode + newCode;
+                }
+                this.codeGenerated.set(funct.server, newCode);
+              }
+            }
+          }
+        }
+      }
+    }
+    return this.codeGenerated;
+  }
 }
-
-
