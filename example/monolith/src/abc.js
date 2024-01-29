@@ -1,21 +1,28 @@
-async function sub(a,b){
-    return a-b;
+
+
+// Função no servidor "sub"
+async function sub(a, b) {
+  return a - b;
 }
 
-async function sum (a,b){
-    return a+b;
+async function sum(a, b) {
+  return a + b;
 }
 
-async function calculateRectangleArea(length, width) {
-    if (length <= 0 || width <= 0) {
-      throw new Error("Both length and width must be greater than 0.");
-    }
-    
-    const area = length * width;
-    return area;
-  }
+async function rodeiSum(a,b){
+  return sum(a,b);
+}
+// Função principal que chama a função "sub"
+async function main() {
+  const result = await sub(10, 5);
+  console.log('Rodei sub aqui')
+  console.log("Resultado da função sub:", result);
+  const result2 = await rodeiSum(7, 3);
+  console.log('Rodei sum')
+  console.log("Resultado da função sum:", result2);
+  return { result, result2 };
+}
 
-
-  function foo () { return 1 }
-
-foo() === 1
+export  {
+  sub, sum, main, rodeiSum
+}
