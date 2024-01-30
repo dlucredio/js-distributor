@@ -19,8 +19,9 @@ export default class ServerGenerator extends FunctionGenerator {
       this.appendString(`,async (req, res) => {`);
     } else if (functionInfo.method.toUpperCase() === 'POST') {
       this.appendString(`app.post('/${functionInfo.name}', async (req, res) => {`);
-    } else {
-      console.error("Invalid HTTP method. It must be get or post");
+    } 
+    else if (functionInfo.method.toUpperCase() !== 'RABBIT') {
+      console.error("Invalid method. It must be get, post or rabbit");
     }
   }
 

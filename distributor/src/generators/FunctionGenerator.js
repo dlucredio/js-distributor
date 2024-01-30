@@ -28,7 +28,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.servers = config.servers;
       this.functions = config.functions;
       this.numServers = this.servers.length;
-      this.nameOfProject = config.project.name;
+      // this.nameOfProject = config.project.name;
     } catch (e) {
       console.error('Erro ao carregar o arquivo YAML:', e);
     }

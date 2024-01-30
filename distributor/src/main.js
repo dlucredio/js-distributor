@@ -7,8 +7,9 @@ import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
 import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 import CopyPasteGenerator from "./generators/copypaste-generator.js";
 import FunctionGenerator from "./generators/FunctionGenerator.js";
-import EventSourceGenerator from "./generators/EventSourceGenerator.js";
 import ServerGenerator from "./generators/ServerGenerator.js";
+import RabbitMQGenerator from "./generators/RabbitMQGenerator.js";
+import WaitForCallGenerator from "./generators/WaitForCallGenerator.js";
 
 export default function main(
   mode,
@@ -24,7 +25,7 @@ export default function main(
   });
 
   if (mode === "single") {
-    generateCodeDir(target, inputDirRelative, outputDir);
+    // generateCodeDir(target, inputDirRelative, outputDir);
     generateFunctionFiles(inputDirRelative, outputDir, target);
   } else if (mode === "watch") {
     let fsWait = false;
@@ -147,7 +148,7 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
     const itemPath = path.join(inputDir, item);
     if (fs.statSync(itemPath).isDirectory()) {
       filesInicialized = generateFunctionFiles(itemPath, outputDir, target, filesInicialized)
-    } else {
+    } else if (itemPath.slice(-2) === "js") {
       try {
         const input = fs.readFileSync(itemPath, { encoding: "utf8" });
         const chars = new antlr4.InputStream(input);
@@ -222,6 +223,46 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
               console.error('Erro ao adicionar conteúdo ao arquivo:', err);
             }
           });
+        }
+      }
+
+      const RabbitGenerator = new RabbitMQGenerator();  
+      const modifiedRabbit = RabbitGenerator.generateFunctions(tree); 
+      for (var [key, code] of modifiedRabbit) {
+        let outputFile = path.join(outputDir, item);
+        outputFile = `${outputFile.slice(0, -3)}-RabbitMQ-${key}.js`;
+        if (fs.existsSync(outputFile)) {
+          fs.rmSync(outputFile);
+        }
+
+        if (code !== null) {
+          fs.writeFileSync(
+            outputFile,
+            beautify(code, {
+              indent_size: 4,
+              space_in_empty_paren: true,
+            })
+          );
+        }
+      }
+
+      const WaitCallGenerator = new WaitForCallGenerator();  
+      const ModifiedWaitCall = WaitCallGenerator.generateFunctions(tree);
+      for (var [key, code] of ModifiedWaitCall) {
+        let outputFile = path.join(outputDir, item);
+        outputFile = `${outputFile.slice(0, -3)}-waitforcall-${key}.js`;
+        if (fs.existsSync(outputFile)) {
+          fs.rmSync(outputFile);
+        }
+
+        if (code !== null) {
+          fs.writeFileSync(
+            outputFile,
+            beautify(code, {
+              indent_size: 4,
+              space_in_empty_paren: true,
+            })
+          );
         }
       }
 

@@ -18,15 +18,17 @@ export default class RabbitMQGenerator extends FunctionGenerator {
   }
 
   visitFunctionDeclaration(ctx) {
-   
     const functionName = ctx.identifier().getText();
     const functionInfo = this.functions.find(
       (func) => func.name === functionName
     );
-    const server = this.servers.find((s) => s.id === functionInfo.server);
+    const server = this.servers.find((s) => s.id === functionInfo.server && functionInfo.method.toUpperCase() === 'RABBIT');
+    
+    if (server === undefined) return;
     const paramNames = functionInfo.parameters
       .map((param) => param.name)
       .join(", ");
+    // console.log("antes do connection", server.id);
     const connectionUrl = server.rabbitmq.connectionUrl || "amqp://localhost";
 
 
@@ -125,7 +127,9 @@ export default class RabbitMQGenerator extends FunctionGenerator {
           for (let funct of this.functions) {
             if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
               // Verifica se o código para este servidor já foi gerado
-              if (!this.codeGenerated.has(funct.server)) {
+              const serverInfo = this.servers.find((server)=> server.id === funct.server);
+              // console.log("geracao do rabbit para server", funct.server, serverInfo.id)
+              if (!this.codeGenerated.has(funct.server) && serverInfo.method.toUpperCase() === 'RABBIT') {
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
                 let newCode = this.stringBuilder.toString();
                 let existingCode = this.codeGenerated.get(funct.server);

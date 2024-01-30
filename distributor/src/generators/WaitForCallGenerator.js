@@ -37,8 +37,9 @@ export default class WaitForCallGenerator extends FunctionGenerator {
     const functionInfo = this.functions.find((func) => func.name === functionName);
 
     if (functionInfo) {
-      const server = this.servers.find((s) => s.id === functionInfo.server);
+      const server = this.servers.find((s) => s.id === functionInfo.server && functionInfo.method.toUpperCase() === 'RABBIT');
 
+      if (!server) return;
       if (server) {
         // Gerar imports para todas as funções associadas ao servidor
         for (const func of this.functionMap[server.id]) {
