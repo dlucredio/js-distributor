@@ -137,7 +137,9 @@ export default class FunctionGenerator extends CopyPasteGenerator {
   // }
 
   visitExportStatement(ctx, funct) {
-    if (ctx.declaration().functionDeclaration() && ctx.declaration().functionDeclaration().identifier().getText() === funct.name) {
+    const declarationCtx = ctx.declaration();
+    if (!declarationCtx) return;
+    else if (declarationCtx.functionDeclaration() && ctx.declaration().functionDeclaration().identifier().getText() === funct.name) {
       this.currentFunction  = funct;
       this.currentServerName = funct.server;
       this.visitFunctionDeclaration(ctx.declaration().functionDeclaration());
@@ -168,8 +170,10 @@ export default class FunctionGenerator extends CopyPasteGenerator {
             // reinicio de stringBuilder
             this.stringBuilder = new StringBuilder();
             for (let funct of this.functions) {
+              // if (funct.name === 'ordenaListas') console.log("examinando funcao", funct.name, funct.method, '\n')
               if (sourceElements[i].statement().functionDeclaration() && 
-                  funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
+                  funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText() &&
+                  (funct.method.toUpperCase() === 'POST' || funct.method.toUpperCase() === 'GET')) {
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
                 let newCode = this.codeGenerated.get(funct.server);
                 if (newCode === undefined) {

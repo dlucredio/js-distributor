@@ -11,14 +11,26 @@ servers:
     port: 3000
     url: localhost
     method: node
+    rabbitmq:
+      exchange: server1_exchange
+      queue: server1_queue
+      connectionUrl: amqp://localhost
   - id: server2
     port: 5000
     url: localhost
     method: node
+    rabbitmq:
+      exchange: server2_exchange
+      queue: server2_queue
+      connectionUrl: amqp://localhost
   - id: server3
     port: 1111
     url: localhost
     method: node
+    rabbitmq:
+      exchange: server3_exchange
+      queue: server3_queue
+      connectionUrl: amqp://localhost
   - id: server4
     port: 2222
     url: localhost
@@ -35,31 +47,8 @@ servers:
     port: 5555
     url: localhost
     method: node
-  - id: server1_rabbit
-    port: 3001
-    url: url-server1
-    method: rabbit
-    rabbitmq:
-      exchange: server1_exchange
-      queue: server1_queue
-      connectionUrl: amqp://localhost
-  - id: server2_rabbit
-    port: 5001
-    url: url-server2
-    method: rabbit
-    rabbitmq:
-      exchange: server2_exchange
-      queue: server2_queue
-      connectionUrl: amqp://localhost
-  - id: server3_rabbit
-    port: 5004
-    url: url-server3
-    method: rabbit
-    rabbitmq:
-      exchange: server3_exchange
-      queue: server3_queue
-      connectionUrl: amqp://localhost
 
+# retirar method dos servers
 functions:
   - name: main
     server: server1
@@ -222,7 +211,7 @@ functions:
         type: number
     method: GET
   - name: sub_rabbit
-    server: server1_rabbit
+    server: server1
     parameters: 
       - name: a
         type: number
@@ -230,7 +219,7 @@ functions:
         type: number
     method: rabbit
   - name: sum_rabbit
-    server: server2_rabbit
+    server: server2
     parameters: 
       - name: a
         type: number
@@ -238,7 +227,7 @@ functions:
         type: number
     method: rabbit
   - name: rodeiSum
-    server: server1_rabbit
+    server: server1
     parameters: 
       - name: a
         type: number
@@ -246,6 +235,6 @@ functions:
         type: number
     method: rabbit
   - name: main_rabbit
-    server: server3_rabbit
+    server: server3
     parameters: []
     method: rabbit

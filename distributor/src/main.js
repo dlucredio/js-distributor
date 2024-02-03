@@ -131,6 +131,8 @@ function generateInitialCode(typeOfCode, serverName) {
     code += `});`;
 
     return code;
+  } else if (typeOfCode === 'rabbit') {
+    return "";
   }
 };
 
@@ -165,7 +167,7 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
         // percorre todos codigos de funcoes gerados para todos servidores
         for (var [key, code] of modifiedNodeCode) {
           let outputFile = path.join(outputDir, item);
-          outputFile = `./src-gen/modifiedNode-${key}.js`;
+          outputFile = `./src-gen/functions-${key}.js`;
           
           // se arquivo nao existe ou execucao esta sendo feito novamente, cria outro
           if (!fs.existsSync(outputFile) || !filesInicialized.includes(outputFile)) {
@@ -201,8 +203,9 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
       // modifiedServerCode = serverGenerator.generateFunctions(tree, modifiedServerCode); 
       // percorre todos codigos de servidores gerados
       for (var [key, code] of modifiedServerCode) {
+        console.log("nao entrou aqui!")
         let outputFile = path.join(outputDir, item);
-        outputFile = `./src-gen/modifiedNodeServer-${key}.js`;
+        outputFile = `./src-gen/start-${key}.js`;
         if (!fs.existsSync(outputFile)|| !filesInicialized.includes(outputFile)) {
           fs.writeFileSync(
             outputFile,
@@ -227,35 +230,59 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
       }
 
       const RabbitGenerator = new RabbitMQGenerator();  
-      const modifiedRabbit = RabbitGenerator.generateFunctions(tree); 
+      const modifiedRabbit = RabbitGenerator.generateFunctions(tree, filesInicialized); 
+      // for (var [key, code] of modifiedRabbit) {
+      //   let outputFile = path.join(outputDir, item);
+      //   outputFile = `${outputFile.slice(0, -3)}-RabbitMQ-${key}.js`;
+      //   if (fs.existsSync(outputFile)) {
+      //     fs.rmSync(outputFile);
+      //   }
+
+      //   if (code !== null) {
+      //     console.log("gerando arquivo", outputFile, '\n')
+      //     fs.writeFileSync(
+      //       outputFile,
+      //       beautify(code, {
+      //         indent_size: 4,
+      //         space_in_empty_paren: true,
+      //       })
+      //     );
+      //   }
+      // }
+
       for (var [key, code] of modifiedRabbit) {
         let outputFile = path.join(outputDir, item);
-        outputFile = `${outputFile.slice(0, -3)}-RabbitMQ-${key}.js`;
-        if (fs.existsSync(outputFile)) {
-          fs.rmSync(outputFile);
-        }
-
-        if (code !== null) {
+        outputFile = `./src-gen/start-${key}.js`;
+        if (!fs.existsSync(outputFile)|| !filesInicialized.includes(outputFile)) {
           fs.writeFileSync(
             outputFile,
-            beautify(code, {
+            generateInitialCode("rabbit", key),
+          );
+          filesInicialized.push(outputFile);
+        } 
+        
+        if (code !== null) {
+          fs.appendFileSync(
+            outputFile, 
+            '\n'+beautify(code, {
               indent_size: 4,
               space_in_empty_paren: true,
-            })
-          );
+            }), 
+            (err) => {
+            if (err) {
+              console.error('Erro ao adicionar conteúdo ao arquivo:', err);
+            }
+          });
         }
       }
 
       const WaitCallGenerator = new WaitForCallGenerator();  
       const ModifiedWaitCall = WaitCallGenerator.generateFunctions(tree);
       for (var [key, code] of ModifiedWaitCall) {
+        console.log("teste")
         let outputFile = path.join(outputDir, item);
-        outputFile = `${outputFile.slice(0, -3)}-waitforcall-${key}.js`;
-        if (fs.existsSync(outputFile)) {
-          fs.rmSync(outputFile);
-        }
-
-        if (code !== null) {
+        outputFile = `./src-gen/waitforcall-${key}.js`;
+        if (!fs.existsSync(outputFile)|| !filesInicialized.includes(outputFile)) {
           fs.writeFileSync(
             outputFile,
             beautify(code, {
@@ -263,6 +290,21 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
               space_in_empty_paren: true,
             })
           );
+          filesInicialized.push(outputFile);
+        } 
+
+        if (code !== null) {
+          fs.appendFileSync(
+            outputFile, 
+            '\n'+beautify(code, {
+              indent_size: 4,
+              space_in_empty_paren: true,
+            }), 
+            (err) => {
+            if (err) {
+              console.error('Erro ao adicionar conteúdo ao arquivo:', err);
+            }
+          });
         }
       }
 

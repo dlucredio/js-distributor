@@ -102,7 +102,7 @@ export default class WaitForCallGenerator extends FunctionGenerator {
 
   generateFunctions(ctx) {
     this.visitProgram(ctx);
-    this.codeGenerated.set("allfunctions", this.stringBuilder.toString());
+    // this.codeGenerated.set("allfunctions", this.stringBuilder.toString());
 
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
@@ -112,8 +112,9 @@ export default class WaitForCallGenerator extends FunctionGenerator {
           this.stringBuilder = new StringBuilder();
           for (let funct of this.functions) {
             if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
+              const serverInfo = this.servers.find((server)=> server.id === funct.server);
               // Verifica se o código para este servidor já foi gerado
-              if (!this.codeGenerated.has(funct.server)) {
+              if (!this.codeGenerated.has(funct.server) && funct.method.toUpperCase() === 'RABBIT') {
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
                 let newCode = this.stringBuilder.toString();
                 let existingCode = this.codeGenerated.get(funct.server);

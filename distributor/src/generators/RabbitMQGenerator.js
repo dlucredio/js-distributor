@@ -23,7 +23,7 @@ export default class RabbitMQGenerator extends FunctionGenerator {
       (func) => func.name === functionName
     );
     const server = this.servers.find((s) => s.id === functionInfo.server && functionInfo.method.toUpperCase() === 'RABBIT');
-    
+    if (functionInfo.method.toUpperCase() !== "RABBIT") return;
     if (server === undefined) return;
     const paramNames = functionInfo.parameters
       .map((param) => param.name)
@@ -34,7 +34,8 @@ export default class RabbitMQGenerator extends FunctionGenerator {
 
     this.appendString(`import amqp from 'amqplib';`);
     for (const func of this.functionMap[server.id]) {
-      this.appendString(`export{${func.name}};`);
+      if (func.method.toUpperCase() ==="RABBIT")
+        this.appendString(`export{${func.name}};`);
     
     if (functionInfo) {
       const exchange = server.rabbitmq.exchange;
@@ -114,9 +115,9 @@ export default class RabbitMQGenerator extends FunctionGenerator {
     }
     }
   }
-  generateFunctions(ctx) {
-    this.visitProgram(ctx);
-    this.codeGenerated.set("allfunctions", this.stringBuilder.toString());
+  generateFunctions(ctx, filesInicialized) {
+    // this.visitProgram(ctx);
+    // this.codeGenerated.set("allfunctions", this.stringBuilder.toString());
 
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
@@ -129,7 +130,7 @@ export default class RabbitMQGenerator extends FunctionGenerator {
               // Verifica se o código para este servidor já foi gerado
               const serverInfo = this.servers.find((server)=> server.id === funct.server);
               // console.log("geracao do rabbit para server", funct.server, serverInfo.id)
-              if (!this.codeGenerated.has(funct.server) && serverInfo.method.toUpperCase() === 'RABBIT') {
+              if (!this.codeGenerated.has(funct.server)) {
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
                 let newCode = this.stringBuilder.toString();
                 let existingCode = this.codeGenerated.get(funct.server);

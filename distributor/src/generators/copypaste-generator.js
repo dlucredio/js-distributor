@@ -797,8 +797,11 @@ debuggerStatement --
   
     
     // ifStatement
+    // ifStatement
+    // : If '(' expressionSequence ')' statement (Else statement)?
+    // ;
     visitIfStatement(ctx) {
-      this.appendString("if");
+      this.appendString("if ");
       this.appendString("(");
       this.visitExpressionSequence(ctx.expressionSequence());
       this.appendString(") ");
@@ -1337,5 +1340,94 @@ debuggerStatement --
       this.appendString(ctx.children[1].getText());
       this.appendString('}');
     }
+  }
+
+  // novo - jsx
+  // htmlElements
+  //   : htmlElement+
+  //   ; ok
+
+  // htmlElement
+  //     : '<' htmlTagStartName htmlAttribute* '>' htmlContent '<' '/' htmlTagClosingName '>'
+  //     | '<' htmlTagName htmlAttribute* htmlContent '/' '>'
+  //     | '<' htmlTagName htmlAttribute* '/' '>'
+  //     | '<' htmlTagName htmlAttribute* '>'
+  //     ; ok
+  visitHtmlElement(ctx) {
+    this.appendString("<");
+    if (ctx.htmlTagStartName()) {
+      this.visitHtmlTagStartName(ctx.htmlTagStartName());
+      for (const htmlAttribute of ctx.htmlAttribute()) {
+        this.visitHtmlAtribute(htmlAttribute);
+      }
+      this.appendString(">");
+      this.visitHtmlContent(ctx.htmlContent());
+      this.appendString("<");
+      this.visitHtmlTagClosingName(ctx.htmlTagClosingName());
+    } else {
+      this.visitChildren(ctx);
+      if (ctx.getText().slice(-2) === '/>') this.appendString("/");
+    }
+
+    this.appendString(">");
+  }
+
+  // htmlContent
+  //     : htmlChardata? ((htmlElement | objectExpressionSequence) htmlChardata?)*
+  //     ; ok
+
+  // htmlTagStartName
+  //     : htmlTagName {this.pushHtmlTagName($htmlTagName.text);}
+  //     ; ok
+
+  // htmlTagClosingName
+  //     : htmlTagName {this.popHtmlTagName($htmlTagName.text)}?
+  //     ; ok
+
+  // htmlTagName
+  //     : TagName
+  //     | keyword
+  //     | Identifier
+  //     ;  ok
+  visitHtmlTagName(ctx) {
+      this.appendString(ctx.getText());
+  }
+
+  // htmlAttribute
+  //     : htmlAttributeName '=' htmlAttributeValue
+  //     | htmlAttributeName
+  //     ; ok
+  visitHtmlAttribute(ctx) {
+    this.visitHtmlAttributeName(ctx.htmlAttributeName());
+    if (ctx.htmlAttributeValue()) {
+      this.appendString("=");
+      this.visitHtmlAtributeValue(ctx.htmlAttributeValue())
+    }
+  }
+
+  // htmlAttributeName
+  //     : TagName
+  //     | Identifier ('-' Identifier)* // 2020/10/28 bugfix: '-' is recognized as MINUS and TagName is splited by '-'.
+  //     ; ok
+  visitHtmlAttributeName(ctx) {
+    this.appendString(ctx.getText());
+  }
+
+  // htmlChardata
+  //     : ~('<' | '{')+
+  //     ; ok
+  visitHtmlChardata(ctx) {
+    this.appendString(ctx.getText());
+  }
+
+  // htmlAttributeValue
+  //     : AttributeValue
+  //     | StringLiteral
+  //     | objectExpressionSequence
+  //     ; ok
+  visitHtmlAttributeValue() {
+    if (ctx.objectExpressionSequence()) {
+      visitObjectExpressionSequence(ctx.objectExpressionSequence());
+    } else this.appendString(ctx.getText());
   }
 }

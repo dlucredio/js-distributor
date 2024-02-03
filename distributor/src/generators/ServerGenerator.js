@@ -89,8 +89,11 @@ export default class ServerGenerator extends FunctionGenerator {
 
   visitFunctionDeclaration(ctx) {
     const functionName = ctx.identifier().getText();
+    console.log("function name que chegou aqui", functionName, "\n")
+    // const functionName = ctx.identifier().getText();
     const functionInfo = this.functions.find((func) => func.name === functionName);
     const isAsync = ctx.identifier().Async() !== null || this.checkAsyncFunction(functionInfo, ctx);
+    if (functionInfo.method.toUpperCase() !== 'POST' && functionInfo.method.toUpperCase() !== 'GET') return;
     if (functionInfo) {
 
       // geracao do codigo da rota post ou get
@@ -143,7 +146,9 @@ export default class ServerGenerator extends FunctionGenerator {
 
 
   visitExportStatement(ctx, funct) {
-    if (ctx.declaration().functionDeclaration() && ctx.declaration().functionDeclaration().identifier().getText() === funct.name) {
+    const declarationCtx = ctx.declaration();
+    if (!declarationCtx) return;
+    else if (declarationCtx.functionDeclaration() && ctx.declaration().functionDeclaration().identifier().getText() === funct.name) {
       this.currentFunction  = funct;
       this.currentServerName = funct.server;
       this.visitFunctionDeclaration(ctx.declaration().functionDeclaration());
@@ -156,6 +161,7 @@ export default class ServerGenerator extends FunctionGenerator {
   }
 
   checkExportFunctionsDeclarations(sourceElementCtx, funct) {
+    console.log("aqui ", funct.name, "\n")
     if (sourceElementCtx.statement().exportStatement()) {
       const exportStatementCtx = sourceElementCtx.statement().exportStatement();
       this.visitExportStatement(exportStatementCtx, funct);
@@ -198,7 +204,7 @@ export default class ServerGenerator extends FunctionGenerator {
   // checkar se importacao de uma funcao nao foi feita no servidor por outro arquivo anterior
   checkDoubleImportAux(importSearched) {
     // le arquivo do servidor correspondente
-    const filepath = `./src-gen/modifiedNodeServer-${this.currentServerName}.js`;
+    const filepath = `./src-gen/start-${this.currentServerName}.js`;
     
     // se arquivo existe e servidor ja foi inicializado (garante que nao esta executando novamente com arquivos existentes em src-gen)
     if (fs.existsSync(filepath) && this.filesInitialized.includes(filepath)) {
@@ -224,7 +230,8 @@ export default class ServerGenerator extends FunctionGenerator {
 
   // gera imports necessarios
   generateImports(functionInfo) {
-    const filename = `modifiedNode-${functionInfo.server}.js`;
+    if (functionInfo.method.toUpperCase() !== 'GET' && functionInfo.method.toUpperCase() !== 'POST') return;
+    const filename = `functions-${functionInfo.server}.js`;
     const importPath = `./${filename}`;
     let importCode = `import { ${functionInfo.name} } from "${importPath}";`;
     
