@@ -115,7 +115,7 @@ export default class RabbitMQGenerator extends FunctionGenerator {
     }
     }
   }
-  generateFunctions(ctx, filesInicialized) {
+  generateFunctions(ctx, filesInitialized) {
     // this.visitProgram(ctx);
     // this.codeGenerated.set("allfunctions", this.stringBuilder.toString());
 
@@ -128,8 +128,6 @@ export default class RabbitMQGenerator extends FunctionGenerator {
           for (let funct of this.functions) {
             if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
               // Verifica se o código para este servidor já foi gerado
-              const serverInfo = this.servers.find((server)=> server.id === funct.server);
-              // console.log("geracao do rabbit para server", funct.server, serverInfo.id)
               if (!this.codeGenerated.has(funct.server)) {
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
                 let newCode = this.stringBuilder.toString();

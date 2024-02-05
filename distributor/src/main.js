@@ -144,12 +144,12 @@ function getPortOfServer(serverName) {
   return serverInfo.port;
 }
 
-function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[]) {
+function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[]) {
   let items = fs.readdirSync(inputDir);
   for (let item of items) {
     const itemPath = path.join(inputDir, item);
     if (fs.statSync(itemPath).isDirectory()) {
-      filesInicialized = generateFunctionFiles(itemPath, outputDir, target, filesInicialized)
+      filesInitialized = generateFunctionFiles(itemPath, outputDir, target, filesInitialized)
     } else if (itemPath.slice(-2) === "js") {
       try {
         const input = fs.readFileSync(itemPath, { encoding: "utf8" });
@@ -170,12 +170,12 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
           outputFile = `./src-gen/functions-${key}.js`;
           
           // se arquivo nao existe ou execucao esta sendo feito novamente, cria outro
-          if (!fs.existsSync(outputFile) || !filesInicialized.includes(outputFile)) {
+          if (!fs.existsSync(outputFile) || !filesInitialized.includes(outputFile)) {
             fs.writeFileSync(
               outputFile,
               generateInitialCode("function"),
             );
-            filesInicialized.push(outputFile);
+            filesInitialized.push(outputFile);
           }
 
           if (code !== null) {
@@ -198,20 +198,19 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
       // serversInitialized = [];
       
       const serverGenerator = new ServerGenerator();  
-      const modifiedServerCode = serverGenerator.generateFunctions(tree, filesInicialized);
+      const modifiedServerCode = serverGenerator.generateFunctions(tree, filesInitialized);
       // necessario passar codigo gerado na iteracao anterior para gerador
       // modifiedServerCode = serverGenerator.generateFunctions(tree, modifiedServerCode); 
       // percorre todos codigos de servidores gerados
       for (var [key, code] of modifiedServerCode) {
-        console.log("nao entrou aqui!")
         let outputFile = path.join(outputDir, item);
         outputFile = `./src-gen/start-${key}.js`;
-        if (!fs.existsSync(outputFile)|| !filesInicialized.includes(outputFile)) {
+        if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
           fs.writeFileSync(
             outputFile,
             generateInitialCode("server", key),
           );
-          filesInicialized.push(outputFile);
+          filesInitialized.push(outputFile);
         } 
         
         if (code !== null) {
@@ -230,7 +229,7 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
       }
 
       const RabbitGenerator = new RabbitMQGenerator();  
-      const modifiedRabbit = RabbitGenerator.generateFunctions(tree, filesInicialized); 
+      const modifiedRabbit = RabbitGenerator.generateFunctions(tree, filesInitialized); 
       // for (var [key, code] of modifiedRabbit) {
       //   let outputFile = path.join(outputDir, item);
       //   outputFile = `${outputFile.slice(0, -3)}-RabbitMQ-${key}.js`;
@@ -253,15 +252,16 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
       for (var [key, code] of modifiedRabbit) {
         let outputFile = path.join(outputDir, item);
         outputFile = `./src-gen/start-${key}.js`;
-        if (!fs.existsSync(outputFile)|| !filesInicialized.includes(outputFile)) {
+        if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
           fs.writeFileSync(
             outputFile,
             generateInitialCode("rabbit", key),
           );
-          filesInicialized.push(outputFile);
+          filesInitialized.push(outputFile);
         } 
         
         if (code !== null) {
+          // console.log("dando append no arquivo ", outputFile, "\n ")
           fs.appendFileSync(
             outputFile, 
             '\n'+beautify(code, {
@@ -282,7 +282,7 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
         console.log("teste")
         let outputFile = path.join(outputDir, item);
         outputFile = `./src-gen/waitforcall-${key}.js`;
-        if (!fs.existsSync(outputFile)|| !filesInicialized.includes(outputFile)) {
+        if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
           fs.writeFileSync(
             outputFile,
             beautify(code, {
@@ -290,7 +290,7 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
               space_in_empty_paren: true,
             })
           );
-          filesInicialized.push(outputFile);
+          filesInitialized.push(outputFile);
         } 
 
         if (code !== null) {
@@ -338,5 +338,5 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInicialized=[])
       }
     }
   }
-  return filesInicialized;
+  return filesInitialized;
 }
