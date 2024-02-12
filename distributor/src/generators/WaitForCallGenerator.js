@@ -36,6 +36,7 @@ export default class WaitForCallGenerator extends FunctionGenerator {
     const functionName = ctx.identifier().getText();
     const functionInfo = this.functions.find((func) => func.name === functionName);
 
+    if(functionInfo.method.toUpperCase() !== 'RABBIT') return;
     if (functionInfo) {
       const server = this.servers.find((s) => s.id === functionInfo.server && functionInfo.method.toUpperCase() === 'RABBIT');
 
@@ -70,6 +71,7 @@ export default class WaitForCallGenerator extends FunctionGenerator {
 
         // Loop pelas funcs associadas ao server
         for (const func of this.functionMap[server.id]) {
+          if(func.method.toUpperCase() !== 'RABBIT') continue;
           const parameters = func.parameters.map((param) => param.name).join(', ');
 
           this.appendString(`        if (message.funcName === "${func.name}" && message.type === "call") {`);
