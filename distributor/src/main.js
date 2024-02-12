@@ -228,28 +228,10 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
         }
       }
 
-      const RabbitGenerator = new RabbitMQGenerator();  
-      const modifiedRabbit = RabbitGenerator.generateFunctions(tree, filesInitialized); 
-      // for (var [key, code] of modifiedRabbit) {
-      //   let outputFile = path.join(outputDir, item);
-      //   outputFile = `${outputFile.slice(0, -3)}-RabbitMQ-${key}.js`;
-      //   if (fs.existsSync(outputFile)) {
-      //     fs.rmSync(outputFile);
-      //   }
+      const WaitforCallGenerator = new WaitForCallGenerator();  
+      const modifiedWaitForCall = WaitforCallGenerator.generateFunctions(tree, filesInitialized); 
 
-      //   if (code !== null) {
-      //     console.log("gerando arquivo", outputFile, '\n')
-      //     fs.writeFileSync(
-      //       outputFile,
-      //       beautify(code, {
-      //         indent_size: 4,
-      //         space_in_empty_paren: true,
-      //       })
-      //     );
-      //   }
-      // }
-
-      for (var [key, code] of modifiedRabbit) {
+      for (var [key, code] of modifiedWaitForCall) {
         let outputFile = path.join(outputDir, item);
         outputFile = `./src-gen/start-${key}.js`;
         if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
@@ -275,64 +257,6 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
           });
         }
       }
-
-      const WaitCallGenerator = new WaitForCallGenerator();  
-      const ModifiedWaitCall = WaitCallGenerator.generateFunctions(tree);
-      for (var [key, code] of ModifiedWaitCall) {
-        console.log("teste")
-        let outputFile = path.join(outputDir, item);
-        outputFile = `./src-gen/waitforcall-${key}.js`;
-        if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
-          fs.writeFileSync(
-            outputFile,
-            beautify(code, {
-              indent_size: 4,
-              space_in_empty_paren: true,
-            })
-          );
-          filesInitialized.push(outputFile);
-        } 
-
-        if (code !== null) {
-          fs.appendFileSync(
-            outputFile, 
-            '\n'+beautify(code, {
-              indent_size: 4,
-              space_in_empty_paren: true,
-            }), 
-            (err) => {
-            if (err) {
-              console.error('Erro ao adicionar conteúdo ao arquivo:', err);
-            }
-          });
-        }
-      }
-
-
-        // Adiciona o código para gerar com EventSourceGenerator
-
-        // tree -> generateFunctions
-        // const EventSourceGen = new EventSourceGenerator();
-        // const modifiedEventSource = EventSourceGen.generateFunctions(tree);
-
-        // modifiedEventSource.forEach(function(code, i) {
-        //   let outputFile = path.join(outputDir, filename);
-        //   outputFile = `${outputFile.slice(0, -3)}-modifiedES-${i}.js`;
-
-        //   if (fs.existsSync(outputFile)) {
-        //     fs.rmSync(outputFile);
-        //   }
-
-        //   if (code !== null) {
-        //     fs.writeFileSync(
-        //       outputFile,
-        //       beautify(code, {
-        //         indent_size: 4,
-        //         space_in_empty_paren: true,
-        //       })
-        //     );
-        //   }
-        // });
       } catch (e) {
         console.log(e);
       }
