@@ -4,9 +4,6 @@ import fs from "fs";
 import yaml from "js-yaml";
 import path from "path";
 
-// variavel global para permitir ou nao declaracao da funcao
-let isFunctionDeclaration = false;
-
 export default class FunctionGenerator extends CopyPasteGenerator {
   constructor(outputDir) {
     super();
@@ -22,16 +19,16 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     this.loadYAML();
   }
 
+  /**
+   * Carrega informações do arquivo yaml para os atributos da classe
+   */
   loadYAML() {
     try {
       const yamlPath = path.resolve("config4.yml");
-      // const yamlPath = path.resolve('config2.yml')
-      // const yamlPath = path.resolve('config4.yml')
       const config = yaml.load(fs.readFileSync(yamlPath, "utf8"));
       this.servers = config.servers;
       this.functions = config.functions;
       this.numServers = this.servers.length;
-      // this.nameOfProject = config.project.name;
     } catch (e) {
       console.error("Erro ao carregar o arquivo YAML:", e);
     }
@@ -48,7 +45,14 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     return functionMap;
   }
 
-  // gera url com parametros por body do post ou query para get
+  /**
+   * Gera URL de chamadas fetch correspondentes as funções, usando query para 
+   * passar argumentos de chamadas GET e body para argumentos de chamadas POST
+   * @param {*} server - informações do servidor do qual a chamada pertence
+   * @param {*} functionInfo - informações da função que está sendo chamadas 
+   * @param {*} args - possíveis argumentos da função
+   * @returns - URL da chamada
+   */
   generateServerUrl(server, functionInfo, args) {
     let serverURL = `http://${server.url}:${server.port}/${functionInfo.name}`;
 
@@ -71,7 +75,6 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       functionInfo.method.toUpperCase() === "GET" &&
       functionInfo.parameters.length > 0
     ) {
-      // get e query
       serverURL += "?";
       for (let i = 0; i < functionInfo.parameters.length; i++) {
         serverURL += `${functionInfo.parameters[i].name}=' + ${args[i]}`;
@@ -95,11 +98,13 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     });
     return functionMap;
   }
-  /* 
-    sobreposicao de visitFunctionDeclaration   
-  */
+  
+  /**
+   * Sobreescrita do visitFunctionDeclaration do copypaste para gerar códigos de chamadas fetch
+   * ou WaitForCall do Rabbit
+   * @param {*} ctx - context da função
+   */
   visitFunctionDeclaration(ctx) {
-    // Obtém o nome da função
     const functionName = ctx.identifier().getText();
     const functionInfo = this.functions.find(
       (func) => func.name === functionName
@@ -108,7 +113,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     const server = this.servers.find((server) => server.id === serverName);
     let args = [];
 
-    // declaração da função
+    // declaração da função quando ela é definida usando chamadas fetch
     if (functionInfo.method.toUpperCase() !== "RABBIT") {
       this.appendString(`export async function ${functionName}(`);
 
@@ -141,16 +146,12 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.appendNewLine();
       this.appendString(`}`);
     }
-    // Parte rabbit
+    // declaração da função quando ela é definida usando rabbitmq
     else if (functionInfo.method.toUpperCase() === "RABBIT") {
       const paramNames = functionInfo.parameters
         .map((param) => param.name)
         .join(", ");
       const connectionUrl = server.rabbitmq.connectionUrl || "amqp://localhost";
-      if(this.amqpImported == false){
-        this.appendString(`import amqp from 'amqplib';`);
-        this.amqpImported = true;
-      }
       
       this.appendString(
         `export async function ${functionName}(${paramNames}) {`
@@ -228,6 +229,11 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     }
   }
 
+  /**
+   * Sobreescrita de visitFormalParameterList para obter lista com argumentos da função gerada
+   * @param {*} ctx - context do formalParameterList
+   * @returns - lista com argumentos da função
+   */
   visitFormalParameterList(ctx) {
     const args = [];
     if (ctx.formalParameterArg().length !== 0) {
@@ -250,19 +256,16 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     return args;
   }
 
-  // generateImportFetch() {
-  //   let importFetchString = "import fetch from 'node-fetch';";
-
-  //   for (let server of this.servers) {
-
-  //     console.log(!code.includes(importFetchString))
-  //     if (!code || !code.includes(importFetchString))
-  //       this.codeGenerated.set(server.id, importFetchString );
-  //   }
-  // }
-
+  /**
+   * Sobreescrita de visitExportStatement para testar se ha alguma função do yaml definida com  
+   * export no arquivo de entrada e gerar código correspondente
+   * @param {*} ctx - context de exportStatement
+   * @param {*} funct - função definida no arquivo yaml que é verificada no exportStatement
+   * @returns - void
+   */
   visitExportStatement(ctx, funct) {
     const declarationCtx = ctx.declaration();
+    // se export não se trata de uma declaração, retorna
     if (!declarationCtx) return;
     else if (
       declarationCtx.functionDeclaration() &&
@@ -280,6 +283,11 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     }
   }
 
+  /**
+   * Auxiliar para testar definição de funções do yaml por export
+   * @param {*} sourceElementCtx - context do sourceElement
+   * @param {*} funct - função do yaml sendo buscada
+   */
   checkExportFunctionsDeclarations(sourceElementCtx, funct) {
     if (sourceElementCtx.statement().exportStatement()) {
       const exportStatementCtx = sourceElementCtx.statement().exportStatement();
@@ -287,14 +295,20 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     }
   }
 
+  /**
+   * Percorre SourceElements em busca de definição de funções que se encontram no arquivo yaml para 
+   * gerar então código correspondente em chamadas fetch ou WaitForCall do rabbit
+   * @param {*} ctx - raiz da árvore semântica
+   * @returns - código gerado correspondente para funções encontradas
+   */
   generateFunctions(ctx) {
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
-      for (let i in sourceElements) {
+      for (let i in sourceElements) { // percorre todos sourceElements
         if (
           sourceElements[i].statement().functionDeclaration() ||
           sourceElements[i].statement().exportStatement()
-        ) {
+        ) { 
           this.stringBuilder = new StringBuilder();
           for (let funct of this.functions) {
             const statement = sourceElements[i].statement();

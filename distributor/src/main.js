@@ -120,7 +120,9 @@ function generateCode(target, inputFile, outputFile) {
 // retorna codigo inicial (importacoes, inicializacao servidor) para cada tipo de arquivo
 function generateInitialCode(typeOfCode, serverName) {
   if (typeOfCode === 'function'){
-    return "import fetch from 'node-fetch';"
+    let code = "import fetch from 'node-fetch';\n";
+    code += `import amqp from 'amqplib';`
+    return code;
   } else if (typeOfCode === 'server') {
     let code = "import express from 'express';\n";
     code += "const app = express();\n";

@@ -106,7 +106,7 @@ functions:
         type: number
       - name: b
         type: number
-    method: POST
+    method: get
   - name: ehPar
     server: gama
     parameters:
@@ -178,7 +178,7 @@ functions:
     parameters:
       - name: delta
         type: number
-    method: GET
+    method: POST
   - name: calcularBhaskara
     server: server5
     parameters:
