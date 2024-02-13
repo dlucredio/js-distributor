@@ -10,7 +10,6 @@ servers:
   - id: server1
     port: 3000
     url: localhost
-    method: node
     rabbitmq:
       exchange: server1_exchange
       queue: server1_queue
@@ -18,7 +17,6 @@ servers:
   - id: server2
     port: 5000
     url: localhost
-    method: node
     rabbitmq:
       exchange: server2_exchange
       queue: server2_queue
@@ -26,7 +24,6 @@ servers:
   - id: server3
     port: 1111
     url: localhost
-    method: node
     rabbitmq:
       exchange: server3_exchange
       queue: server3_queue
@@ -34,21 +31,21 @@ servers:
   - id: server4
     port: 2222
     url: localhost
-    method: node
   - id: server5
     port: 3333
     url: localhost
-    method: node
   - id: gama
     port: 4444
     url: localhost
-    method: node
   - id: alfa
     port: 5555
     url: localhost
-    method: node
+    rabbitmq:
+      exchange: alfa_exchange
+      queue: alfa_queue
+      connectionUrl: amqp://localhost
 
-# retirar method dos servers
+# opcoes para method: post, get, rabbit
 functions:
   - name: main
     server: server1
@@ -209,7 +206,7 @@ functions:
     parameters: 
       - name: a
         type: number
-    method: GET
+    method: rabbit
   - name: sub_rabbit
     server: server1
     parameters: 
@@ -237,4 +234,10 @@ functions:
   - name: main_rabbit
     server: server3
     parameters: []
+    method: rabbit
+  - name: checkEhPositivo
+    server: server1
+    parameters:
+      - name: x
+        type: number
     method: rabbit

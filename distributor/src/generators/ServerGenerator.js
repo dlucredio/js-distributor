@@ -89,8 +89,6 @@ export default class ServerGenerator extends FunctionGenerator {
 
   visitFunctionDeclaration(ctx) {
     const functionName = ctx.identifier().getText();
-    console.log("function name que chegou aqui", functionName, "\n")
-    // const functionName = ctx.identifier().getText();
     const functionInfo = this.functions.find((func) => func.name === functionName);
     const isAsync = ctx.identifier().Async() !== null || this.checkAsyncFunction(functionInfo, ctx);
     if (functionInfo.method.toUpperCase() !== 'POST' && functionInfo.method.toUpperCase() !== 'GET') return;
@@ -131,8 +129,8 @@ export default class ServerGenerator extends FunctionGenerator {
     const functionName = ctx.children[0].getText();
     // tester se é uma funcao do servidor ou uma funcao de outro servidor
     const functionInfo = this.functions.find((func) => func.name === functionName);
-
-    if (functionInfo && functionInfo.server !== this.currentServerName) {
+    
+    if (functionInfo && (functionInfo.server !== this.currentServerName || functionInfo.method.toUpperCase() === 'RABBIT')) {
       this.generateImports(functionInfo, ctx.children[1]);
     }
 
@@ -161,7 +159,6 @@ export default class ServerGenerator extends FunctionGenerator {
   }
 
   checkExportFunctionsDeclarations(sourceElementCtx, funct) {
-    console.log("aqui ", funct.name, "\n")
     if (sourceElementCtx.statement().exportStatement()) {
       const exportStatementCtx = sourceElementCtx.statement().exportStatement();
       this.visitExportStatement(exportStatementCtx, funct);
@@ -230,11 +227,11 @@ export default class ServerGenerator extends FunctionGenerator {
 
   // gera imports necessarios
   generateImports(functionInfo) {
-    if (functionInfo.method.toUpperCase() !== 'GET' && functionInfo.method.toUpperCase() !== 'POST') return;
+    // if (functionInfo.method.toUpperCase() !== 'GET' && functionInfo.method.toUpperCase() !== 'POST') return;
     const filename = `functions-${functionInfo.server}.js`;
     const importPath = `./${filename}`;
     let importCode = `import { ${functionInfo.name} } from "${importPath}";`;
-    
+  
     if (!this.checkDoubleImport(importCode, functionInfo)) {
       if (this.codeGenerated.get(this.currentServerName)) importCode += this.codeGenerated.get(this.currentServerName);
       this.codeGenerated.set(this.currentServerName, importCode);

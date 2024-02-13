@@ -1,11 +1,14 @@
 import { StringBuilder } from "./generator-utils.js";
 import FunctionGenerator from "./FunctionGenerator.js";
+import fs from "fs";
+import beautify from "js-beautify";
 
 export default class WaitForCallGenerator extends FunctionGenerator {
   constructor() {
     super();
     this.functionMap = this.buildFunctionMap(this.functions);
     this.functionsImportedInsideServer = new Set();
+    this.filesInitialized = [];
   }
 
   buildFunctionMap(functions) {
@@ -32,6 +35,32 @@ export default class WaitForCallGenerator extends FunctionGenerator {
     }
   }
 
+  checkDoubleImportAux(importSearched) {
+    // le arquivo do servidor correspondente
+    const filepath = `./src-gen/start-${this.currentServerName}.js`;
+    
+    // se arquivo existe e servidor ja foi inicializado (garante que nao esta executando novamente com arquivos existentes em src-gen)
+    if (fs.existsSync(filepath) && this.filesInitialized.includes(filepath)) {
+        
+      try {
+        const code = fs.readFileSync(filepath, 'utf8');
+
+        // testa se import sendo feito ja esta nesse arquivo
+        if (code.includes(beautify(importSearched, {
+          indent_size: 4,
+          space_in_empty_paren: true,
+        }))) { 
+          return true; // se tiver, return true
+        } else return false; // se nao tiver, retorna false
+      } catch(e) { 
+        console.log(e);
+        return; 
+      }
+    } 
+    
+    return false;
+  }
+
   visitFunctionDeclaration(ctx) {
     const functionName = ctx.identifier().getText();
     const functionInfo = this.functions.find((func) => func.name === functionName);
@@ -52,10 +81,12 @@ export default class WaitForCallGenerator extends FunctionGenerator {
 
         // Adicionar o import para todas as funções associadas ao servidor
         for (const func of this.functionMap[server.id]) {
-          this.appendString(`import { ${func.name} } from "../src-gen/abc.js";`);
+          const importCode = `import { ${func.name} } from "./functions-${func.server}.js";`;
+          if (func.method.toUpperCase() === 'RABBIT' && !this.checkDoubleImportAux(importCode))
+            this.appendString(importCode);
         }
         this.appendNewLine();
-        this.appendString(`import amqp from 'amqplib';`);
+        // this.appendString(`import amqp from 'amqplib';`);
         this.appendString(`async function waitForCall${server.id}() {`);
         this.appendString(`  const connection = await amqp.connect("${server.rabbitmq.connectionUrl || 'amqp://localhost'}");`);
         this.appendString(`  console.log("Esperando por chamadas");`);
@@ -102,10 +133,9 @@ export default class WaitForCallGenerator extends FunctionGenerator {
     }
   }
 
-  generateFunctions(ctx) {
+  generateFunctions(ctx, filesInitialized) {
     this.visitProgram(ctx);
-    // this.codeGenerated.set("allfunctions", this.stringBuilder.toString());
-
+    this.filesInitialized = filesInitialized;
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
@@ -117,6 +147,7 @@ export default class WaitForCallGenerator extends FunctionGenerator {
               const serverInfo = this.servers.find((server)=> server.id === funct.server);
               // Verifica se o código para este servidor já foi gerado
               if (!this.codeGenerated.has(funct.server) && funct.method.toUpperCase() === 'RABBIT') {
+                this.currentServerName = funct.server;
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());
                 let newCode = this.stringBuilder.toString();
                 let existingCode = this.codeGenerated.get(funct.server);
@@ -124,6 +155,7 @@ export default class WaitForCallGenerator extends FunctionGenerator {
                   newCode = existingCode + newCode;
                 }
                 this.codeGenerated.set(funct.server, newCode);
+                this.currentServerName = "";
               }
             }
           }

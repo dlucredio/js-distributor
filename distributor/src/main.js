@@ -128,11 +128,9 @@ function generateInitialCode(typeOfCode, serverName) {
     code += `app.use(express.json());\n`;
     code += `app.listen(port, () => {\n`;
     code += `  console.log('Servidor rodando na porta ' + port);\n`;
-    code += `});`;
-
+    code += `});\n`;
+    code += `import amqp from 'amqplib';`
     return code;
-  } else if (typeOfCode === 'rabbit') {
-    return "";
   }
 };
 
@@ -237,7 +235,6 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
         if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
           fs.writeFileSync(
             outputFile,
-            generateInitialCode("rabbit", key),
           );
           filesInitialized.push(outputFile);
         } 
