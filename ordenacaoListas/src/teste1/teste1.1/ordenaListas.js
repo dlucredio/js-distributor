@@ -1,10 +1,13 @@
 // gera lista aleatoriamente e ordena
 
-function main() {
+import sub_rabbit from "../teste1.2/abc";
+
+async function main() {
+    console.log("");
     const lista = sorteiaLista();
     const listaOrdenada = ordenaListas(lista, 'selectionSort', 'selection sort');
     console.log("lista ordenada: ", listaOrdenada);
-
+    console.log("diferenca entre ultimo e primeiro elemento", sub_rabbit(listaOrdenada[(listaOrdenada.length-1)], listaOrdenada[0]))
     return listaOrdenada;
 }
 
@@ -46,8 +49,8 @@ function sorteiaNumero(x, argTeste) {
 }
 
 // retorna uma lista aleatoria de tamanho "tam" e elementos entre 1 e 100
-export async function sorteiaLista() {
-    const tam = await sorteiaNumero(20, "argumento de teste chegou");
+export function sorteiaLista() {
+    const tam = sorteiaNumero(20, "argumento de teste chegou");
     const lista = [];
     for (let i = 0; i < tam; i++) {
         lista.push(Math.floor(Math.random() * 100) + 1);
@@ -77,6 +80,10 @@ function imprimeLista(msg, lista) {
     console.log(msg, lista);
     console.log("funcao de teste retornou: ", deTeste("true"))
 }
+
+
+
+export { imprimeLista };
 
 
 main();
