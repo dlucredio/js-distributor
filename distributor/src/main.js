@@ -8,7 +8,6 @@ import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 import CopyPasteGenerator from "./generators/copypaste-generator.js";
 import FunctionGenerator from "./generators/FunctionGenerator.js";
 import ServerGenerator from "./generators/ServerGenerator.js";
-import RabbitMQGenerator from "./generators/RabbitMQGenerator.js";
 import WaitForCallGenerator from "./generators/WaitForCallGenerator.js";
 
 export default function main(
@@ -42,7 +41,7 @@ export default function main(
         console.log(
           `File ${filename} has changed (${event}). Generating code and function files again...`
         );
-        generateCodeDir(target, inputDirRelative, outputDir);
+        // generateCodeDir(target, inputDirRelative, outputDir);
         generateFunctionFiles(inputDirRelative, outputDir, target);
       }
     });
@@ -116,8 +115,13 @@ function generateCode(target, inputFile, outputFile) {
   }
 }
 
-
-// retorna codigo inicial (importacoes, inicializacao servidor) para cada tipo de arquivo
+/**
+ * Inicializa arquivos de servidores e funções com código estático necessário
+ * @param {*} typeOfCode - 'function' ou 'server': indica se deve inicializar com código do servidor
+ * ou function 
+ * @param {*} serverName - nome do servidor   
+ * @returns - código inicial que que inicializa arquivo
+ */
 function generateInitialCode(typeOfCode, serverName) {
   if (typeOfCode === 'function'){
     let code = "import fetch from 'node-fetch';\n";
@@ -136,7 +140,11 @@ function generateInitialCode(typeOfCode, serverName) {
   }
 };
 
-// auxiliar para obter porta do servidor passado
+/**
+ * Obtém porta de um dado servidor
+ * @param {*} serverName - nome do servidor buscado
+ * @returns - porta do servidor desejado
+ */
 function getPortOfServer(serverName) {
   const yamlPath = './config4.yml';
   const config = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
@@ -144,14 +152,26 @@ function getPortOfServer(serverName) {
   return serverInfo.port;
 }
 
+/**
+ * Função recursiva que percorre todos diretorios e arquivos de entrada gerando o codigo corresponde 
+ * das funções e servidores
+ * @param {*} inputDir - diretório corrente de entrada
+ * @param {*} outputDir - diretório de saida 
+ * @param {*} target - target de geração
+ * @param {*} filesInitialized - array de arquivos já inicializados 
+ * @returns - array de arquivos inicializados
+ */
 function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[]) {
   let items = fs.readdirSync(inputDir);
-  for (let item of items) {
+  for (let item of items) { // percorre itens (arquivos e diretórios) dentro de um diretorio
     const itemPath = path.join(inputDir, item);
+
+    // se item é um diretorio, fazer chamada recursiva
     if (fs.statSync(itemPath).isDirectory()) {
       filesInitialized = generateFunctionFiles(itemPath, outputDir, target, filesInitialized)
-    } else if (itemPath.slice(-2) === "js") {
+    } else if (itemPath.slice(-2) === "js") { // se item é um arquivo de entrada, gerar código
       try {
+        // obtenção árvore semântica
         const input = fs.readFileSync(itemPath, { encoding: "utf8" });
         const chars = new antlr4.InputStream(input);
         const lexer = new JavaScriptLexer(chars);
@@ -169,15 +189,16 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
           let outputFile = path.join(outputDir, item);
           outputFile = `./src-gen/functions-${key}.js`;
           
-          // se arquivo nao existe ou execucao esta sendo feito novamente, cria outro
+          // se arquivo nao existe ou execucao esta sendo feito novamente, cria arquivo
           if (!fs.existsSync(outputFile) || !filesInitialized.includes(outputFile)) {
             fs.writeFileSync(
               outputFile,
-              generateInitialCode("function"),
+              generateInitialCode("function"), // codigo inicial do arquivo de funcoes
             );
             filesInitialized.push(outputFile);
           }
 
+          // da append do codigo gerado no arquivo de funções
           if (code !== null) {
             fs.appendFileSync(
               outputFile, 
@@ -193,14 +214,10 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
           }
         }
 
-
-      // Gerador de servidor node
-      // serversInitialized = [];
-      
+      // Gerador de servidores express
       const serverGenerator = new ServerGenerator();  
       const modifiedServerCode = serverGenerator.generateFunctions(tree, filesInitialized);
-      // necessario passar codigo gerado na iteracao anterior para gerador
-      // modifiedServerCode = serverGenerator.generateFunctions(tree, modifiedServerCode); 
+       
       // percorre todos codigos de servidores gerados
       for (var [key, code] of modifiedServerCode) {
         let outputFile = path.join(outputDir, item);
@@ -208,7 +225,7 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
         if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
           fs.writeFileSync(
             outputFile,
-            generateInitialCode("server", key),
+            generateInitialCode("server", key), // codigo inicial do arquivo de servidor
           );
           filesInitialized.push(outputFile);
         } 
@@ -228,6 +245,7 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
         }
       }
 
+      // gerador dos waitForCall 
       const WaitforCallGenerator = new WaitForCallGenerator();  
       const modifiedWaitForCall = WaitforCallGenerator.generateFunctions(tree, filesInitialized); 
 
@@ -241,8 +259,8 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
           filesInitialized.push(outputFile);
         } 
         
+        // da append dos codigos gerados nos arquivos de servidores 
         if (code !== null) {
-          // console.log("dando append no arquivo ", outputFile, "\n ")
           fs.appendFileSync(
             outputFile, 
             '\n'+beautify(code, {

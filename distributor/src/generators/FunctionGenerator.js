@@ -230,7 +230,8 @@ export default class FunctionGenerator extends CopyPasteGenerator {
   }
 
   /**
-   * Sobreescrita de visitFormalParameterList para obter lista com argumentos da função gerada
+   * Sobreescrita de visitFormalParameterList para obter lista com argumentos da função gerada e 
+   * também gerar código correspondente da regra formalParameterList 
    * @param {*} ctx - context do formalParameterList
    * @returns - lista com argumentos da função
    */
