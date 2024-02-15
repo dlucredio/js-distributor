@@ -17,3 +17,10 @@ function fazTudoComLista() {
 export function subtraiNumero(a, b) {
     return a - b;
 }
+
+export function checkEhPositivo(x) {
+    const retorno = sub_rabbit(0, x);
+
+    if (retorno < 0) return `${x} eh positivo`;
+    else return `${x} eh negativo`;
+}

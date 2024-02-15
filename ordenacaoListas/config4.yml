@@ -37,6 +37,10 @@ servers:
   - id: gama
     port: 4444
     url: localhost
+    rabbitmq:
+      exchange: gama_exchange
+      queue: gama_queue
+      connectionUrl: amqp://localhost
   - id: alfa
     port: 5555
     url: localhost
@@ -208,7 +212,7 @@ functions:
         type: number
     method: rabbit
   - name: sub_rabbit
-    server: server1
+    server: gama
     parameters: 
       - name: a
         type: number

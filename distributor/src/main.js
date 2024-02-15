@@ -246,34 +246,34 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
       }
 
       // gerador dos waitForCall 
-      const WaitforCallGenerator = new WaitForCallGenerator();  
-      const modifiedWaitForCall = WaitforCallGenerator.generateFunctions(tree, filesInitialized); 
+      // const WaitforCallGenerator = new WaitForCallGenerator();  
+      // const modifiedWaitForCall = WaitforCallGenerator.generateFunctions(tree, filesInitialized); 
 
-      for (var [key, code] of modifiedWaitForCall) {
-        let outputFile = path.join(outputDir, item);
-        outputFile = `./src-gen/start-${key}.js`;
-        if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
-          fs.writeFileSync(
-            outputFile,
-          );
-          filesInitialized.push(outputFile);
-        } 
+      // for (var [key, code] of modifiedWaitForCall) {
+      //   let outputFile = path.join(outputDir, item);
+      //   outputFile = `./src-gen/start-${key}.js`;
+      //   if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
+      //     fs.writeFileSync(
+      //       outputFile,
+      //     );
+      //     filesInitialized.push(outputFile);
+      //   } 
         
-        // da append dos codigos gerados nos arquivos de servidores 
-        if (code !== null) {
-          fs.appendFileSync(
-            outputFile, 
-            '\n'+beautify(code, {
-              indent_size: 4,
-              space_in_empty_paren: true,
-            }), 
-            (err) => {
-            if (err) {
-              console.error('Erro ao adicionar conteúdo ao arquivo:', err);
-            }
-          });
-        }
-      }
+      //   // da append dos codigos gerados nos arquivos de servidores 
+      //   if (code !== null) {
+      //     fs.appendFileSync(
+      //       outputFile, 
+      //       '\n'+beautify(code, {
+      //         indent_size: 4,
+      //         space_in_empty_paren: true,
+      //       }), 
+      //       (err) => {
+      //       if (err) {
+      //         console.error('Erro ao adicionar conteúdo ao arquivo:', err);
+      //       }
+      //     });
+      //   }
+      // }
       } catch (e) {
         console.log(e);
       }

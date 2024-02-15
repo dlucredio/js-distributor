@@ -24,12 +24,6 @@ function main_rabbit() {
     return { result, result2 };
 }
 
-function checkEhPositivo(x) {
-    const retorno = sub_rabbit(0, x);
-
-    if (retorno < 0) return `${x} eh positivo`;
-    else return `${x} eh negativo`;
-}
 
 // export  {
 //     sub, sum, main, rodeiSum
