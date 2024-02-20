@@ -212,7 +212,7 @@ functions:
         type: number
     method: rabbit
   - name: sub_rabbit
-    server: gama
+    server: server2
     parameters: 
       - name: a
         type: number
