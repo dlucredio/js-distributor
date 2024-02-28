@@ -203,6 +203,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
         `              console.log("Resposta recebida:", result);`
       );
       this.appendString(`              resolve(result);`);
+      this.appendString('channel.cancel(msg.fields.consumerTag);')
       this.appendString(`            }`);
       this.appendString(`          }`);
       this.appendString(`        },`);
