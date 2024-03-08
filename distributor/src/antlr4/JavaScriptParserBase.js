@@ -5,6 +5,7 @@ export default class JavaScriptParserBase extends antlr4.Parser {
 
     constructor(input) {
         super(input);
+        this._tagNames = new Array();
     }
 
     p(str) {
@@ -69,5 +70,21 @@ export default class JavaScriptParserBase extends antlr4.Parser {
                  (text.includes("\r") || text.includes("\n"))) ||
                 type === JavaScriptParser.LineTerminator
                );
+    }
+
+    // 2020/10/27 for jsx
+    pushHtmlTagName(tagName)
+    {
+        this._tagNames.push(tagName);
+    }
+
+    popHtmlTagName(tagName)
+    {
+      //return String.Equals(_tagNames.pop(), tagName, StringComparison.InvariantCulture);
+    	return this.equalsIgnoreCase(tagName, this._tagNames.pop());
+    }
+
+    equalsIgnoreCase(str1, str2) {
+        return (str1.toUpperCase() === str2.toUpperCase());
     }
 }

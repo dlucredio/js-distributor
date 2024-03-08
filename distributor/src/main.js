@@ -24,14 +24,14 @@ export default function main(
   });
 
   if (mode === "single") {
-    // generateCodeDir(target, inputDirRelative, outputDir);
-    generateFunctionFiles(inputDirRelative, outputDir, target);
+    generateCodeDir(target, inputDirRelative, outputDir);
+    // generateFunctionFiles(inputDirRelative, outputDir, target);
   } else if (mode === "watch") {
     let fsWait = false;
 
     console.log(`Watching ${inputDir} for changes...`);
 
-    fs.watch(inputDir, (event, filename) => {
+    fs.watch(inputDir, { recursive: true }, (event, filename) => {
       if (filename) {
         if (fsWait) return;
         fsWait = true;

@@ -48,26 +48,8 @@ export default class JavaScriptParserVisitor extends antlr4.tree.ParseTreeVisito
 	}
 
 
-	// Visit a parse tree produced by JavaScriptParser#importModuleItems.
-	visitImportModuleItems(ctx) {
-	  return this.visitChildren(ctx);
-	}
-
-
-	// Visit a parse tree produced by JavaScriptParser#importAliasName.
-	visitImportAliasName(ctx) {
-	  return this.visitChildren(ctx);
-	}
-
-
-	// Visit a parse tree produced by JavaScriptParser#moduleExportName.
-	visitModuleExportName(ctx) {
-	  return this.visitChildren(ctx);
-	}
-
-
-	// Visit a parse tree produced by JavaScriptParser#importedBinding.
-	visitImportedBinding(ctx) {
+	// Visit a parse tree produced by JavaScriptParser#moduleItems.
+	visitModuleItems(ctx) {
 	  return this.visitChildren(ctx);
 	}
 
@@ -110,18 +92,6 @@ export default class JavaScriptParserVisitor extends antlr4.tree.ParseTreeVisito
 
 	// Visit a parse tree produced by JavaScriptParser#exportFromBlock.
 	visitExportFromBlock(ctx) {
-	  return this.visitChildren(ctx);
-	}
-
-
-	// Visit a parse tree produced by JavaScriptParser#exportModuleItems.
-	visitExportModuleItems(ctx) {
-	  return this.visitChildren(ctx);
-	}
-
-
-	// Visit a parse tree produced by JavaScriptParser#exportAliasName.
-	visitExportAliasName(ctx) {
 	  return this.visitChildren(ctx);
 	}
 
@@ -492,12 +462,6 @@ export default class JavaScriptParserVisitor extends antlr4.tree.ParseTreeVisito
 	}
 
 
-	// Visit a parse tree produced by JavaScriptParser#OptionalChainExpression.
-	visitOptionalChainExpression(ctx) {
-	  return this.visitChildren(ctx);
-	}
-
-
 	// Visit a parse tree produced by JavaScriptParser#NotExpression.
 	visitNotExpression(ctx) {
 	  return this.visitChildren(ctx);
@@ -506,6 +470,12 @@ export default class JavaScriptParserVisitor extends antlr4.tree.ParseTreeVisito
 
 	// Visit a parse tree produced by JavaScriptParser#PreDecreaseExpression.
 	visitPreDecreaseExpression(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxElementExpression.
+	visitJsxElementExpression(ctx) {
 	  return this.visitChildren(ctx);
 	}
 
@@ -720,6 +690,96 @@ export default class JavaScriptParserVisitor extends antlr4.tree.ParseTreeVisito
 	}
 
 
+	// Visit a parse tree produced by JavaScriptParser#jsxElements.
+	visitJsxElements(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxElementBegin.
+	visitJsxElementBegin(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxElement.
+	visitJsxElement(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxSelfClosingElement.
+	visitJsxSelfClosingElement(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxOpeningElement.
+	visitJsxOpeningElement(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxClosingElement.
+	visitJsxClosingElement(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxChildren.
+	visitJsxChildren(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxSelfClosingElementName.
+	visitJsxSelfClosingElementName(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxOpeningElementName.
+	visitJsxOpeningElementName(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxClosingElementName.
+	visitJsxClosingElementName(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxAttributes.
+	visitJsxAttributes(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxSpreadAttribute.
+	visitJsxSpreadAttribute(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxAttribute.
+	visitJsxAttribute(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxAttributeName.
+	visitJsxAttributeName(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#jsxAttributeValue.
+	visitJsxAttributeValue(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by JavaScriptParser#assignable.
 	visitAssignable(ctx) {
 	  return this.visitChildren(ctx);
@@ -732,8 +792,26 @@ export default class JavaScriptParserVisitor extends antlr4.tree.ParseTreeVisito
 	}
 
 
-	// Visit a parse tree produced by JavaScriptParser#AnonymousFunctionDecl.
-	visitAnonymousFunctionDecl(ctx) {
+	// Visit a parse tree produced by JavaScriptParser#openBrace.
+	visitOpenBrace(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#objectExpressionSequence.
+	visitObjectExpressionSequence(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#FunctionDecl.
+	visitFunctionDecl(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by JavaScriptParser#AnoymousFunctionDecl.
+	visitAnoymousFunctionDecl(ctx) {
 	  return this.visitChildren(ctx);
 	}
 

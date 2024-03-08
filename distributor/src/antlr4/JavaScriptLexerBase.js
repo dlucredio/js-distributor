@@ -114,4 +114,32 @@ export default class JavaScriptLexerBase extends antlr4.Lexer {
         this.templateDepth = 0;
         super.reset();
     }
+
+    /**
+     * Returns {@code true} if the lexer can match a JSX opening element.
+     */
+    IsJsxPossible() {
+        
+        if (this.lastToken === null) {
+            return false;
+        }
+        
+        switch (this.lastToken.type) {
+            case JavaScriptLexer.Assign:
+            case JavaScriptLexer.Colon:
+            case JavaScriptLexer.Comma:                
+            case JavaScriptLexer.Default:                
+            case JavaScriptLexer.QuestionMark:                
+            case JavaScriptLexer.Return:
+            case JavaScriptLexer.OpenBrace:
+            case JavaScriptLexer.OpenParen:
+            case JavaScriptLexer.JsxOpeningElementOpenBrace:
+            case JavaScriptLexer.JsxChildrenOpenBrace:
+            case JavaScriptLexer.Yield:
+            case JavaScriptLexer.ARROW:
+                return true;
+            default:
+                return false;
+        }
+    }
 }

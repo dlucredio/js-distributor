@@ -68,39 +68,12 @@ export default class JavaScriptParserListener extends antlr4.tree.ParseTreeListe
 	}
 
 
-	// Enter a parse tree produced by JavaScriptParser#importModuleItems.
-	enterImportModuleItems(ctx) {
+	// Enter a parse tree produced by JavaScriptParser#moduleItems.
+	enterModuleItems(ctx) {
 	}
 
-	// Exit a parse tree produced by JavaScriptParser#importModuleItems.
-	exitImportModuleItems(ctx) {
-	}
-
-
-	// Enter a parse tree produced by JavaScriptParser#importAliasName.
-	enterImportAliasName(ctx) {
-	}
-
-	// Exit a parse tree produced by JavaScriptParser#importAliasName.
-	exitImportAliasName(ctx) {
-	}
-
-
-	// Enter a parse tree produced by JavaScriptParser#moduleExportName.
-	enterModuleExportName(ctx) {
-	}
-
-	// Exit a parse tree produced by JavaScriptParser#moduleExportName.
-	exitModuleExportName(ctx) {
-	}
-
-
-	// Enter a parse tree produced by JavaScriptParser#importedBinding.
-	enterImportedBinding(ctx) {
-	}
-
-	// Exit a parse tree produced by JavaScriptParser#importedBinding.
-	exitImportedBinding(ctx) {
+	// Exit a parse tree produced by JavaScriptParser#moduleItems.
+	exitModuleItems(ctx) {
 	}
 
 
@@ -164,24 +137,6 @@ export default class JavaScriptParserListener extends antlr4.tree.ParseTreeListe
 
 	// Exit a parse tree produced by JavaScriptParser#exportFromBlock.
 	exitExportFromBlock(ctx) {
-	}
-
-
-	// Enter a parse tree produced by JavaScriptParser#exportModuleItems.
-	enterExportModuleItems(ctx) {
-	}
-
-	// Exit a parse tree produced by JavaScriptParser#exportModuleItems.
-	exitExportModuleItems(ctx) {
-	}
-
-
-	// Enter a parse tree produced by JavaScriptParser#exportAliasName.
-	enterExportAliasName(ctx) {
-	}
-
-	// Exit a parse tree produced by JavaScriptParser#exportAliasName.
-	exitExportAliasName(ctx) {
 	}
 
 
@@ -734,15 +689,6 @@ export default class JavaScriptParserListener extends antlr4.tree.ParseTreeListe
 	}
 
 
-	// Enter a parse tree produced by JavaScriptParser#OptionalChainExpression.
-	enterOptionalChainExpression(ctx) {
-	}
-
-	// Exit a parse tree produced by JavaScriptParser#OptionalChainExpression.
-	exitOptionalChainExpression(ctx) {
-	}
-
-
 	// Enter a parse tree produced by JavaScriptParser#NotExpression.
 	enterNotExpression(ctx) {
 	}
@@ -758,6 +704,15 @@ export default class JavaScriptParserListener extends antlr4.tree.ParseTreeListe
 
 	// Exit a parse tree produced by JavaScriptParser#PreDecreaseExpression.
 	exitPreDecreaseExpression(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxElementExpression.
+	enterJsxElementExpression(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxElementExpression.
+	exitJsxElementExpression(ctx) {
 	}
 
 
@@ -1076,6 +1031,141 @@ export default class JavaScriptParserListener extends antlr4.tree.ParseTreeListe
 	}
 
 
+	// Enter a parse tree produced by JavaScriptParser#jsxElements.
+	enterJsxElements(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxElements.
+	exitJsxElements(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxElementBegin.
+	enterJsxElementBegin(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxElementBegin.
+	exitJsxElementBegin(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxElement.
+	enterJsxElement(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxElement.
+	exitJsxElement(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxSelfClosingElement.
+	enterJsxSelfClosingElement(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxSelfClosingElement.
+	exitJsxSelfClosingElement(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxOpeningElement.
+	enterJsxOpeningElement(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxOpeningElement.
+	exitJsxOpeningElement(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxClosingElement.
+	enterJsxClosingElement(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxClosingElement.
+	exitJsxClosingElement(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxChildren.
+	enterJsxChildren(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxChildren.
+	exitJsxChildren(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxSelfClosingElementName.
+	enterJsxSelfClosingElementName(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxSelfClosingElementName.
+	exitJsxSelfClosingElementName(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxOpeningElementName.
+	enterJsxOpeningElementName(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxOpeningElementName.
+	exitJsxOpeningElementName(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxClosingElementName.
+	enterJsxClosingElementName(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxClosingElementName.
+	exitJsxClosingElementName(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxAttributes.
+	enterJsxAttributes(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxAttributes.
+	exitJsxAttributes(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxSpreadAttribute.
+	enterJsxSpreadAttribute(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxSpreadAttribute.
+	exitJsxSpreadAttribute(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxAttribute.
+	enterJsxAttribute(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxAttribute.
+	exitJsxAttribute(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxAttributeName.
+	enterJsxAttributeName(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxAttributeName.
+	exitJsxAttributeName(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#jsxAttributeValue.
+	enterJsxAttributeValue(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#jsxAttributeValue.
+	exitJsxAttributeValue(ctx) {
+	}
+
+
 	// Enter a parse tree produced by JavaScriptParser#assignable.
 	enterAssignable(ctx) {
 	}
@@ -1094,12 +1184,39 @@ export default class JavaScriptParserListener extends antlr4.tree.ParseTreeListe
 	}
 
 
-	// Enter a parse tree produced by JavaScriptParser#AnonymousFunctionDecl.
-	enterAnonymousFunctionDecl(ctx) {
+	// Enter a parse tree produced by JavaScriptParser#openBrace.
+	enterOpenBrace(ctx) {
 	}
 
-	// Exit a parse tree produced by JavaScriptParser#AnonymousFunctionDecl.
-	exitAnonymousFunctionDecl(ctx) {
+	// Exit a parse tree produced by JavaScriptParser#openBrace.
+	exitOpenBrace(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#objectExpressionSequence.
+	enterObjectExpressionSequence(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#objectExpressionSequence.
+	exitObjectExpressionSequence(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#FunctionDecl.
+	enterFunctionDecl(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#FunctionDecl.
+	exitFunctionDecl(ctx) {
+	}
+
+
+	// Enter a parse tree produced by JavaScriptParser#AnoymousFunctionDecl.
+	enterAnoymousFunctionDecl(ctx) {
+	}
+
+	// Exit a parse tree produced by JavaScriptParser#AnoymousFunctionDecl.
+	exitAnoymousFunctionDecl(ctx) {
 	}
 
 
