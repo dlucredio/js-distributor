@@ -1,28 +1,49 @@
 import JavaScriptParserVisitor from "../antlr4/JavaScriptParserVisitor.js";
 import { StringBuilder } from "./generator-utils.js";
 
+/**
+  Class that generates copy-pasted code.
+*/
 export default class CopyPasteGenerator extends JavaScriptParserVisitor {
+  /**
+  Constructor of the CopyPasteGenerator class.
+*/
   constructor() {
     super();
     this.stringBuilder = new StringBuilder();
   }
 
+  /**
+   * Adds tokens to the StringBuilder.
+   * @param {Object} token - Token to be added.
+   */
   appendTokens(token) {
     if (token) {
       this.stringBuilder.append(token.getText());
     }
   }
 
+  /**
+   * Adds a string to the StringBuilder.
+   * @param {string} str - String to be added.
+   */
   appendString(str) {
     if (str) {
       this.stringBuilder.append(str);
     }
   }
 
+  /**
+   * Add a new line to StringBuilder.
+   */
   appendNewLine() {
     this.stringBuilder.append("\n");
   }
 
+  /**
+   * Visit the program.
+   * @param {Object} ctx - Context of the program.
+   */
   visitProgram(ctx) {
     this.appendTokens(ctx.HashBangLine());
     if (ctx.sourceElements()) {
@@ -30,876 +51,980 @@ export default class CopyPasteGenerator extends JavaScriptParserVisitor {
     }
   }
 
+  /**
+   * Visit a block.
+   * @param {Object} ctx - Context of a block.
+   */
   visitBlock(ctx) {
-    // this.appendNewLine(); // duvida
     this.appendString("{");
-    if(ctx.statementList()) {
-        this.visitStatementList(ctx.statementList());
+    if (ctx.statementList()) {
+      this.visitStatementList(ctx.statementList());
     }
     this.appendString("}");
   }
 
+  /**
+   * Visits an import statement.
+   * @param {Object} ctx - Context of the import statement.
+   */
   visitImportStatement(ctx) {
     this.appendString("import ");
     this.visitImportFromBlock(ctx.importFromBlock());
   }
-  
 
+  /**
+   * Visits an import block.
+   * @param {Object} ctx - Context of the import block.
+   */
   visitImportFromBlock(ctx) {
     if (ctx.importFrom()) {
-        if (ctx.importDefault()){
-          this.visitImportDefault(ctx.importDefault());
-        }
-        if (ctx.importNamespace()){
-          this.visitImportNamespace(ctx.importNamespace());
-        } else {
-          this.visitImportModuleItems(ctx.importModuleItems());
-        }
-        this.visitImportFrom(ctx.importFrom());
+      if (ctx.importDefault()) {
+        this.visitImportDefault(ctx.importDefault());
+      }
+      if (ctx.importNamespace()) {
+        this.visitImportNamespace(ctx.importNamespace());
+      } else {
+        this.visitImportModuleItems(ctx.importModuleItems());
+      }
+      this.visitImportFrom(ctx.importFrom());
     } else {
-        this.appendTokens(ctx.StringLiteral());
+      this.appendTokens(ctx.StringLiteral());
     }
     this.appendString(";");
     this.appendNewLine();
   }
 
-    visitImportModuleItems(ctx) {
-      this.appendString("{");
-      for (let i = 0; i < ctx.importAliasName().length; i++){
-        this.visitImportAliasName(ctx.importAliasName(i));
+  /**
+   * Visits the items of the import module.
+   * @param {Object} ctx - Context of the import module items.
+   */
+  visitImportModuleItems(ctx) {
+    this.appendString("{");
+    for (let i = 0; i < ctx.importAliasName().length; i++) {
+      this.visitImportAliasName(ctx.importAliasName(i));
 
-        if (i == ctx.importAliasName().length - 1)
-          break
-        this.appendString(",");
-      }
-      
-      this.appendString("}");
+      if (i == ctx.importAliasName().length - 1) break;
+      this.appendString(",");
     }
 
-    visitImportAliasName(ctx) {
-      this.visitModuleExportName(ctx.moduleExportName());
-      if (ctx.importedBinding()){
+    this.appendString("}");
+  }
+
+  /**
+   * Visits an import alias name.
+   * @param {Object} ctx - Context of the import alias name.
+   */
+  visitImportAliasName(ctx) {
+    this.visitModuleExportName(ctx.moduleExportName());
+    if (ctx.importedBinding()) {
+      this.appendString(" as ");
+      this.visitImportedBinding(ctx.importedBinding());
+    }
+  }
+
+  /**
+   * Visits a module export name.
+   * @param {Object} ctx - Context of the module export name.
+   */
+  visitModuleExportName(ctx) {
+    ctx.identifierName()
+      ? this.appendString(ctx.identifierName().getText())
+      : this.appendString(ctx.StringLiteral().getText());
+  }
+
+  /**
+   * Visits an import alias.
+   * @param {Object} ctx - Context of the import alias.
+   */
+  visitImportedBinding(ctx) {
+    if (ctx.Identifier()) this.appendString(ctx.Identifier().getText());
+    else if (ctx.Yield()) this.appendString(ctx.Yield().getText());
+    else if (ctx.Await()) this.appendString(ctx.Await().getText());
+  }
+
+  /**
+   * Visits an identifier name.
+   * @param {Object} ctx - Context of the identifier name.
+   */
+  visitIdentifierName(ctx) {
+    this.appendString(ctx.getText());
+  }
+
+  /**
+   * Visits a default import.
+   * @param {Object} ctx - Context of the default import.
+   */
+  visitImportDefault(ctx) {
+    this.visitAliasName(ctx.aliasName());
+    this.appendString(", ");
+  }
+
+  /**
+   * Visits an alias name.
+   * @param {Object} ctx - Context of the alias name.
+   */
+  visitAliasName(ctx) {
+    this.visitIdentifierName(ctx.identifierName(0));
+    if (ctx.identifierName(1)) {
+      this.appendString(" as ");
+      this.visitIdentifierName(ctx.identifierName(1));
+    }
+  }
+
+  /**
+   * Visit an import namespace.
+   * @param {Object} ctx - Context of the import namespace.
+   */
+  visitImportNamespace(ctx) {
+    if (ctx.getText().includes("*")) {
+      this.appendString(" * ");
+      if (ctx.identifierName(0)) {
         this.appendString(" as ");
-        this.visitImportedBinding(ctx.importedBinding());
+        this.visitIdentifierName(ctx.identifierName(0));
       }
-    }
-
-    visitModuleExportName(ctx) {
-      ctx.identifierName() ? this.appendString(ctx.identifierName().getText()) : this.appendString(ctx.StringLiteral().getText());
-    }
-
-    visitImportedBinding(ctx) {
-      if (ctx.Identifier()) this.appendString(ctx.Identifier().getText());
-      else if (ctx.Yield()) this.appendString(ctx.Yield().getText());
-      else if (ctx.Await()) this.appendString(ctx.Await().getText());
-    }
-
-    visitIdentifierName(ctx){
-      this.appendString(ctx.getText());
-    }
-
-    visitImportDefault(ctx){
-      this.visitAliasName(ctx.aliasName());
-      this.appendString(", ");
-    } 
-
-    visitAliasName(ctx){
+    } else {
       this.visitIdentifierName(ctx.identifierName(0));
-      if (ctx.identifierName(1)){
+      if (ctx.identifierName(1)) {
         this.appendString(" as ");
         this.visitIdentifierName(ctx.identifierName(1));
       }
     }
+  }
 
-    visitImportNamespace(ctx){
-      if (ctx.getText().includes("*")) {
-        this.appendString(" * ");
-        if (ctx.identifierName(0)) {
-          this.appendString(" as ");
-          this.visitIdentifierName(ctx.identifierName(0));
-        }
-      } else {
-        this.visitIdentifierName(ctx.identifierName(0));
-        if (ctx.identifierName(1)) {
-          this.appendString(" as ");
-          this.visitIdentifierName(ctx.identifierName(1));
-        } 
-      }
+  /**
+   * Visit an import statement.
+   * @param {Object} ctx - Context of the import statement.
+   */
+  visitImportFrom(ctx) {
+    this.appendString(" from ");
+    this.appendString(ctx.StringLiteral().getText());
+  }
+
+  /**
+   * Visit an export declaration.
+   * @param {Object} ctx - Context of the export declaration.
+   */
+  visitExportDeclaration(ctx) {
+    this.appendString("export ");
+    if (ctx.Default()) this.appendString(" default ");
+    if (ctx.exportFromBlock()) {
+      this.visitExportFromBlock(ctx.exportFromBlock());
+      this.appendString(";");
     }
+    // Do not add ';' since visitDeclaration will add it
+    else if (ctx.declaration()) this.visitDeclaration(ctx.declaration());
+  }
 
-    visitImportFrom(ctx){
-      this.appendString(" from ");
-      this.appendString(ctx.StringLiteral().getText());
-    }
-
-/*
-exportStatement
-    : Export Default? (exportFromBlock | declaration) eos    # ExportDeclaration
-    | Export Default singleExpression eos                    # ExportDefaultDeclaration
-    ;
-*/
-visitExportDeclaration(ctx) {
-  this.appendString("export ");
-  if (ctx.Default()) this.appendString(" default ");
-  if (ctx.exportFromBlock()) {
-    this.visitExportFromBlock(ctx.exportFromBlock());
+  /**
+   * Visit a default export declaration.
+   * @param {Object} ctx - Context of the default export declaration.
+   */
+  visitExportDefaultDeclaration(ctx) {
+    this.appendString("export ");
+    this.appendString(" default ");
+    this.visitChildren(ctx);
     this.appendString(";");
   }
-  // nao adiciona ';' pois visitDeclaration adicionara  
-  else if (ctx.declaration()) this.visitDeclaration(ctx.declaration());
 
-}
-
-visitExportDefaultDeclaration(ctx) {
-  this.appendString("export ");
-  this.appendString(" default ");
-  this.visitChildren(ctx);
-  this.appendString(";");
-}
-
-/*
-exportFromBlock
-: importNamespace importFrom eos
-| exportModuleItems importFrom? eos
-;
-*/
-visitExportFromBlock(ctx) {
-  if (ctx.importNamespace()){
-    this.visitImportNamespace(ctx.importNamespace());
-    this.visitImportFrom(ctx.importFrom());
-  } else {
-    this.visitExportModuleItems(ctx.exportModuleItems());
-    if (ctx.importFrom()) this.visitImportFrom(ctx.importFrom());
+  /**
+   * Visit a module export block.
+   * @param {Object} ctx - Context of the module export block.
+   */
+  visitExportFromBlock(ctx) {
+    if (ctx.importNamespace()) {
+      this.visitImportNamespace(ctx.importNamespace());
+      this.visitImportFrom(ctx.importFrom());
+    } else {
+      this.visitExportModuleItems(ctx.exportModuleItems());
+      if (ctx.importFrom()) this.visitImportFrom(ctx.importFrom());
+    }
   }
-}
 
-/*
-exportModuleItems
-: '{' (exportAliasName ',')* (exportAliasName ','?)? '}'
-;
-*/
-visitExportModuleItems(ctx) {
-  this.appendString("{ ");
-  for (let i = 0; i < ctx.exportAliasName().length; i++){
-    this.visitExportAliasName(ctx.exportAliasName(i));
+  /**
+   * Visit module export items.
+   * @param {Object} ctx - Context of the module export items.
+   */
+  visitExportModuleItems(ctx) {
+    this.appendString("{ ");
+    for (let i = 0; i < ctx.exportAliasName().length; i++) {
+      this.visitExportAliasName(ctx.exportAliasName(i));
 
-    if (i !== ctx.exportAliasName().length - 1) this.appendString(", ");
+      if (i !== ctx.exportAliasName().length - 1) this.appendString(", ");
+    }
+    this.appendString("}");
   }
-  this.appendString("}");
-}
 
-/*
-exportAliasName
-: moduleExportName (As moduleExportName)?
-;
-*/
-visitExportAliasName(ctx) {
-  this.visitModuleExportName(ctx.moduleExportName(0));
-  if (ctx.moduleExportName(1)){
-    this.appendString(" as ");
-    this.visitModuleExportName(ctx.moduleExportName(1));
-}
-}
+  /**
+   * Visit an export alias name.
+   * @param {Object} ctx - Context of the export alias name.
+   */
+  visitExportAliasName(ctx) {
+    this.visitModuleExportName(ctx.moduleExportName(0));
+    if (ctx.moduleExportName(1)) {
+      this.appendString(" as ");
+      this.visitModuleExportName(ctx.moduleExportName(1));
+    }
+  }
 
-
-//| Async? '*'? propertyName '(' formalParameterList?  ')'  functionBody  # FunctionProperty
-visitFunctionProperty(ctx) {
-  if (ctx.Async()) this.appendString("async ");
-  if (ctx.children[0].getText().includes("*") || ctx.children[1].getText().includes("*")) this.appendString("*");
-  this.visitPropertyName(ctx.propertyName());
-  this.appendString("( ");
-  if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
-  this.appendString(")");
-  this.visitFunctionBody(ctx.functionBody());
-}
-
-/*
-functionDeclaration
-: Async? Function_ '*'? identifier '(' formalParameterList? ')' functionBody
-;
-*/
-visitFunctionDeclaration(ctx) {
-  if (ctx.Async()) this.appendString("async ")
-  this.appendString("function ");
-  if (ctx.children[1].getText().includes("*") || ctx.children[2].getText().includes("*")) this.appendString("*");
-  this.appendString(ctx.identifier().getText());
-  this.appendString("(");
-  if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
-  this.appendString(")");
-  this.visitFunctionBody(ctx.functionBody());
-}
-
-
-/*
-anonymousFunction
-: Async? Function_ '*'? '(' formalParameterList? ')' functionBody    # AnonymousFunctionDecl
-| Async? arrowFunctionParameters '=>' arrowFunctionBody                     # ArrowFunction
-;
-*/
-// ta cheganndo contexto errado
-visitAnonymousFunctionDecl(ctx) {
-  if (ctx.Async()) this.appendTokens(ctx.Async());
-  this.appendTokens(ctx.Function_());
-  if (ctx.children[0].getText().includes("*") || ctx.children[1].getText().includes("*")) this.appendString("*");
-  this.appendString("(");
-  if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
-  this.appendString(")");
-  this.visitFunctionBody(ctx.functionBody());
-}
-
-visitArrowFunction(ctx) {
-  if (ctx.Async()) this.appendTokens(ctx.Async());
-  this.visitArrowFunctionParameters(ctx.arrowFunctionParameters());
-  this.appendString(" => ");
-  this.visitArrowFunctionBody(ctx.arrowFunctionBody());
-}
-
-/*
-arrowFunctionParameters
-: identifier
-| '(' formalParameterList? ')'
-;
-*/
-visitArrowFunctionParameters(ctx) {
-  if (ctx.identifier()) this.appendTokens(ctx.identifier());
-  else {
+  /**
+   * Visits a function property.
+   * @param {Object} ctx - Context of the function property.
+   */
+  visitFunctionProperty(ctx) {
+    if (ctx.Async()) this.appendString("async ");
+    if (
+      ctx.children[0].getText().includes("*") ||
+      ctx.children[1].getText().includes("*")
+    )
+      this.appendString("*");
+    this.visitPropertyName(ctx.propertyName());
     this.appendString("( ");
-    if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
-    this.appendString(" ) ");
+    if (ctx.formalParameterList())
+      this.visitFormalParameterList(ctx.formalParameterList());
+    this.appendString(")");
+    this.visitFunctionBody(ctx.functionBody());
   }
-}
 
+  /**
+   * Visits a function declaration.
+   * @param {Object} ctx - Context of the function declaration.
+   */
+  visitFunctionDeclaration(ctx) {
+    if (ctx.Async()) this.appendString("async ");
+    this.appendString("function ");
+    if (
+      ctx.children[1].getText().includes("*") ||
+      ctx.children[2].getText().includes("*")
+    )
+      this.appendString("*");
+    this.appendString(ctx.identifier().getText());
+    this.appendString("(");
+    if (ctx.formalParameterList())
+      this.visitFormalParameterList(ctx.formalParameterList());
+    this.appendString(")");
+    this.visitFunctionBody(ctx.functionBody());
+  }
 
- /*
-  formalParameterList
-    : formalParameterArg (',' formalParameterArg)* (',' lastFormalParameterArg)?
-    | lastFormalParameterArg
-    ;
-  */
+  /**
+   * Visits an anonymous function declaration.
+   * @param {Object} ctx - Context of the anonymous function declaration.
+   */
+  visitAnonymousFunctionDecl(ctx) {
+    if (ctx.Async()) this.appendTokens(ctx.Async());
+    this.appendTokens(ctx.Function_());
+    if (
+      ctx.children[0].getText().includes("*") ||
+      ctx.children[1].getText().includes("*")
+    )
+      this.appendString("*");
+    this.appendString("(");
+    if (ctx.formalParameterList())
+      this.visitFormalParameterList(ctx.formalParameterList());
+    this.appendString(")");
+    this.visitFunctionBody(ctx.functionBody());
+  }
+
+  /**
+   * Visits an arrow function.
+   * @param {Object} ctx - Context of the arrow function.
+   */
+  visitArrowFunction(ctx) {
+    if (ctx.Async()) this.appendTokens(ctx.Async());
+    this.visitArrowFunctionParameters(ctx.arrowFunctionParameters());
+    this.appendString(" => ");
+    this.visitArrowFunctionBody(ctx.arrowFunctionBody());
+  }
+
+  /**
+   * Visits arrow function parameters.
+   * @param {Object} ctx - Context of the arrow function parameters.
+   */
+  visitArrowFunctionParameters(ctx) {
+    if (ctx.identifier()) this.appendTokens(ctx.identifier());
+    else {
+      this.appendString("( ");
+      if (ctx.formalParameterList())
+        this.visitFormalParameterList(ctx.formalParameterList());
+      this.appendString(" ) ");
+    }
+  }
+
+  /**
+   * Visits the formal parameter list.
+   * @param {Object} ctx - Context of the formal parameter list.
+   */
   visitFormalParameterList(ctx) {
     if (ctx.formalParameterArg().length !== 0) {
       for (let i = 0; i < ctx.formalParameterArg().length; i++) {
         this.visitFormalParameterArg(ctx.formalParameterArg(i));
         if (i !== ctx.formalParameterArg().length - 1) this.appendString(", ");
       }
-  
-      if (ctx.lastFormalParameterArg()) { 
-        this.appendString("," );
+
+      if (ctx.lastFormalParameterArg()) {
+        this.appendString(",");
         this.visitLastFormalParameterArg(ctx.lastFormalParameterArg());
       }
     } else {
       this.visitLastFormalParameterArg(ctx.lastFormalParameterArg());
     }
   }
-  
-    /*
-    formalParameterArg
-      : assignable ('=' singleExpression)?      // ECMAScript 6: Initialization
-      ;
-    */
-    visitFormalParameterArg(ctx) {
-      this.visitAssignable(ctx.assignable());
-      if (ctx.children.length > 1) {
-        this.appendString(" = ");
-        this.visit(ctx.children[2]);
-      }
-    }
-  
-    /*
-    assignable
-      : identifier
-      | arrayLiteral
-      | objectLiteral
-      ;
-    */
-    visitAssignable(ctx) {
-      if (ctx.identifier()) this.visitIdentifier(ctx.identifier());
-      else this.visitChildren(ctx);
-    }
-  
-    /*
-    arrayLiteral
-      : ('[' elementList ']')
-      ;
-    */
-   visitArrayLiteral(ctx) {
-      this.appendString("[ ");
-      this.visitElementList(ctx.elementList());
-      this.appendString("] ");
-   }
-   /*
-   objectLiteral - erro aqui
-      : '{' (propertyAssignment (',' propertyAssignment)* ','?)? '}'
-      ;
-    */
-   visitObjectLiteral(ctx) {
-      this.appendString("{ ");
-      // for (let i = 0; i < ctx.chindren.length - 1; i++) {
-      //   this.visit(ctx.children[i]);
-      //   if (i !== ctx.children.length - 1) this.appendString(", ");
-      // }
-      for (let i = 1; i < ctx.children.length - 1; i++) {
-        this.visit(ctx.children[i]);
-        if(i !== ctx.children.length - 2 && !ctx.children[i].getText().includes(",")) this.appendString(", ");
-      }
-      this.appendString("}");
-   }
 
-   // : propertyName ':' singleExpression                                             # PropertyExpressionAssignment
-   visitPropertyExpressionAssignment(ctx) {
-      this.visitPropertyName(ctx.propertyName());
-      this.appendString(": ");
-      this.visit(ctx.children[2]);
-   }
-  
-   /*
-   elementList
-      : ','* arrayElement? (','+ arrayElement)* ','* // Yes, everything is optional
-      ;
+  /**
+   * Visits a formal parameter argument.
+   * @param {Object} ctx - Context of the formal parameter argument.
    */
-   visitElementList(ctx) {
-      for (let i = 0; i < ctx.arrayElement().length; i++) {
-        this.visitArrayElement(ctx.arrayElement(i));
-        if (i !== ctx.arrayElement().length - 1) this.appendString(", ");
-      }
-   }
-  
-   /*
-   arrayElement
-      : Ellipsis? singleExpression
-      ;
-    */
-    visitArrayElement(ctx) {
-      if (ctx.Ellipsis()) this.appendTokens(ctx.Ellipsis());
-      this.visitChildren(ctx);
+  visitFormalParameterArg(ctx) {
+    this.visitAssignable(ctx.assignable());
+    if (ctx.children.length > 1) {
+      this.appendString(" = ");
+      this.visit(ctx.children[2]);
     }
-    
-    /*
-    lastFormalParameterArg                        // ECMAScript 6: Rest Parameter
-      : Ellipsis singleExpression
-      ;
-    */
-    visitLastFormalParameterArg(ctx) {
-      this.appendTokens(ctx.Ellipsis());
-      this.visitChildren(ctx);
-    }
-  
-    /*
-    functionBody
-      : '{' sourceElements? '}'
-      ;
-    */
-    visitFunctionBody(ctx) {
-      this.appendString("{ ");
-      if (ctx.sourceElements()) this.visitSourceElement(ctx.sourceElements());
-      this.appendString("} ");
-    }
-  
-    /*
-    classDeclaration
-      : Class identifier classTail
-      ;
-    */
-  
-    visitClassDeclaration(ctx) {
-      this.appendString("class ");
-      this.appendString(ctx.identifier().getText());
-      this.visitClassTail(ctx.classTail());
-    }
-    
-    // | Class identifier? classTail                                           # ClassExpression
-    visitClassExpression(ctx) {
-      this.appendString("class ");
-      if (ctx.identifier()) this.visitIdentifier(ctx.identifier());
-      this.visitClassTail(ctx.classTail());
-    }
-  
-    /*
-    classTail
-      : (Extends singleExpression)? '{' classElement* '}'
-      ;
-    */
-    visitClassTail(ctx) {
-      if (ctx.Extends()) {
-        this.appendString(" extends ");
-        this.visit(ctx.children[1]);
-      }
-      this.appendString("{");
-      for (let i = 0; i < ctx.classElement().length; i++) {
-        this.visitClassElement(ctx.classElement(i));
-      }
-      this.appendString("}");
-    }
-  
-    /*
-    classElement - duvida com professor
-      : (Static | {this.n("static")}? identifier | Async)* (methodDefinition | assignable '=' objectLiteral ';')
-      | emptyStatement_
-      | '#'? propertyName '=' singleExpression
-      ;
-    */
-    visitClassElement(ctx) {
-      if (ctx.emptyStatement_()) {
-        this.appendString(";");
-      } else if (ctx.propertyName()) {
-        if (ctx.children.length === 4) this.appendString("#");
-        this.visitPropertyName(ctx.propertyName());
-        this.appendString(" = ");
-        this.visit(ctx.children[ctx.children.length - 1]);
-      } else { // perguntar sobre ordem de static async - duvida
-        for (const tk of ctx.Static()) {
-          this.appendString(tk.getText()+ " ");
-        }
-        for (const tk of ctx.identifier()) {
-          this.appendString(tk.getText() + " ");
-        }
-        for (const tk of ctx.Async()) {
-          this.appendString(tk.getText()+ " ");
-        }
-        if (ctx.methodDefinition()) {
-          this.visitMethodDefinition(ctx.methodDefinition());
-        } else {
-          this.visitAssignable(ctx.assignable());
-          this.appendString(" = ");
-          this.visitObjectLiteral(ctx.objectLiteral());
-          this.appendString(";");
-        }
-      }
-    }
-    /*
-    methodDefinition
-      : '*'? '#'? propertyName '(' formalParameterList? ')' functionBody
-      | '*'? '#'? getter '(' ')' functionBody
-      | '*'? '#'? setter '(' formalParameterList? ')' functionBody
-      ;
-    */
-    visitMethodDefinition(ctx) {
-      if (ctx.children[0].getText().includes("*")) this.appendString("*");
-      if (ctx.children[0].getText().includes("#") || ctx.children[1].getText().includes("#")) this.appendString("#");
-      if (ctx.propertyName()) {
-        this.visitPropertyName(ctx.propertyName());
-        this.appendString("(");
-        if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
-        this.appendString(")");
-      }
-      else if (ctx.getter()) {
-        this.visitGetter(ctx.getter());
-        this.appendString("(");
-        this.appendString(")");
-      } else {
-        this.visitSetter(ctx.setter());
-        this.appendString("(");
-        if (ctx.formalParameterList()) this.visitFormalParameterList(ctx.formalParameterList());
-        this.appendString(")");
-      }
-      this.visitFunctionBody(ctx.functionBody());
-    }
+  }
 
-    visitGetter(ctx) {
-      this.appendString("get ");
-      this.visitPropertyName(ctx.propertyName());
-    }
+  /**
+   * Visits an assignable context.
+   * @param {Object} ctx - Context of the assignable.
+   */
+  visitAssignable(ctx) {
+    if (ctx.identifier()) this.visitIdentifier(ctx.identifier());
+    else this.visitChildren(ctx);
+  }
 
-    // | '[' singleExpression ']' ':' singleExpression                                 # ComputedPropertyExpressionAssignment
-    visitComputedPropertyExpressionAssignment(ctx) {
-      this.appendString("[");
+  /**
+   * Visits an array literal.
+   * @param {Object} ctx - Context of the array literal.
+   */
+  visitArrayLiteral(ctx) {
+    this.appendString("[ ");
+    this.visitElementList(ctx.elementList());
+    this.appendString("] ");
+  }
+
+  /**
+   * Visits an object literal.
+   * @param {Object} ctx - Context of the object literal.
+   */
+  visitObjectLiteral(ctx) {
+    this.appendString("{ ");
+
+    for (let i = 1; i < ctx.children.length - 1; i++) {
+      this.visit(ctx.children[i]);
+      if (
+        i !== ctx.children.length - 2 &&
+        !ctx.children[i].getText().includes(",")
+      )
+        this.appendString(", ");
+    }
+    this.appendString("}");
+  }
+
+  /**
+   * Visits a property expression assignment.
+   * @param {Object} ctx - Context of the property expression assignment.
+   */
+  visitPropertyExpressionAssignment(ctx) {
+    this.visitPropertyName(ctx.propertyName());
+    this.appendString(": ");
+    this.visit(ctx.children[2]);
+  }
+
+  /**
+   * Visits an element list.
+   * @param {Object} ctx - Context of the element list.
+   */
+  visitElementList(ctx) {
+    for (let i = 0; i < ctx.arrayElement().length; i++) {
+      this.visitArrayElement(ctx.arrayElement(i));
+      if (i !== ctx.arrayElement().length - 1) this.appendString(", ");
+    }
+  }
+
+  /**
+   * Visits an array element.
+   * @param {Object} ctx - Context of the array element.
+   */
+  visitArrayElement(ctx) {
+    if (ctx.Ellipsis()) this.appendTokens(ctx.Ellipsis());
+    this.visitChildren(ctx);
+  }
+
+  /**
+   * Visits the last formal parameter argument.
+   * @param {Object} ctx - Context of the last formal parameter argument.
+   */
+  visitLastFormalParameterArg(ctx) {
+    this.appendTokens(ctx.Ellipsis());
+    this.visitChildren(ctx);
+  }
+
+  /**
+   * Visits a function body.
+   * @param {Object} ctx - Context of the function body.
+   */
+  visitFunctionBody(ctx) {
+    this.appendString("{ ");
+    if (ctx.sourceElements()) this.visitSourceElement(ctx.sourceElements());
+    this.appendString("} ");
+  }
+
+  /**
+   * Visits a class declaration.
+   * @param {Object} ctx - Context of the class declaration.
+   */
+  visitClassDeclaration(ctx) {
+    this.appendString("class ");
+    this.appendString(ctx.identifier().getText());
+    this.visitClassTail(ctx.classTail());
+  }
+
+  /**
+   * Visits a class expression.
+   * @param {Object} ctx - Context of the class expression.
+   */
+  visitClassExpression(ctx) {
+    this.appendString("class ");
+    if (ctx.identifier()) this.visitIdentifier(ctx.identifier());
+    this.visitClassTail(ctx.classTail());
+  }
+
+  /**
+   * Visits the tail of a class.
+   * @param {Object} ctx - Context of the class tail.
+   */
+  visitClassTail(ctx) {
+    if (ctx.Extends()) {
+      this.appendString(" extends ");
       this.visit(ctx.children[1]);
-      this.appendString("]");
-      this.appendString(":");
-      this.visit(ctx.children[4]);
     }
+    this.appendString("{");
+    for (let i = 0; i < ctx.classElement().length; i++) {
+      this.visitClassElement(ctx.classElement(i));
+    }
+    this.appendString("}");
+  }
 
-    // | getter '(' ')' functionBody                                           # PropertyGetter
-    visitPropertyGetter(ctx) {
+  /**
+   * Visits a class element.
+   * @param {Object} ctx - Context of the class element.
+   */
+  visitClassElement(ctx) {
+    if (ctx.emptyStatement_()) {
+      this.appendString(";");
+    } else if (ctx.propertyName()) {
+      if (ctx.children.length === 4) this.appendString("#");
+      this.visitPropertyName(ctx.propertyName());
+      this.appendString(" = ");
+      this.visit(ctx.children[ctx.children.length - 1]);
+    } else {
+      for (const tk of ctx.Static()) {
+        this.appendString(tk.getText() + " ");
+      }
+      for (const tk of ctx.identifier()) {
+        this.appendString(tk.getText() + " ");
+      }
+      for (const tk of ctx.Async()) {
+        this.appendString(tk.getText() + " ");
+      }
+      if (ctx.methodDefinition()) {
+        this.visitMethodDefinition(ctx.methodDefinition());
+      } else {
+        this.visitAssignable(ctx.assignable());
+        this.appendString(" = ");
+        this.visitObjectLiteral(ctx.objectLiteral());
+        this.appendString(";");
+      }
+    }
+  }
+
+  /**
+   * Visits a method definition.
+   * @param {Object} ctx - Context of the method definition.
+   */
+  visitMethodDefinition(ctx) {
+    if (ctx.children[0].getText().includes("*")) this.appendString("*");
+    if (
+      ctx.children[0].getText().includes("#") ||
+      ctx.children[1].getText().includes("#")
+    )
+      this.appendString("#");
+    if (ctx.propertyName()) {
+      this.visitPropertyName(ctx.propertyName());
+      this.appendString("(");
+      if (ctx.formalParameterList())
+        this.visitFormalParameterList(ctx.formalParameterList());
+      this.appendString(")");
+    } else if (ctx.getter()) {
       this.visitGetter(ctx.getter());
       this.appendString("(");
       this.appendString(")");
-      this.visitFunctionBody(ctx.functionBody())
-    }
-
-    //| setter '(' formalParameterArg ')' functionBody                        # PropertySetter
-    visitPropertySetter(ctx) {
+    } else {
       this.visitSetter(ctx.setter());
       this.appendString("(");
-      this.visitFormalParameterArg(ctx.formalParameterArg());
+      if (ctx.formalParameterList())
+        this.visitFormalParameterList(ctx.formalParameterList());
       this.appendString(")");
-      this.visitFunctionBody(ctx.functionBody())
     }
-
-    // | Ellipsis? singleExpression                                                    # PropertyShorthand
-    visitPropertyShorthand(ctx) {
-      if (ctx.Ellipsis()) this.appendString("...");
-      this.visitChildren(ctx);
-    }
-
-    visitSetter(ctx) {
-      this.appendString("set ");
-      this.visitPropertyName(ctx.propertyName());
-    }
-
-    // declaration
-    visitDeclaration(ctx) {
-      if (ctx.variableStatement()) {
-        this.visitVariableStatement(ctx.variableStatement());
-      } else if (ctx.classDeclaration()) {
-        this.visitClassDeclaration(ctx.classDeclaration());
-      } else if (ctx.functionDeclaration()) {
-        this.visitFunctionDeclaration(ctx.functionDeclaration());
-      }
-    }
-
-    visitVariableStatement(ctx) { 
-      this.visitVariableDeclarationList(ctx.variableDeclarationList());
-      if (ctx.eos().getText().includes(";")) this.appendString(";");
-      this.appendNewLine(); 
-    }
-
-    // varModifier
-    visitVarModifier(ctx) {
-      if (ctx.Var()) {
-        this.appendString("var ");
-      } else if (ctx.let_()) {
-        this.appendString("let ");
-      } else if (ctx.Const()) {
-        this.appendString("const ");
-      }
-    }
-    
-    // variableDeclaration
-    visitVariableDeclarationList(ctx) {
-      this.visitVarModifier(ctx.varModifier());
-      const variableDeclarations = ctx.variableDeclaration();
-      for (let i = 0; i < variableDeclarations.length; i++) {
-        this.visitVariableDeclaration(variableDeclarations[i]);
-        if (i < variableDeclarations.length - 1) {
-          this.appendString(",");
-        }
-      }
-    }
-
-    // variableDeclaration
-    /*
-    variableDeclaration
-    : assignable ('=' singleExpression)? // ECMAScript 6: Array & Object Matching
-    ;
-    */
-    visitVariableDeclaration(ctx) {
-      this.visitAssignable(ctx.assignable());
-      if (ctx.children.length > 1) {
-        this.appendString(" = ");
-        this.visit(ctx.children[2]);
-        
-      }
-    }
-
-      // continueStatement
-    visitContinueStatement(ctx) {
-      this.appendString("continue");
-      if (ctx.identifier()) {
-        this.appendString(" " + ctx.identifier().getText());
-      }
-      this.appendTokens(ctx.eos());
-    }
-
-    // breakStatement
-    visitBreakStatement(ctx) {
-      this.appendString("break");
-      if (ctx.identifier()) {
-        this.appendString(" " + ctx.identifier().getText());
-      }
-      this.appendTokens(ctx.eos());
-    }
-
-    // returnStatement
-    visitReturnStatement(ctx) {
-      this.appendString("return ");
-      if (ctx.expressionSequence()) {
-          this.visitExpressionSequence(ctx.expressionSequence());
-          this.appendString(";");
-          this.appendNewLine();
-      } else {
-          this.appendString(";");
-          this.appendNewLine();
-      }
+    this.visitFunctionBody(ctx.functionBody());
   }
-  
 
-    //yieldStatement
-    visitYieldStatement(ctx){
-      this.appendString("yield");
-      if(ctx.expressionSequence()){
-        this.appendString(" " + ctx.expressionSequence().getText());
-      }
-      this.appendTokens(ctx.eos());
+  /**
+   * Visits a getter method.
+   * @param {Object} ctx - Context of the getter method.
+   */
+  visitGetter(ctx) {
+    this.appendString("get ");
+    this.visitPropertyName(ctx.propertyName());
+  }
+
+  /**
+   * Visits a computed property expression assignment.
+   * @param {Object} ctx - Context of the computed property expression assignment.
+   */
+  visitComputedPropertyExpressionAssignment(ctx) {
+    this.appendString("[");
+    this.visit(ctx.children[1]);
+    this.appendString("]");
+    this.appendString(":");
+    this.visit(ctx.children[4]);
+  }
+
+  /**
+   * Visits a property getter.
+   * @param {Object} ctx - Context of the property getter.
+   */
+  visitPropertyGetter(ctx) {
+    this.visitGetter(ctx.getter());
+    this.appendString("(");
+    this.appendString(")");
+    this.visitFunctionBody(ctx.functionBody());
+  }
+
+  /**
+   * Visits a property setter.
+   * @param {Object} ctx - Context of the property setter.
+   */
+  visitPropertySetter(ctx) {
+    this.visitSetter(ctx.setter());
+    this.appendString("(");
+    this.visitFormalParameterArg(ctx.formalParameterArg());
+    this.appendString(")");
+    this.visitFunctionBody(ctx.functionBody());
+  }
+
+  /**
+   * Visits a property shorthand.
+   * @param {Object} ctx - Context of the property shorthand.
+   */
+  visitPropertyShorthand(ctx) {
+    if (ctx.Ellipsis()) this.appendString("...");
+    this.visitChildren(ctx);
+  }
+
+  /**
+   * Visits a setter.
+   * @param {Object} ctx - Context of the setter.
+   */
+  visitSetter(ctx) {
+    this.appendString("set ");
+    this.visitPropertyName(ctx.propertyName());
+  }
+
+  /**
+   * Visits a declaration.
+   * @param {Object} ctx - Context of the declaration.
+   */
+  visitDeclaration(ctx) {
+    if (ctx.variableStatement()) {
+      this.visitVariableStatement(ctx.variableStatement());
+    } else if (ctx.classDeclaration()) {
+      this.visitClassDeclaration(ctx.classDeclaration());
+    } else if (ctx.functionDeclaration()) {
+      this.visitFunctionDeclaration(ctx.functionDeclaration());
     }
+  }
 
-    //withStatement
-    visitWithStatement(ctx){
-      this.appendString("with (");
+  /**
+   * Visits a variable statement.
+   * @param {Object} ctx - Context of the variable statement.
+   */
+  visitVariableStatement(ctx) {
+    this.visitVariableDeclarationList(ctx.variableDeclarationList());
+    if (ctx.eos().getText().includes(";")) this.appendString(";");
+    this.appendNewLine();
+  }
+
+  /**
+   * Visits a var modifier.
+   * @param {Object} ctx - Context of the var modifier.
+   */
+  visitVarModifier(ctx) {
+    if (ctx.Var()) {
+      this.appendString("var ");
+    } else if (ctx.let_()) {
+      this.appendString("let ");
+    } else if (ctx.Const()) {
+      this.appendString("const ");
+    }
+  }
+
+  /**
+   * Visits a variable declaration list.
+   * @param {Object} ctx - Context of the variable declaration list.
+   */
+  visitVariableDeclarationList(ctx) {
+    this.visitVarModifier(ctx.varModifier());
+    const variableDeclarations = ctx.variableDeclaration();
+    for (let i = 0; i < variableDeclarations.length; i++) {
+      this.visitVariableDeclaration(variableDeclarations[i]);
+      if (i < variableDeclarations.length - 1) {
+        this.appendString(",");
+      }
+    }
+  }
+
+  /**
+   * Visits a variable declaration.
+   * @param {Object} ctx - Context of the variable declaration.
+   */
+  visitVariableDeclaration(ctx) {
+    this.visitAssignable(ctx.assignable());
+    if (ctx.children.length > 1) {
+      this.appendString(" = ");
+      this.visit(ctx.children[2]);
+    }
+  }
+
+  /**
+   * Visits a continue statement.
+   * @param {Object} ctx - Context of the continue statement.
+   */
+  visitContinueStatement(ctx) {
+    this.appendString("continue");
+    if (ctx.identifier()) {
+      this.appendString(" " + ctx.identifier().getText());
+    }
+    this.appendTokens(ctx.eos());
+  }
+
+  /**
+   * Visits a break statement.
+   * @param {Object} ctx - Context of the break statement.
+   */
+  visitBreakStatement(ctx) {
+    this.appendString("break");
+    if (ctx.identifier()) {
+      this.appendString(" " + ctx.identifier().getText());
+    }
+    this.appendTokens(ctx.eos());
+  }
+
+  /**
+   * Visits a return statement.
+   * @param {Object} ctx - Context of the return statement.
+   */
+  visitReturnStatement(ctx) {
+    this.appendString("return ");
+    if (ctx.expressionSequence()) {
       this.visitExpressionSequence(ctx.expressionSequence());
-      this.appendString(")");
-      this.visitStatement(ctx.statement());
+      this.appendString(";");
+      this.appendNewLine();
+    } else {
+      this.appendString(";");
+      this.appendNewLine();
     }
+  }
 
-    //SwitchStatement
-    visitSwitchStatement(ctx){
-      this.appendString("switch ");
-      this.appendString("(");
-      this.visitExpressionSequence(ctx.expressionSequence());
-      this.appendString(")");
-      this.visitCaseBlock(ctx.caseBlock())
+  /**
+   * Visits a yield statement.
+   * @param {Object} ctx - Context of the yield statement.
+   */
+  visitYieldStatement(ctx) {
+    this.appendString("yield");
+    if (ctx.expressionSequence()) {
+      this.appendString(" " + ctx.expressionSequence().getText());
     }
+    this.appendTokens(ctx.eos());
+  }
 
-    //caseBlock
-    visitCaseBlock(ctx) {
-      this.appendString("{");
-      if (ctx.caseClauses(0)) {
-        this.visitCaseClauses(ctx.caseClauses(0));
+  /**
+   * Visits a with statement.
+   * @param {Object} ctx - Context of the with statement.
+   */
+  visitWithStatement(ctx) {
+    this.appendString("with (");
+    this.visitExpressionSequence(ctx.expressionSequence());
+    this.appendString(")");
+    this.visitStatement(ctx.statement());
+  }
+
+  /**
+   * Visits a switch statement.
+   * @param {Object} ctx - Context of the switch statement.
+   */
+  visitSwitchStatement(ctx) {
+    this.appendString("switch ");
+    this.appendString("(");
+    this.visitExpressionSequence(ctx.expressionSequence());
+    this.appendString(")");
+    this.visitCaseBlock(ctx.caseBlock());
+  }
+
+  /**
+   * Visits a case block.
+   * @param {Object} ctx - Context of the case block.
+   */
+  visitCaseBlock(ctx) {
+    this.appendString("{");
+    if (ctx.caseClauses(0)) {
+      this.visitCaseClauses(ctx.caseClauses(0));
+    }
+    if (ctx.defaultClause()) {
+      this.visitDefaultClause(ctx.defaultClause());
+      if (ctx.caseClauses(1)) {
+        this.visitCaseClauses(ctx.caseClauses(1));
       }
-      if (ctx.defaultClause()) {
-        this.visitDefaultClause(ctx.defaultClause());
-        if (ctx.caseClauses(1)) {
-          this.visitCaseClauses(ctx.caseClauses(1));
-        }
-      }
-      this.appendString("}");
     }
+    this.appendString("}");
+  }
 
-    // caseClauses
-    visitCaseClauses(ctx) {
-      for (const caseClause of ctx.caseClause()) {
-        this.visitCaseClause(caseClause);
-      }
+  /**
+   * Visits case clauses.
+   * @param {Object} ctx - Context of the case clauses.
+   */
+  visitCaseClauses(ctx) {
+    for (const caseClause of ctx.caseClause()) {
+      this.visitCaseClause(caseClause);
     }
+  }
 
-    // caseClause
-    visitCaseClause(ctx) {
-     this.appendString("case ");
-     this.visitExpressionSequence(ctx.expressionSequence());
-     this.appendString(":");
-     if(ctx.statementList()){
+  /**
+   * Visits a case clause.
+   * @param {Object} ctx - Context of the case clause.
+   */
+  visitCaseClause(ctx) {
+    this.appendString("case ");
+    this.visitExpressionSequence(ctx.expressionSequence());
+    this.appendString(":");
+    if (ctx.statementList()) {
       this.visitStatementList(ctx.statementList());
       this.appendNewLine();
-     }
     }
+  }
 
-    // defaultClause
-    visitDefaultClause(ctx) {
-      this.appendString("default:");
-      if (ctx.statementList()) {
-        this.visitStatementList(ctx.statementList());
-        this.appendNewLine()
-      }
+  /**
+   * Visits a default clause.
+   * @param {Object} ctx - Context of the default clause.
+   */
+  visitDefaultClause(ctx) {
+    this.appendString("default:");
+    if (ctx.statementList()) {
+      this.visitStatementList(ctx.statementList());
+      this.appendNewLine();
     }
+  }
 
-        /*
-    labelledStatement --
-    : identifier ':' statement
-    ;
-    */
+  /**
+   * Visits a labelled statement.
+   * @param {Object} ctx - Context of the labelled statement.
+   */
   visitLabelledStatement(ctx) {
     this.appendString(ctx.identifier().getText());
     this.appendString(" : ");
-    this.visitStatement(ctx.statement())
+    this.visitStatement(ctx.statement());
   }
 
-     /*
-throwStatement --
-    : Throw {this.notLineTerminator()}? expressionSequence eos
-    ;
-    */
-    visitThrowStatement(ctx) {
-      this.appendString("throw ");
-      this.visitExpressionSequence(ctx.expressionSequence());
-      this.appendString(";");
-    }
-    
-    /*
-tryStatement --
-    : Try block (catchProduction finallyProduction? | finallyProduction)
-    ;
-    */
-    visitTryStatement(ctx) {
-      this.appendString("try ");
-      this.visitBlock(ctx.block());
-      if (ctx.catchProduction()) {
-        this.visitCatchProduction(ctx.catchProduction());
-        if (ctx.finallyProduction()) this.visitFinallyProduction(ctx.finallyProduction());
-      } else {
+  /**
+   * Visits a throw statement.
+   * @param {Object} ctx - Context of the throw statement.
+   */
+  visitThrowStatement(ctx) {
+    this.appendString("throw ");
+    this.visitExpressionSequence(ctx.expressionSequence());
+    this.appendString(";");
+  }
+
+  /**
+   * Visits a try statement.
+   * @param {Object} ctx - Context of the try statement.
+   */
+  visitTryStatement(ctx) {
+    this.appendString("try ");
+    this.visitBlock(ctx.block());
+    if (ctx.catchProduction()) {
+      this.visitCatchProduction(ctx.catchProduction());
+      if (ctx.finallyProduction())
         this.visitFinallyProduction(ctx.finallyProduction());
-      }
+    } else {
+      this.visitFinallyProduction(ctx.finallyProduction());
     }
-
-    /*
-    catchProduction --
-    : Catch ('(' assignable? ')')? block
-    ;
-    */
-    visitCatchProduction(ctx) {
-      this.appendString("catch ");
-      if (ctx.assignable()) {
-        this.appendString("( ");
-        this.visitAssignable(ctx.assignable());
-        this.appendString(") ");
-      }
-      this.visitBlock(ctx.block());
-    }
-
-    /*
-    
-finallyProduction -- 
-    : Finally block
-    ;
-    */
-    visitFinallyProduction(ctx) {
-      this.appendString("finally ");
-      this.visitBlock(ctx.block());
-    }
-    /*
-debuggerStatement --
-    : Debugger eos
-    ;
-    */
-    visitDebuggerStatement(ctx) {
-      this.appendString("debugger ");
-      this.appendString(";");
-    }
-
-    // statementList
-    visitStatementList(ctx) {
-      for (const statement of ctx.statement()) {
-        this.visitStatement(statement);
-        this.appendNewLine()
-      }
-    }
-
-    // emptyStatement_
-    visitEmptyStatement_(ctx){
-      this.appendTokens(ctx.SemiColon());
-    }
-
-   /* visitExpressionStatement(ctx) {
-      if (!this.notOpenBraceAndNotFunction()) {
-        this.visitExpressionSequence(ctx.expressionSequence());
-        this.appendTokens(ctx.eos());
-      }
-    }*/
-
-    // expressionSequence: singleExp (',' singleExp)*
-    visitExpressionSequence(ctx) {
-      for (let i = 0; i < ctx.children.length; i++) {
-          this.visit(ctx.children[i]);
-          if (i % 2 !== 0 && i !== 0) {
-              this.appendString(",");
-          }
-      }
   }
-  
-    
-    // ifStatement
-    // ifStatement
-    // : If '(' expressionSequence ')' statement (Else statement)?
-    // ;
-    visitIfStatement(ctx) {
-      this.appendString("if ");
-      this.appendString("(");
-      this.visitExpressionSequence(ctx.expressionSequence());
+
+  /**
+   * Visits a catch production.
+   * @param {Object} ctx - Context of the catch production.
+   */
+  visitCatchProduction(ctx) {
+    this.appendString("catch ");
+    if (ctx.assignable()) {
+      this.appendString("( ");
+      this.visitAssignable(ctx.assignable());
       this.appendString(") ");
-      this.appendNewLine(); // colocar ou nao?
-      this.visitStatement(ctx.statement(0));
-      if (ctx.Else()) {
-        this.appendString("else ");
-        this.visitStatement(ctx.statement(1));
+    }
+    this.visitBlock(ctx.block());
+  }
+
+  /**
+   * Visits a finally production.
+   * @param {Object} ctx - Context of the finally production.
+   */
+  visitFinallyProduction(ctx) {
+    this.appendString("finally ");
+    this.visitBlock(ctx.block());
+  }
+
+  /**
+   * Visits a debugger statement.
+   * @param {Object} ctx - Context of the debugger statement.
+   */
+  visitDebuggerStatement(ctx) {
+    this.appendString("debugger ");
+    this.appendString(";");
+  }
+
+  /**
+   * Visits a statement list.
+   * @param {Object} ctx - Context of the statement list.
+   */
+  visitStatementList(ctx) {
+    for (const statement of ctx.statement()) {
+      this.visitStatement(statement);
+      this.appendNewLine();
+    }
+  }
+
+  /**
+   * Visits an empty statement.
+   * @param {Object} ctx - Context of the empty statement.
+   */
+  visitEmptyStatement_(ctx) {
+    this.appendTokens(ctx.SemiColon());
+  }
+
+  /**
+   * Visits an expression sequence.
+   * @param {Object} ctx - Context of the expression sequence.
+   */
+  visitExpressionSequence(ctx) {
+    for (let i = 0; i < ctx.children.length; i++) {
+      this.visit(ctx.children[i]);
+      if (i % 2 !== 0 && i !== 0) {
+        this.appendString(",");
       }
     }
+  }
 
-    // iterationStatement
-    /*
-    iterationStatement
-    : Do statement While '(' expressionSequence ')' eos                                                                       # DoStatement
-    | While '(' expressionSequence ')' statement                                                                              # WhileStatement
-    | For '(' (expressionSequence | variableDeclarationList)? ';' expressionSequence? ';' expressionSequence? ')' statement   # ForStatement
-    | For '(' (singleExpression | variableDeclarationList) In expressionSequence ')' statement                                # ForInStatement
-    // strange, 'of' is an identifier. and this.p("of") not work in sometime.
-    | For Await? '(' (singleExpression | variableDeclarationList) identifier{this.p("of")}? expressionSequence ')' statement  # ForOfStatement
-    ;
-    */
-   visitDoStatement(ctx) {
-      this.appendString("do ");
-      this.visitStatement(ctx.statement());
-      this.appendString("while");
-      this.appendString("(");
-      this.visitExpressionSequence(ctx.expressionSequence());
-      this.appendString(")");
-      this.appendTokens(ctx.eos());
-   }
-
-   visitWhileStatement(ctx) {
-      this.appendString("while ");
-      this.appendString("(");
-      this.visitExpressionSequence(ctx.expressionSequence());
-      this.appendString(")");
-      this.visitStatement(ctx.statement());
-   }
-
-   visitForStatement(ctx) {
-      for (const childCtx of ctx.children) {
-        if (childCtx.getText() === "for") this.appendString("for ");
-        else if (childCtx.getText() === ";") this.appendString(";");
-        else if (childCtx.getText() === "(") this.appendString("(");
-        else if (childCtx.getText() === ")") this.appendString(")");
-        else this.visit(childCtx);
-      }
-   }
-
-//    visitForInStatement(ctx) {
-//     this.appendString("for ");
-//     this.appendString("(");
-
-//     // Verificar se há um singleExpression ou variableDeclarationList no contexto
-//     if (ctx.children[2].singleExpression()) {
-//         this.visit(ctx.children[2].singleExpression());
-//     } else if (ctx.children[2].variableDeclarationList()) {
-//         this.visitVariableDeclarationList(ctx.children[2].variableDeclarationList());
-//     }
-
-//     this.appendString(" in ");
-//     this.visitExpressionSequence(ctx.expressionSequence());
-//     this.appendString(")");
-//     this.visitStatement(ctx.statement());
-// }
-
-   //| For Await? '(' (singleExpression | variableDeclarationList) identifier{this.p("of")}? expressionSequence ')' statement  # ForOfStatement
-    visitForOfStatement(ctx) {
-      this.appendString("for ");
-      if (ctx.Await()) this.appendString("await ");
-      this.appendString("(");
-      
-      if (ctx.variableDeclarationList()) this.visitVariableDeclarationList(ctx.variableDeclarationList());
-      else {
-        if (ctx.Await()) this.visit(ctx.children[3]);
-        else this.visit(ctx.children[2]);
-      }
-
-      if (ctx.identifier()) this.visitIdentifier(ctx.identifier());
-
-      this.visitExpressionSequence(ctx.expressionSequence());
-
-      this.appendString(")");
-      this.visitStatement(ctx.statement());
+  /**
+   * Visits an if statement.
+   * @param {Object} ctx - Context of the if statement.
+   */
+  visitIfStatement(ctx) {
+    this.appendString("if ");
+    this.appendString("(");
+    this.visitExpressionSequence(ctx.expressionSequence());
+    this.appendString(") ");
+    this.appendNewLine();
+    this.visitStatement(ctx.statement(0));
+    if (ctx.Else()) {
+      this.appendString("else ");
+      this.visitStatement(ctx.statement(1));
     }
-  
-    visitIdentifier(ctx) {
-      this.appendString(ctx.getText() + " ");
+  }
+
+  /**
+   * Visits a do statement.
+   * @param {Object} ctx - Context of the do statement.
+   */
+  visitDoStatement(ctx) {
+    this.appendString("do ");
+    this.visitStatement(ctx.statement());
+    this.appendString("while");
+    this.appendString("(");
+    this.visitExpressionSequence(ctx.expressionSequence());
+    this.appendString(")");
+    this.appendTokens(ctx.eos());
+  }
+
+  /**
+   * Visits a while statement.
+   * @param {Object} ctx - Context of the while statement.
+   */
+  visitWhileStatement(ctx) {
+    this.appendString("while ");
+    this.appendString("(");
+    this.visitExpressionSequence(ctx.expressionSequence());
+    this.appendString(")");
+    this.visitStatement(ctx.statement());
+  }
+
+  /**
+   * Visits a for statement.
+   * @param {Object} ctx - Context of the for statement.
+   */
+  visitForStatement(ctx) {
+    for (const childCtx of ctx.children) {
+      if (childCtx.getText() === "for") this.appendString("for ");
+      else if (childCtx.getText() === ";") this.appendString(";");
+      else if (childCtx.getText() === "(") this.appendString("(");
+      else if (childCtx.getText() === ")") this.appendString(")");
+      else this.visit(childCtx);
+    }
+  }
+
+  /**
+   * Visits a for-of statement.
+   * @param {Object} ctx - Context of the for-of statement.
+   */
+  visitForOfStatement(ctx) {
+    this.appendString("for ");
+    if (ctx.Await()) this.appendString("await ");
+    this.appendString("(");
+
+    if (ctx.variableDeclarationList())
+      this.visitVariableDeclarationList(ctx.variableDeclarationList());
+    else {
+      if (ctx.Await()) this.visit(ctx.children[3]);
+      else this.visit(ctx.children[2]);
     }
 
-    // pra ter ; eos
-    visitExpressionStatement(ctx) {
-      this.visitExpressionSequence(ctx.expressionSequence());
-      this.appendString(";");
-    }
-    
-    // anonymousFunction
+    if (ctx.identifier()) this.visitIdentifier(ctx.identifier());
+
+    this.visitExpressionSequence(ctx.expressionSequence());
+
+    this.appendString(")");
+    this.visitStatement(ctx.statement());
+  }
+
+  /**
+   * Visits an identifier.
+   * @param {Object} ctx - Context of the identifier.
+   */
+  visitIdentifier(ctx) {
+    this.appendString(ctx.getText() + " ");
+  }
+
+  /**
+   * Visits an expression statement.
+   * @param {Object} ctx - Context of the expression statement.
+   */
+  visitExpressionStatement(ctx) {
+    this.visitExpressionSequence(ctx.expressionSequence());
+    this.appendString(";");
+  }
+
+  /**
+   * Visits an anonymous function.
+   * @param {Object} ctx - Context of the anonymous function.
+   */
   visitAnonymousFunction(ctx) {
     if (ctx.Async()) {
       this.appendTokens(ctx.Async());
@@ -915,40 +1040,45 @@ debuggerStatement --
     this.appendTokens(ctx.RightParen());
     this.visitFunctionBody(ctx.functionBody());
   }
-    
 
-
-  //singleExpression
-
-    // | singleExpression '?.'? '[' expressionSequence ']'                     # MemberIndexExpression
+  /**
+   * Visits a member index expression.
+   * @param {Object} ctx - Context of the member index expression.
+   */
   visitMemberIndexExpression(ctx) {
-    this.visit(ctx.children[0])
+    this.visit(ctx.children[0]);
     if (ctx.children.length === 5) this.appendString(" ?. ");
     this.appendString("[ ");
     this.visitExpressionSequence(ctx.expressionSequence());
     this.appendString(" ] ");
   }
 
-  //| singleExpression '?'? '.' '#'? identifierName                         # MemberDotExpression
-  visitMemberDotExpression(ctx) { 
+  /**
+   * Visits a member dot expression.
+   * @param {Object} ctx - Context of the member dot expression.
+   */
+  visitMemberDotExpression(ctx) {
     this.visit(ctx.children[0]);
     if (ctx.children[1].getText().includes("?")) this.appendString(" ? ");
     this.appendString(".");
-    if (ctx.children[ctx.children.length-2].getText().includes("#")) this.appendString(" #");
+    if (ctx.children[ctx.children.length - 2].getText().includes("#"))
+      this.appendString(" #");
     this.appendString(ctx.identifierName().getText());
   }
 
-  //| New singleExpression arguments                                        # NewExpression
+  /**
+   * Visits a new expression.
+   * @param {Object} ctx - Context of the new expression.
+   */
   visitNewExpression(ctx) {
     this.appendString("new ");
     this.visitChildren(ctx);
   }
 
-  /*
-  arguments
-    : '('(argument (',' argument)* ','?)?')'
-    ;
-  */
+  /**
+   * Visits arguments.
+   * @param {Object} ctx - Context of the arguments.
+   */
   visitArguments(ctx) {
     this.appendString("(");
     for (let i = 0; i < ctx.argument().length; i++) {
@@ -958,19 +1088,20 @@ debuggerStatement --
     this.appendString(") ");
   }
 
-  /*
-  argument
-    : Ellipsis? (singleExpression | identifier)
-    ;
-  */
+  /**
+   * Visits an argument.
+   * @param {Object} ctx - Context of the argument.
+   */
   visitArgument(ctx) {
     if (ctx.Ellipsis()) this.appendTokens(ctx.Ellipsis());
     if (ctx.identifier()) this.appendString(ctx.identifier().getText());
     else this.visitChildren(ctx);
-
   }
 
-  //  singleExpression ('+' | '-') singleExpression   
+  /**
+   * Visits an additive expression.
+   * @param {Object} ctx - Context of the additive expression.
+   */
   visitAdditiveExpression(ctx) {
     this.visit(ctx.children[0]);
     if (ctx.children[1].getText().includes("+")) this.appendString("+ ");
@@ -978,17 +1109,14 @@ debuggerStatement --
     this.visit(ctx.children[2]);
   }
 
-  /*
-  propertyName
-    : identifierName
-    | StringLiteral
-    | numericLiteral
-    | '[' singleExpression ']'
-    ;
-  */
+  /**
+   * Visits a property name.
+   * @param {Object} ctx - Context of the property name.
+   */
   visitPropertyName(ctx) {
     if (ctx.identifierName()) this.visitIdentifierName(ctx.identifierName());
-    else if (ctx.StringLiteral()) this.appendString(ctx.StringLiteral().getText());
+    else if (ctx.StringLiteral())
+      this.appendString(ctx.StringLiteral().getText());
     else if (ctx.numericLiteral()) this.appendTokens(ctx.numericLiteral());
     else {
       this.appendString(" [ ");
@@ -997,265 +1125,329 @@ debuggerStatement --
     }
   }
 
-  //| singleExpression arguments                                            # ArgumentsExpression
+  /**
+   * Visits an arguments expression.
+   * @param {Object} ctx - Context of the arguments expression.
+   */
   visitArgumentsExpression(ctx) {
     this.visit(ctx.children[0]);
     this.visitArguments(ctx.arguments());
   }
 
-  //| New '.' identifier                                                    # MetaExpression // new.target
+  /**
+   * Visits a meta expression.
+   * @param {Object} ctx - Context of the meta expression.
+   */
   visitMetaExpression(ctx) {
     this.appendString(" new");
     this.appendString(".");
     this.appendString(ctx.identifier().getText());
   }
 
-  //| singleExpression {this.notLineTerminator()}? '++'                     # PostIncrementExpression 
+  /**
+   * Visits a post-increment expression.
+   * @param {Object} ctx - Context of the post-increment expression.
+   */
   visitPostIncrementExpression(ctx) {
     this.visit(ctx.children[0]);
     this.appendString("++ ");
   }
 
-  // | singleExpression {this.notLineTerminator()}? '--'                     # PostDecreaseExpression
+  /**
+   * Visits a post-decrease expression.
+   * @param {Object} ctx - Context of the post-decrease expression.
+   */
   visitPostDecreaseExpression(ctx) {
     this.visit(ctx.children[0]);
     this.appendString("-- ");
   }
 
-  //| Delete singleExpression                                               # DeleteExpression
+  /**
+   * Visits a delete expression.
+   * @param {Object} ctx - Context of the delete expression.
+   */
   visitDeleteExpression(ctx) {
     this.appendString(" delete ");
     this.visitChildren(ctx);
-  }  
+  }
 
-  //   | Void singleExpression                                                 # VoidExpression
+  /**
+   * Visits a void expression.
+   * @param {Object} ctx - Context of the void expression.
+   */
   visitVoidExpression(ctx) {
     this.appendString(" void ");
     this.visitChildren(ctx);
   }
 
-  // | Typeof singleExpression                                               # TypeofExpression
+  /**
+   * Visits a typeof expression.
+   * @param {Object} ctx - Context of the typeof expression.
+   */
   visitTypeofExpression(ctx) {
     this.appendString(" typeof ");
     this.visitChildren(ctx);
   }
 
-  //| '++' singleExpression                                                 # PreIncrementExpression
+  /**
+   * Visits a pre-increment expression.
+   * @param {Object} ctx - Context of the pre-increment expression.
+   */
   visitPreIncrementExpression(ctx) {
     this.appendString(" ++ ");
     this.visitChildren(ctx);
   }
 
-  // | '--' singleExpression                                                 # PreDecreaseExpression
+  /**
+   * Visits a pre-decrease expression.
+   * @param {Object} ctx - Context of the pre-decrease expression.
+   */
   visitPreDecreaseExpression(ctx) {
     this.appendString(" -- ");
     this.visitChildren(ctx);
   }
 
-  //| '+' singleExpression                                                  # UnaryPlusExpression
+  /**
+   * Visits a unary plus expression.
+   * @param {Object} ctx - Context of the unary plus expression.
+   */
   visitUnaryPlusExpression(ctx) {
     this.appendString("+ ");
     this.visitChildren(ctx);
   }
 
-  //| '-' singleExpression                                                  # UnaryMinusExpression
+  /**
+   * Visits a unary minus expression.
+   * @param {Object} ctx - Context of the unary minus expression.
+   */
   visitUnaryMinusExpression(ctx) {
     this.appendString("- ");
     this.visitChildren(ctx);
   }
 
-  // | '~' singleExpression                                                  # BitNotExpression
+  /**
+   * Visits a bitwise NOT expression.
+   * @param {Object} ctx - Context of the bitwise NOT expression.
+   */
   visitBitNotExpression(ctx) {
     this.appendString(" ~ ");
     this.visitChildren(ctx);
   }
 
-  // | '!' singleExpression                                                  # NotExpression
+  /**
+   * Visits a logical NOT expression.
+   * @param {Object} ctx - Context of the logical NOT expression.
+   */
   visitNotExpression(ctx) {
     this.appendString(" ! ");
     this.visitChildren(ctx);
   }
 
-  // | Await singleExpression                                                # AwaitExpression
+  /**
+   * Visits an await expression.
+   * @param {Object} ctx - Context of the await expression.
+   */
   visitAwaitExpression(ctx) {
     this.appendString(" await ");
     this.visitChildren(ctx);
   }
 
-  /*
-    | <assoc=right> singleExpression '**' singleExpression                  # PowerExpression
-  */
-
+  /**
+   * Visits a power expression.
+   * @param {Object} ctx - Context of the power expression.
+   */
   visitPowerExpression(ctx) {
     this.visit(ctx.children[0]);
     this.appendString(" ** ");
     this.visit(ctx.children[2]);
   }
 
-    // MultiplicativeExpression
+  /**
+   * Visits a multiplicative expression.
+   * @param {Object} ctx - Context of the multiplicative expression.
+   */
   visitMultiplicativeExpression(ctx) {
-    this.visit(ctx.children[0]) // Visita a primeira subexpressão ***
+    this.visit(ctx.children[0]);
 
-    const operator = ctx.children[1].getText(); // Obtém o texto do operador
+    const operator = ctx.children[1].getText();
 
-    if (operator === '*') {
+    if (operator === "*") {
       this.appendString("*");
-    } else if (operator === '/') {
+    } else if (operator === "/") {
       this.appendString("/");
-    } else if (operator === '%') {
+    } else if (operator === "%") {
       this.appendString("%");
     }
 
-    this.visit(ctx.children[2]); // Visita a segunda subexpressão
-  }
-
-  // CoalesceExpression
-  visitCoalesceExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a primeira subexpressão
-
-    this.appendString("??");
-
-    this.visit(ctx.children[1]); // Visita a segunda subexpressão
-  }
-
-  // BitShiftExpression
-  visitBitShiftExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a primeira subexpressão
-
-    const operator = ctx.getChild(1).getText(); // Obtém o texto do operador de deslocamento
-
-    if (operator === '<<') {
-      this.appendString("<<");
-    } else if (operator === '>>') {
-      this.appendString(">>");
-    } else if (operator === '>>>') {
-      this.appendString(">>>");
-    }
-
-    this.visit(ctx.children[2]); // Visita a segunda subexpressão
-  }
-
-  // RelationalExpression
-  visitRelationalExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a primeira subexpressão
-
-    const operator = ctx.getChild(1).getText(); // Obtém o texto do operador
-
-    if (operator === '<') {
-      this.appendString("<");
-    } else if (operator === '>') {
-      this.appendString(">");
-    } else if (operator === '<=') {
-      this.appendString("<=");
-    } else if (operator === '>=') {
-      this.appendString(">=");
-    }
-
-    this.visit(ctx.children[2]); // Visita a segunda subexpressão
-  }
-
-  // InstanceofExpression
-  visitInstanceofExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a primeira subexpressão
-
-    this.appendString("instanceof");
-
-    this.visit(ctx.children[1]); // Visita a segunda subexpressão
-  }
-
-  // InExpression
-  visitInExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a primeira subexpressão
-
-    this.appendString("in ");
-
-    //this.visit(ctx.children[1]); // Visita a segunda subexpressão
     this.visit(ctx.children[2]);
   }
 
-  // EqualityExpression
+  /**
+   * Visits a coalesce expression.
+   * @param {Object} ctx - Context of the coalesce expression.
+   */
+  visitCoalesceExpression(ctx) {
+    this.visit(ctx.children[0]);
+    this.appendString("??");
+    this.visit(ctx.children[1]);
+  }
+
+  /**
+   * Visits a bitwise shift expression.
+   * @param {Object} ctx - Context of the bitwise shift expression.
+   */
+  visitBitShiftExpression(ctx) {
+    this.visit(ctx.children[0]);
+    const operator = ctx.getChild(1).getText();
+
+    if (operator === "<<") {
+      this.appendString("<<");
+    } else if (operator === ">>") {
+      this.appendString(">>");
+    } else if (operator === ">>>") {
+      this.appendString(">>>");
+    }
+
+    this.visit(ctx.children[2]);
+  }
+
+  /**
+   * Visits a relational expression.
+   * @param {Object} ctx - Context of the relational expression.
+   */
+  visitRelationalExpression(ctx) {
+    this.visit(ctx.children[0]);
+
+    const operator = ctx.getChild(1).getText();
+
+    if (operator === "<") {
+      this.appendString("<");
+    } else if (operator === ">") {
+      this.appendString(">");
+    } else if (operator === "<=") {
+      this.appendString("<=");
+    } else if (operator === ">=") {
+      this.appendString(">=");
+    }
+
+    this.visit(ctx.children[2]);
+  }
+
+  /**
+   * Visits an instanceof expression.
+   * @param {Object} ctx - Context of the instanceof expression.
+   */
+  visitInstanceofExpression(ctx) {
+    this.visit(ctx.children[0]);
+    this.appendString("instanceof");
+    this.visit(ctx.children[1]);
+  }
+
+  /**
+   * Visits an in expression.
+   * @param {Object} ctx - Context of the in expression.
+   */
+  visitInExpression(ctx) {
+    this.visit(ctx.children[0]);
+    this.appendString("in ");
+    this.visit(ctx.children[2]);
+  }
+
+  /**
+   * Visits an equality expression.
+   * @param {Object} ctx - Context of the equality expression.
+   */
   visitEqualityExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]);
 
-    const operator = ctx.getChild(1).getText(); // Obtém o texto do operador
+    const operator = ctx.getChild(1).getText();
 
-    if (operator === '==') {
+    if (operator === "==") {
       this.appendString("==");
-    } else if (operator === '!=') {
+    } else if (operator === "!=") {
       this.appendString("!=");
-    } else if (operator === '===') {
+    } else if (operator === "===") {
       this.appendString("===");
-    } else if (operator === '!==') {
+    } else if (operator === "!==") {
       this.appendString("!==");
     }
-    if (!(ctx.children[2].getText().includes(";"))
-        && (ctx.children[2].getText().includes("["))
-        &&(!(ctx.children[2].getText().includes("*")))
-        &&(!(ctx.children[2].getText().includes("/")))
-        &&((ctx.children[2].getText().includes(".")))
-
-    ) { //se nao tem ;
+    if (
+      !ctx.children[2].getText().includes(";") &&
+      ctx.children[2].getText().includes("[") &&
+      !ctx.children[2].getText().includes("*") &&
+      !ctx.children[2].getText().includes("/") &&
+      ctx.children[2].getText().includes(".")
+    ) {
       let modifiedText = ctx.children[2].getText();
       let index = modifiedText.indexOf("[");
-      
+
       if (index !== -1) {
-          modifiedText = modifiedText.slice(0, index) + ";" + modifiedText.slice(index);
+        modifiedText =
+          modifiedText.slice(0, index) + ";" + modifiedText.slice(index);
       }
-      
-     this.appendString(modifiedText)
-  }
-  else{
-      this.visit(ctx.children[2]); // Visita a segunda subexpressão
+
+      this.appendString(modifiedText);
+    } else {
+      this.visit(ctx.children[2]);
     }
   }
-  // LogicalAndExpression
+
+  /**
+   * Visits a logical AND expression.
+   * @param {Object} ctx - Context of the logical AND expression.
+   */
   visitLogicalAndExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]);
     this.appendString("&&");
-    this.visit(ctx.children[2]); // Visita a segunda subexpressão
+    this.visit(ctx.children[2]);
   }
 
-  // LogicalOrExpression
+  /**
+   * Visits a logical OR expression.
+   * @param {Object} ctx - Context of the logical OR expression.
+   */
   visitLogicalOrExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a primeira subexpressão
+    this.visit(ctx.children[0]);
     this.appendString("||");
-    this.visit(ctx.children[2]); // Visita a segunda subexpressão
+    this.visit(ctx.children[2]);
   }
 
-  // TernaryExpression  | singleExpression '?' singleExpression ':' singleExpression 
+  /**
+   * Visits a ternary expression.
+   * @param {Object} ctx - Context of the ternary expression.
+   */
   visitTernaryExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a expressão condicional
+    this.visit(ctx.children[0]);
     this.appendString(" ? ");
-    this.visit(ctx.children[2]); // Visita a expressão verdadeira
+    this.visit(ctx.children[2]);
     this.appendString(" : ");
-    this.visit(ctx.children[4]); // Visita a expressão falsa
-}
-
-
-
-  // AssignmentExpression singleExp '=' singExp
-  visitAssignmentExpression(ctx) {
-    this.visit(ctx.children[0]); // Visita a expressão à esquerda
-    this.appendString(" = ");
-    this.visit(ctx.children[2]); // Visita a expressão à direita
+    this.visit(ctx.children[4]);
   }
 
-  // AssignmentOperatorExpression
-  // | <assoc=right> singleExpression assignmentOperator singleExpression    # AssignmentOperatorExpression
+  /**
+   * Visits an assignment expression.
+   * @param {Object} ctx - Context of the assignment expression.
+   */
+  visitAssignmentExpression(ctx) {
+    this.visit(ctx.children[0]);
+    this.appendString(" = ");
+    this.visit(ctx.children[2]);
+  }
+
+  /**
+   * Visits an assignment operator expression.
+   * @param {Object} ctx - Context of the assignment operator expression.
+   */
   visitAssignmentOperatorExpression(ctx) {
-    // this.visitChildren(ctx.children[0]); // Visita a expressão à esquerda
-
-    // const operator = ctx.assignmentOperator().getText(); // Obtém o texto do operador de atribuição
-
-    // this.appendString(operator);
-
-    // this.visitSingleExpression(ctx.singleExpression(1)); // Visita a expressão à direita
     this.visit(ctx.children[0]);
     this.visitAssigmentOperator(ctx.assignmentOperator());
     this.visit(ctx.children[2]);
   }
 
-  // ImportExpression  | Import '(' singleExpression ')'  
+  /**
+   * Visits an import expression.
+   * @param {Object} ctx - Context of the import expression.
+   */
   visitImportExpression(ctx) {
     this.appendString("import");
     this.appendString("(");
@@ -1263,102 +1455,119 @@ debuggerStatement --
     this.appendString(")");
   }
 
-  //YieldExpression
+  /**
+   * Visits a yield expression.
+   * @param {Object} ctx - Context of the yield expression.
+   */
   visitYieldExpression(ctx) {
     this.visitChildren(ctx);
   }
 
-  //ThisExpression
+  /**
+   * Visits a this expression.
+   */
   visitThisExpression(ctx) {
     this.appendString("this");
   }
 
-  //identifierExpression - todos terminais, so imprimir
+  /**
+   * Visits an identifier expression.
+   * @param {Object} ctx - Context of the identifier expression.
+   */
   visitIdentifierExpression(ctx) {
     this.appendString(ctx.getText() + " ");
   }
 
-  //SuperExpression
-  visitSuperExpression(){
+  /**
+   * Visits a super expression.
+   */
+  visitSuperExpression() {
     this.appendString("super");
   }
 
-  //LiteralExpression
+  /**
+   * Visits a literal expression.
+   * @param {Object} ctx - Context of the literal expression.
+   */
   visitLiteralExpression(ctx) {
     this.visitChildren(ctx);
   }
 
-  //| singleExpression '?.' singleExpression                                # OptionalChainExpression
+  /**
+   * Visits an optional chain expression.
+   * @param {Object} ctx - Context of the optional chain expression.
+   */
   visitOptionalChainExpression(ctx) {
     this.visit(ctx.children[0]);
     if (ctx.children.length === 3) this.appendString(".");
     this.visit(ctx.children[2]);
   }
 
-  //ParenthesizedExpression
-  visitParenthesizedExpression(ctx){
-    this.appendString('(');
+  /**
+   * Visits a parenthesized expression.
+   * @param {Object} ctx - Context of the parenthesized expression.
+   */
+  visitParenthesizedExpression(ctx) {
+    this.appendString("(");
     this.visitExpressionSequence(ctx.children[1]);
-    this.appendString(')');
+    this.appendString(")");
   }
 
-  // assignmentOperator
-  visitAssigmentOperator(ctx){
+  /**
+   * Visits an assignment operator.
+   * @param {Object} ctx - Context of the assignment operator.
+   */
+  visitAssigmentOperator(ctx) {
     this.appendString(ctx.getText());
   }
-  /*
 
-  literal
-      : NullLiteral
-      | BooleanLiteral
-      | StringLiteral
-      | templateStringLiteral
-      | RegularExpressionLiteral
-      | numericLiteral
-      | bigintLiteral
-      ;
-  */
+  /**
+   * Visits a literal.
+   * @param {Object} ctx - Context of the literal.
+   */
   visitLiteral(ctx) {
-    if (ctx.templateStringLiteral()) this.visitTemplateStringLiteral(ctx.templateStringLiteral());
+    if (ctx.templateStringLiteral())
+      this.visitTemplateStringLiteral(ctx.templateStringLiteral());
     else this.appendString(ctx.getText());
   }
 
+  /**
+   * Visits a template string literal.
+   * @param {Object} ctx - Context of the template string literal.
+   */
   visitTemplateStringLiteral(ctx) {
-    this.appendString('`');
+    this.appendString("`");
     const templateStringAtoms = ctx.templateStringAtom();
     for (let i = 0; i < templateStringAtoms.length; i++) {
       this.visitTemplateStringAtom(templateStringAtoms[i]);
     }
-    this.appendString('`');
+    this.appendString("`");
   }
 
+  /**
+   * Visits a template string atom.
+   * @param {Object} ctx - Context of the template string atom.
+   */
   visitTemplateStringAtom(ctx) {
     if (ctx.TemplateStringAtom()) {
       this.appendString(ctx.TemplateStringAtom().getText());
     } else {
-      this.appendString('${');
+      this.appendString("${");
       this.appendString(ctx.children[1].getText());
-      this.appendString('}');
+      this.appendString("}");
     }
   }
 
-  // novo - jsx
-  // htmlElements
-  //   : htmlElement+
-  //   ; ok
-
-  // htmlElement
-  //     : '<' htmlTagStartName htmlAttribute* '>' htmlContent '<' '/' htmlTagClosingName '>'
-  //     | '<' htmlTagName htmlAttribute* htmlContent '/' '>'
-  //     | '<' htmlTagName htmlAttribute* '/' '>'
-  //     | '<' htmlTagName htmlAttribute* '>'
-  //     ; ok
+  /**
+   * Visits an HTML element.
+   * @param {Object} ctx - Context of the HTML element.
+   */
   visitHtmlElement(ctx) {
     this.appendString("<");
     if (ctx.htmlTagStartName()) {
       this.visitHtmlTagStartName(ctx.htmlTagStartName());
       for (const htmlAttribute of ctx.htmlAttribute()) {
-        this.visitHtmlAtribute(htmlAttribute);
+        this.visitHtmlAttribute(htmlAttribute);
       }
       this.appendString(">");
       this.visitHtmlContent(ctx.htmlContent());
@@ -1366,66 +1575,53 @@ debuggerStatement --
       this.visitHtmlTagClosingName(ctx.htmlTagClosingName());
     } else {
       this.visitChildren(ctx);
-      if (ctx.getText().slice(-2) === '/>') this.appendString("/");
+      if (ctx.getText().slice(-2) === "/>") this.appendString("/");
     }
 
     this.appendString(">");
   }
 
-  // htmlContent
-  //     : htmlChardata? ((htmlElement | objectExpressionSequence) htmlChardata?)*
-  //     ; ok
-
-  // htmlTagStartName
-  //     : htmlTagName {this.pushHtmlTagName($htmlTagName.text);}
-  //     ; ok
-
-  // htmlTagClosingName
-  //     : htmlTagName {this.popHtmlTagName($htmlTagName.text)}?
-  //     ; ok
-
-  // htmlTagName
-  //     : TagName
-  //     | keyword
-  //     | Identifier
-  //     ;  ok
+  /**
+   * Visits an HTML tag name.
+   * @param {Object} ctx - Context of the HTML tag name.
+   */
   visitHtmlTagName(ctx) {
-      this.appendString(ctx.getText());
+    this.appendString(ctx.getText());
   }
 
-  // htmlAttribute
-  //     : htmlAttributeName '=' htmlAttributeValue
-  //     | htmlAttributeName
-  //     ; ok
+  /**
+   * Visits an HTML attribute.
+   * @param {Object} ctx - Context of the HTML attribute.
+   */
   visitHtmlAttribute(ctx) {
     this.visitHtmlAttributeName(ctx.htmlAttributeName());
     if (ctx.htmlAttributeValue()) {
       this.appendString("=");
-      this.visitHtmlAtributeValue(ctx.htmlAttributeValue())
+      this.visitHtmlAtributeValue(ctx.htmlAttributeValue());
     }
   }
 
-  // htmlAttributeName
-  //     : TagName
-  //     | Identifier ('-' Identifier)* // 2020/10/28 bugfix: '-' is recognized as MINUS and TagName is splited by '-'.
-  //     ; ok
+  /**
+   * Visits an HTML attribute name.
+   * @param {Object} ctx - Context of the HTML attribute name.
+   */
   visitHtmlAttributeName(ctx) {
     this.appendString(ctx.getText());
   }
 
-  // htmlChardata
-  //     : ~('<' | '{')+
-  //     ; ok
+  /**
+   * Visits HTML character data.
+   * @param {Object} ctx - Context of the HTML character data.
+   */
   visitHtmlChardata(ctx) {
     this.appendString(ctx.getText());
   }
 
-  // htmlAttributeValue
-  //     : AttributeValue
-  //     | StringLiteral
-  //     | objectExpressionSequence
-  //     ; ok
-  visitHtmlAttributeValue() {
+  /**
+   * Visits HTML attribute value.
+   * @param {Object} ctx - Context of the HTML attribute value.
+   */
+  visitHtmlAttributeValue(ctx) {
     if (ctx.objectExpressionSequence()) {
       visitObjectExpressionSequence(ctx.objectExpressionSequence());
     } else this.appendString(ctx.getText());
