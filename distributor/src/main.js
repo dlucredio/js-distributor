@@ -8,7 +8,6 @@ import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 import CopyPasteGenerator from "./generators/copypaste-generator.js";
 import FunctionGenerator from "./generators/FunctionGenerator.js";
 import ServerGenerator from "./generators/ServerGenerator.js";
-import WaitForCallGenerator from "./generators/WaitForCallGenerator.js";
 
 export default function main(
   mode,
@@ -116,11 +115,11 @@ function generateCode(target, inputFile, outputFile) {
 }
 
 /**
- * Inicializa arquivos de servidores e funções com código estático necessário
- * @param {*} typeOfCode - 'function' ou 'server': indica se deve inicializar com código do servidor
- * ou function 
- * @param {*} serverName - nome do servidor   
- * @returns - código inicial que que inicializa arquivo
+ * Initialize server and functions files with necessary and static code 
+ * @param {*} typeOfCode - 'function' ou 'server': indicate wheater to initialize with server or 
+ * function code 
+ * @param {*} serverName  
+ * @returns - initial code to initialize file
  */
 function generateInitialCode(typeOfCode, serverName) {
   if (typeOfCode === 'function'){
@@ -141,9 +140,9 @@ function generateInitialCode(typeOfCode, serverName) {
 };
 
 /**
- * Obtém porta de um dado servidor
- * @param {*} serverName - nome do servidor buscado
- * @returns - porta do servidor desejado
+ * Get port from a given server
+ * @param {*} serverName 
+ * @returns - port associated to the given server 
  */
 function getPortOfServer(serverName) {
   const yamlPath = './config4.yml';
@@ -153,25 +152,25 @@ function getPortOfServer(serverName) {
 }
 
 /**
- * Função recursiva que percorre todos diretorios e arquivos de entrada gerando o codigo corresponde 
- * das funções e servidores
- * @param {*} inputDir - diretório corrente de entrada
- * @param {*} outputDir - diretório de saida 
- * @param {*} target - target de geração
- * @param {*} filesInitialized - array de arquivos já inicializados 
- * @returns - array de arquivos inicializados
+ * Recursive function that runs through all directories and input files, generating the corresponding 
+ * code of functions and servers 
+ * @param {*} inputDir - current input directory
+ * @param {*} outputDir - output directory
+ * @param {*} target - target of generation
+ * @param {*} filesInitialized - already initialized files array  
+ * @returns - array with files initialized
  */
 function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[]) {
   let items = fs.readdirSync(inputDir);
-  for (let item of items) { // percorre itens (arquivos e diretórios) dentro de um diretorio
+  for (let item of items) { // runs through items (files and directories) inside a directory
     const itemPath = path.join(inputDir, item);
 
-    // se item é um diretorio, fazer chamada recursiva
+    // if item is a directory, recursive call is made
     if (fs.statSync(itemPath).isDirectory()) {
       filesInitialized = generateFunctionFiles(itemPath, outputDir, target, filesInitialized)
-    } else if (itemPath.slice(-2) === "js") { // se item é um arquivo de entrada, gerar código
+    } else if (itemPath.slice(-2) === "js") { // if item is an input file, code generation is made
       try {
-        // obtenção árvore semântica
+        // get semantic tree
         const input = fs.readFileSync(itemPath, { encoding: "utf8" });
         const chars = new antlr4.InputStream(input);
         const lexer = new JavaScriptLexer(chars);
@@ -180,25 +179,25 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
         parser.buildParseTrees = true;
         const tree = parser.program();
 
-        // Gerador das funcoes de cada servidor isoladas
+        // generator of functions of each server
         const functionGenerator = new FunctionGenerator();
         const modifiedNodeCode = functionGenerator.generateFunctions(tree);
         
-        // percorre todos codigos de funcoes gerados para todos servidores
+        // runs through all generated functions codes
         for (var [key, code] of modifiedNodeCode) {
           let outputFile = path.join(outputDir, item);
           outputFile = `./src-gen/functions-${key}.js`;
           
-          // se arquivo nao existe ou execucao esta sendo feito novamente, cria arquivo
+          // if file does not exist or execution is being done again, new empty file is created
           if (!fs.existsSync(outputFile) || !filesInitialized.includes(outputFile)) {
             fs.writeFileSync(
               outputFile,
-              generateInitialCode("function"), // codigo inicial do arquivo de funcoes
+              generateInitialCode("function"), // initial code of function file
             );
             filesInitialized.push(outputFile);
           }
 
-          // da append do codigo gerado no arquivo de funções
+          // append of generated code 
           if (code !== null) {
             fs.appendFileSync(
               outputFile, 
@@ -214,18 +213,18 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
           }
         }
 
-      // Gerador de servidores express
+      // server code generator 
       const serverGenerator = new ServerGenerator();  
       const modifiedServerCode = serverGenerator.generateFunctions(tree, filesInitialized);
        
-      // percorre todos codigos de servidores gerados
+      // runs through all generated servers codes
       for (var [key, code] of modifiedServerCode) {
         let outputFile = path.join(outputDir, item);
         outputFile = `./src-gen/start-${key}.js`;
         if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
           fs.writeFileSync(
             outputFile,
-            generateInitialCode("server", key), // codigo inicial do arquivo de servidor
+            generateInitialCode("server", key), // initial code of server file
           );
           filesInitialized.push(outputFile);
         } 
@@ -244,36 +243,6 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
           });
         }
       }
-
-      // gerador dos waitForCall 
-      // const WaitforCallGenerator = new WaitForCallGenerator();  
-      // const modifiedWaitForCall = WaitforCallGenerator.generateFunctions(tree, filesInitialized); 
-
-      // for (var [key, code] of modifiedWaitForCall) {
-      //   let outputFile = path.join(outputDir, item);
-      //   outputFile = `./src-gen/start-${key}.js`;
-      //   if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
-      //     fs.writeFileSync(
-      //       outputFile,
-      //     );
-      //     filesInitialized.push(outputFile);
-      //   } 
-        
-      //   // da append dos codigos gerados nos arquivos de servidores 
-      //   if (code !== null) {
-      //     fs.appendFileSync(
-      //       outputFile, 
-      //       '\n'+beautify(code, {
-      //         indent_size: 4,
-      //         space_in_empty_paren: true,
-      //       }), 
-      //       (err) => {
-      //       if (err) {
-      //         console.error('Erro ao adicionar conteúdo ao arquivo:', err);
-      //       }
-      //     });
-      //   }
-      // }
       } catch (e) {
         console.log(e);
       }
