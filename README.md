@@ -1,5 +1,10 @@
 ﻿# js-distributor
 
+The purpose of this section is to explain how install and contribute to the js-distrubutor project. For information on how to use the distributor in your project, see the "Getting Started with js-distributor" section.
+
+**What is js-distributor?**
+
+This project is capable of automatically generating code to distribute a monolithic JavaScript project across multiple servers using their functions. It requires the configuration of a .yaml file that is responsible for the structuring the servers and their associated functions. 
 
 **Cloning the repository and installing dependencies:**
 
