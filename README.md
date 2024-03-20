@@ -46,29 +46,8 @@ It's important that all functions have an associated and specified server in the
 
 A fictional example of a yaml file is shown below. The example contains two servers, alfa and gama. Alfa is a rabbit server and gama is an express server only. The functions are validateEmail and main.
 
-servers:
-  - id: alfa
-    port: 3000
-    url: localhost
-    rabbitmq:
-      exchange: sub_exchange
-      queue: sub_queue
-      connectionUrl: amqp://localhost/rabbit
-  - id: gama
-    port: 2222
-    url: localhost
+![image](https://github.com/dlucredio/js-distributor/assets/99351180/c27d4d86-6a08-43f4-ab89-004eba803cec)
 
-functions:
-  - name: validateEmail
-    server: alfa
-    method: rabbit
-    parameters: 
-      - name: email
-        type: string
-  - name: main
-    server: gama
-    parameters: []
-    method: get
 
 **Running the Distributor on a Project**
 
