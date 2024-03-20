@@ -39,7 +39,7 @@ All steps above are also available on the following video https://www.youtube.co
 
 In order to run the distributor in your project, you must configurate a configuration file called 'config.yml', which should be created in the root of the project. There, you should write the specifications of the functions and servers you want go generate:
 
-* Functions: It's necessary to inform the name, server related, method (rabbit, get or post) and parameters. Each parameter should have its name and type; Also, it's important to know the limitations of HTTP method GET for passing arguments in a function, which only supports numbers and strings only. Thus, if a function uses an array or any other more complex object in its parameters, the method chosen in yaml must be POST or rabbit.
+* Functions: It's necessary to inform the name, server related, method (rabbit, get or post) and parameters. Each parameter should have its name and type; Also, it's important to know the limitations of HTTP method GET for passing arguments in a function, which only supports numbers and strings. Thus, if a function uses an array or any other more complex object in its parameters, the method chosen in yaml must be POST or rabbit.
 * Servers: It's necessary to inform the id (name of server), port in which the server will be listening, url and rabbitmq information in case it is a rabbit server as well. In this case the following fields must be present: exchange, queue and connectionUrl
 
 It's important that all functions have an associated and specified server in the file and that servers and functions do not have repeated names. 
