@@ -145,7 +145,7 @@ function generateInitialCode(typeOfCode, serverName) {
  * @returns - port associated to the given server 
  */
 function getPortOfServer(serverName) {
-  const yamlPath = './config4.yml';
+  const yamlPath = './config.yml';
   const config = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
   let serverInfo = config.servers.find((server) => server.id === serverName);
   return serverInfo.port;

@@ -1,50 +1,27 @@
-# Definição dos servidores
+# servers definition
 servers:
-  - id: sub
-    port: 3000
-    url: url-sub
-    rabbitmq:
-      exchange: sub_exchange
-      queue: sub_queue
-      connectionUrl: amqp://localhost/rabbit
   - id: alfa
-    port: 8080
-    url: url-alfa
-    rabbitmq:
-      exchange: alfa_exchange
-      queue: alfa_queue
-      connectionUrl: amqp://localhost/rabbit
+    port: 3000
+    url: localhost
   - id: gama
-    port: 5000
-    url: url-gama
-    rabbitmq:
-      exchange: gama_exchange
-      queue: gama_queue
-      connectionUrl: amqp://localhost/rabbit  
+    port: 3001
+    url: localhost
 
-# Definição das funções
+# functions definition
 functions:
-  - name: sub
-    server: sub
-    parameters: 
-      - name: a
-        type: number
-      - name: b
-        type: number
-  - name: sum
-    server: beta
-    parameters: 
-      - name: a
-        type: number
-      - name: b
-        type: number
-  - name: calculateRectangleArea
-    server: gama
+  - name: isAEqualToB
     parameters:
-      - name: length
+      - name: a
         type: number
-      - name: width
+      - name: b
         type: number
-  - name: foo
+    method: get
     server: alfa
-    parameters: []
+  - name: sub
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+    method: post
+    server: gama

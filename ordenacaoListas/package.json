@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "amqplib": "^0.10.3",
     "antlr4": "^4.13.1",
     "distributor": "file:../distributor",
     "express": "^4.18.2",

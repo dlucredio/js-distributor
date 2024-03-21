@@ -24,7 +24,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
    */
   loadYAML() {
     try {
-      const yamlPath = path.resolve("config4.yml");
+      const yamlPath = path.resolve("config.yml");
       const config = yaml.load(fs.readFileSync(yamlPath, "utf8"));
       this.servers = config.servers;
       this.functions = config.functions;
