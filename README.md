@@ -1,5 +1,10 @@
 ﻿# js-distributor
 
+The purpose of this section is to explain how install and contribute to the js-distrubutor project. For information on how to use the distributor in your project, see the "Getting Started with js-distributor" section.
+
+**What is js-distributor?**
+
+This project is capable of automatically generating code to distribute a monolithic JavaScript project across multiple servers using their functions. It requires the configuration of a .yaml file that is responsible for the structuring the servers and their associated functions. 
 
 **Cloning the repository and installing dependencies:**
 
@@ -34,42 +39,3 @@ To install RabbitMQ on Ubuntu, you should follow the instructions available at h
 Once the installation is finished, you can check the status of the rabbit server with 'sudo systemctl status rabbitmq-server'. In case the service is not running, you can run 'sudo systemctl enable rabbitmq-server'.
 
 All steps above are also available on the following video https://www.youtube.com/watch?v=N-AqOeaP8Ag
-
-**Configuration of yaml file**
-
-In order to run the distributor in your project, you must configurate a configuration file called 'config.yml', which should be created in the root of the project. There, you should write the specifications of the functions and servers you want go generate:
-
-* Functions: It's necessary to inform the name, server related, method (rabbit, get or post) and parameters. Each parameter should have its name and type;
-* Servers: It's necessary to inform the id (name of server), port in which the server will be listening, url and rabbitmq information in case it is a rabbit server as well. In this case the following fields must be present: exchange, queue and connectionUrl
-
-It's important that all functions have an associated and specified server in the file and that servers and functions do not have repeated names. 
-
-A fictional example of a yaml file is shown below. The example contains two servers, alfa and gama. Alfa is a rabbit server and gama is an express server only. The functions are validateEmail and main.
-
-servers:
-  - id: alfa
-    port: 3000
-    url: localhost
-    rabbitmq:
-      exchange: sub_exchange
-      queue: sub_queue
-      connectionUrl: amqp://localhost/rabbit
-  - id: gama
-    port: 2222
-    url: localhost
-
-functions:
-  - name: validateEmail
-    server: alfa
-    method: rabbit
-    parameters: 
-      - name: email
-        type: string
-  - name: main
-    server: gama
-    parameters: []
-    method: get
-
-**Running the Distributor on a Project**
-
-Once the config.yml file is configured, you can run the distributor by executing the command 'npm run generate-single' on the root of the project.
