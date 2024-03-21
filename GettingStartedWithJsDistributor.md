@@ -4,7 +4,18 @@ The purpose of this section is to illustrate the use of the distributor using tw
 
 The functions used are 'isAEqualToB' and 'sub' and their definitions are shown below: 
 
-![image](https://github.com/dlucredio/js-distributor/assets/99351180/507ec395-babc-4045-96e3-817a580ab84e)
+``` JavaScript
+function isAEqualToB(a, b) {
+    const subResult = sub(a, b);
+
+    if (subResult === 0) return true;
+    else return false;
+}
+
+function sub(a, b) {
+    return a - b;
+}
+```
 
 
 **Installing nodejs and the js-distributor**
@@ -25,9 +36,33 @@ In the root of the project, create a directory named 'src' and a file named 'exa
 
 In the root directory of the new project, create a file called 'config.yml'. Inside this file, useful informations about the functions to be distributed and their related servers are defined. Thus, define the functions and servers as below:
 
-![image](https://github.com/dlucredio/js-distributor/assets/99351180/16a776be-9d3d-4127-87e6-53f853567da1)
+```yaml
+servers:
+  - id: alfa
+    port: 3000
+    url: localhost
+  - id: gama
+    port: 3001
+    url: localhost
 
-![image](https://github.com/dlucredio/js-distributor/assets/99351180/33c04b7f-1fe0-4007-83bb-79d709787848)
+functions:
+  - name: isAEqualToB
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+    method: get
+    server: alfa
+  - name: sub
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+    method: post
+    server: gama
+```
 
 In this example functions are defined with get and post methods and only HTTP calls are made in the server communication. If you want to use message brokers, you can configure the yaml as shown below:
 
