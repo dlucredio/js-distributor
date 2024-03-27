@@ -75,5 +75,48 @@ and 'start-gama.js'.
 
 In order to run the servers and test it, you can run 'node start-alfa.js' and 'node start-gama.js' inside the src-gen directory and using two different terminals. 
 
-**
+**RabbitMQ method**
 
+To enable communication between servers using RabbitMQ, you can modify the method specified in the .yaml file to 'rabbit', in addition to adding a ConnectionURL (connection route to RabbitMQ services defined in your computer settings) in the servers' definitions. This will cause the distributor to generate code that uses RabbitMQ for asynchronous communication between servers.
+
+For the function isAEqualToB, defined on the Gama server, the configuration would appear as follows:
+
+```yaml
+servers:
+  - id: alfa
+    port: 5555
+    url: localhost
+    rabbitmq:
+      exchange: alfa_exchange
+      queue: alfa_queue
+      connectionUrl: amqp://localhost
+  - id: gama
+    port: 4444
+    url: localhost
+    rabbitmq:
+      exchange: gama_exchange
+      queue: gama_queue
+      connectionUrl: amqp://localhost
+
+functions:
+  - name: isAEqualToB
+    server: gama
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+    method: rabbit
+  - name: sub
+    server: alfa
+    parameters:
+      - name: a
+        type: number
+      - name: b
+        type: number
+    method: rabbit
+
+```
+In the generated code, server functions will be divided between producers and consumers of RabbitMQ messages. The functions-server file will contain producer functions, responsible for sending messages to RabbitMQ queues and processing them later. The start-server will be responsible for setting up the queues, waiting for calls, and forwarding received messages to the appropriate consumer functions for processing.
+
+In summary, by using the 'rabbit' method in the .yaml file, the distributor will generate code that uses RabbitMQ for communication between servers, providing a robust and scalable architecture for your distributed system.
