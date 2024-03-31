@@ -21,12 +21,9 @@ function sub(a, b) {
 **Installing nodejs and the js-distributor**
 
 * First, it's necessary to have nodejs installed on your device. If you don't have it yet, you can install it here: https://nodejs.org/en.
-* Create a directory and git clone the js-distributor into it.
-* Run 'npm install' in the js-distributor/distributor root directory to install its dependencies.
-* Create a directory for a new project and run 'npm init' in your root.
-* Install js-distributor inside your project using 'npm install path-to-js-distributor/js-distributor/distributor'.
+* Create a directory with a npm project created inside it and install js-distributor via 'npm i js-distributor'.
 * Some other dependecies are needed for the distributor. Thus, run 'npm install express node-fetch amqplib'.
-* Add the following script to the "scripts" in package.json file: "generate-single": "distributor-scripts single copypaste src src-gen".
+* Add the following script to the "scripts" in package.json file: "generate-single": "js-distributor-scripts single copypaste src src-gen" so you can run the js-distributor via 'npm run generate-single' instead of 'npx npx js-distributor-scripts single copypaste src src-gen' (optional)
 
 **Creating the files with the functions that will be distributed**
 
@@ -68,12 +65,9 @@ In this example functions are defined with get and post methods and only HTTP ca
 
 **Running the js-distributor**
 
-Open a terminal and run "npm run generate-single". A directory src-gen must be created with the files 'functions-alfa.js', 'functions-gama.js', 'start-alfa.js'
-and 'start-gama.js'.
+Open a terminal and run "npm run generate-single" if you defined the script in the package.json or 'npx npx js-distributor-scripts single copypaste src src-gen' if you didn't. A directory src-gen must be created with the files 'functions-alfa.js', 'functions-gama.js', 'start-alfa.js' and 'start-gama.js'.
 
 **Running servers**
 
 In order to run the servers and test it, you can run 'node start-alfa.js' and 'node start-gama.js' inside the src-gen directory and using two different terminals. 
-
-**
 

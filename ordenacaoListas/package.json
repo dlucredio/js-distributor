@@ -5,7 +5,7 @@
   "main": "src/main.js",
   "type": "module",
   "scripts": {
-    "generate-single": "distributor-scripts single copypaste src src-gen",
+    "generate-single": "js-distributor-scripts single copypaste src src-gen",
     "generate-watch": "distributor-scripts watch copypaste src src-gen",
     "start": "node src/main.js",
     "test": "jest"

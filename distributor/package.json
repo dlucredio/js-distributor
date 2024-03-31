@@ -1,15 +1,16 @@
 {
-  "name": "distributor",
+  "name": "js-distributor",
   "version": "1.0.0",
-  "description": "",
+  "description": "Distribution of a monolithic JavaScript project across multiple servers",
   "main": "src/main.js",
+  "keywords": ["JavaScript", "nodejs", "rabbitmq"],
   "type": "module",
   "scripts": {
     "generate": "npm run antlr4-js",
     "antlr4-js": "java -Xmx500M -jar ./bin/antlr-4.13.0-complete.jar -Dlanguage=JavaScript -lib src/antlr4 -o src/antlr4 -visitor -Xexact-output-dir src/antlr4/JavaScriptLexer.g4 src/antlr4/JavaScriptParser.g4"
   },
   "bin": {
-    "distributor-scripts": "./bin/distributor-scripts.js"
+    "js-distributor-scripts": "./bin/distributor-scripts.js"
   },
   "author": "",
   "license": "ISC",
