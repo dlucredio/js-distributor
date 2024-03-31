@@ -61,19 +61,7 @@ functions:
     server: gama
 ```
 
-In this example functions are defined with get and post methods and only HTTP calls are made in the server communication. If you want to use message brokers, you can configure the yaml as shown below:
-
-**Running the js-distributor**
-
-Open a terminal and run "npm run generate-single" if you defined the script in the package.json or 'npx npx js-distributor-scripts single copypaste src src-gen' if you didn't. A directory src-gen must be created with the files 'functions-alfa.js', 'functions-gama.js', 'start-alfa.js' and 'start-gama.js'.
-
-**Running servers**
-
-In order to run the servers and test it, you can run 'node start-alfa.js' and 'node start-gama.js' inside the src-gen directory and using two different terminals. 
-
-**RabbitMQ method**
-
-To enable communication between servers using RabbitMQ, you can modify the method specified in the .yaml file to 'rabbit', in addition to adding a ConnectionURL (connection route to RabbitMQ services defined in your computer settings) in the servers' definitions. This will cause the distributor to generate code that uses RabbitMQ for asynchronous communication between servers.
+In this example functions are defined with get and post methods and only HTTP calls are made in the server communication. To enable communication between servers using RabbitMQ, you can modify the method specified in the .yaml file to 'rabbit', in addition to adding a ConnectionURL (connection route to RabbitMQ services defined in your computer settings) in the servers' definitions. This will cause the distributor to generate code that uses RabbitMQ for asynchronous communication between servers.
 
 For the function isAEqualToB, defined on the Gama server, the configuration would appear as follows:
 
@@ -116,3 +104,12 @@ functions:
 In the generated code, server functions will be divided between producers and consumers of RabbitMQ messages. The functions-server file will contain producer functions, responsible for sending messages to RabbitMQ queues and processing them later. The start-server will be responsible for setting up the queues, waiting for calls, and forwarding received messages to the appropriate consumer functions for processing.
 
 In summary, by using the 'rabbit' method in the .yaml file, the distributor will generate code that uses RabbitMQ for communication between servers, providing a robust and scalable architecture for your distributed system.
+
+**Running the js-distributor**
+
+Open a terminal and run "npm run generate-single" if you defined the script in the package.json or 'npx npx js-distributor-scripts single copypaste src src-gen' if you didn't. A directory src-gen must be created with the files 'functions-alfa.js', 'functions-gama.js', 'start-alfa.js' and 'start-gama.js'.
+
+**Running servers**
+
+In order to run the servers and test it, you can run 'node start-alfa.js' and 'node start-gama.js' inside the src-gen directory and using two different terminals. 
+
