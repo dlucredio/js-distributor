@@ -1,0 +1,18 @@
+GET http://localhost:3000/entryPoint
+
+###
+
+GET http://localhost:3001/findUserByEmail?email=daniel@email.com
+
+###
+
+GET http://localhost:3002/generateKey?prefix=abcd
+
+###
+
+POST http://localhost:3000/generateKey
+Content-Type: application/json
+
+{
+    "prefix" : "aPrefix"
+}

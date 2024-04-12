@@ -8,6 +8,7 @@ import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 import CopyPasteGenerator from "./generators/copypaste-generator.js";
 import FunctionGenerator from "./generators/FunctionGenerator.js";
 import ServerGenerator from "./generators/ServerGenerator.js";
+import { getAllJSFiles } from "./generators/generator-utils.js";
 
 export default function main(
   mode,
@@ -28,9 +29,24 @@ export default function main(
   } else if (mode === "watch") {
     let fsWait = false;
 
-    console.log(`Watching ${inputDir} for changes...`);
+    console.log(`Watching ${inputDir} and config.yml for changes...`);
 
-    fs.watch(inputDir, (event, filename) => {
+    fs.watch('config.yml', (event, filename) => {
+      if (filename) {
+        if (fsWait) return;
+        fsWait = true;
+        setTimeout(() => {
+          fsWait = false;
+        }, 500);
+        console.log(
+          `File ${filename} has changed (${event}). Generating code and function files again...`
+        );
+        // generateCodeDir(target, inputDirRelative, outputDir);
+        generateFunctionFiles(inputDirRelative, outputDir, target);
+      }
+    });
+
+    fs.watch(inputDir, { recursive: true }, (event, filename) => {
       if (filename) {
         if (fsWait) return;
         fsWait = true;
@@ -52,7 +68,7 @@ export default function main(
 function generateCodeDir(target, inputDir, outputDir) {
   fs.readdir(inputDir, (err, items) => {
     if (err) {
-      console.log("erro ao ler", inputDir);
+      console.log("Error reading ", inputDir);
     }
 
     items.forEach((item) => {
@@ -121,23 +137,58 @@ function generateCode(target, inputFile, outputFile) {
  * @param {*} serverName  
  * @returns - initial code to initialize file
  */
-function generateInitialCode(typeOfCode, serverName) {
-  if (typeOfCode === 'function'){
+function generateInitialCode(inputDir, typeOfCode, serverName) {
+  if (typeOfCode === 'function') {
     let code = "import fetch from 'node-fetch';\n";
     code += `import amqp from 'amqplib';`
     return code;
   } else if (typeOfCode === 'server') {
     let code = "import express from 'express';\n";
     code += "const app = express();\n";
-    code += `const port = ${getPortOfServer(serverName)};\n`; 
+    code += `const port = ${getPortOfServer(serverName)};\n`;
     code += `app.use(express.json());\n`;
     code += `app.listen(port, () => {\n`;
     code += `  console.log('Servidor rodando na porta ' + port);\n`;
     code += `});\n`;
     code += `import amqp from 'amqplib';`
+
+    code += generateGlobalElements(inputDir, serverName);
+
     return code;
   }
 };
+
+function generateGlobalElements(inputDir, serverName) {
+  try {
+    const yamlPath = path.resolve("config.yml");
+    const config = yaml.load(fs.readFileSync(yamlPath, "utf8"));
+
+    const jsFiles = getAllJSFiles(inputDir);
+
+    let code = '';
+
+    for (let jsFile of jsFiles) {
+      const input = fs.readFileSync(jsFile, { encoding: "utf8" });
+      const chars = new antlr4.InputStream(input);
+      const lexer = new JavaScriptLexer(chars);
+      const tokens = new antlr4.CommonTokenStream(lexer);
+      const parser = new JavaScriptParser(tokens);
+      parser.buildParseTrees = true;
+      const tree = parser.program();
+
+      const serverGenerator = new ServerGenerator();
+      code += serverGenerator.generateGlobalElements(jsFile, tree, serverName, config);
+
+    }
+
+    return code;
+
+  } catch (e) {
+    console.error(`Error generating global elements for server ${serverName}: `, e);
+  }
+
+}
+
 
 /**
  * Get port from a given server
@@ -160,7 +211,7 @@ function getPortOfServer(serverName) {
  * @param {*} filesInitialized - already initialized files array  
  * @returns - array with files initialized
  */
-function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[]) {
+function generateFunctionFiles(inputDir, outputDir, target, filesInitialized = []) {
   let items = fs.readdirSync(inputDir);
   for (let item of items) { // runs through items (files and directories) inside a directory
     const itemPath = path.join(inputDir, item);
@@ -182,17 +233,17 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
         // generator of functions of each server
         const functionGenerator = new FunctionGenerator();
         const modifiedNodeCode = functionGenerator.generateFunctions(tree);
-        
+
         // runs through all generated functions codes
         for (var [key, code] of modifiedNodeCode) {
           let outputFile = path.join(outputDir, item);
           outputFile = `./src-gen/functions-${key}.js`;
-          
+
           // if file does not exist or execution is being done again, new empty file is created
           if (!fs.existsSync(outputFile) || !filesInitialized.includes(outputFile)) {
             fs.writeFileSync(
               outputFile,
-              generateInitialCode("function"), // initial code of function file
+              generateInitialCode(inputDir, "function"), // initial code of function file
             );
             filesInitialized.push(outputFile);
           }
@@ -200,49 +251,49 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized=[])
           // append of generated code 
           if (code !== null) {
             fs.appendFileSync(
-              outputFile, 
-              '\n'+beautify(code, {
+              outputFile,
+              '\n' + beautify(code, {
                 indent_size: 4,
                 space_in_empty_paren: true,
-              }), 
+              }),
               (err) => {
-              if (err) {
-                console.error('Erro ao adicionar conteúdo ao arquivo:', err);
-              }
-            });
+                if (err) {
+                  console.error('Erro ao adicionar conteúdo ao arquivo:', err);
+                }
+              });
           }
         }
 
-      // server code generator 
-      const serverGenerator = new ServerGenerator();  
-      const modifiedServerCode = serverGenerator.generateFunctions(tree, filesInitialized);
-       
-      // runs through all generated servers codes
-      for (var [key, code] of modifiedServerCode) {
-        let outputFile = path.join(outputDir, item);
-        outputFile = `./src-gen/start-${key}.js`;
-        if (!fs.existsSync(outputFile)|| !filesInitialized.includes(outputFile)) {
-          fs.writeFileSync(
-            outputFile,
-            generateInitialCode("server", key), // initial code of server file
-          );
-          filesInitialized.push(outputFile);
-        } 
-        
-        if (code !== null) {
-          fs.appendFileSync(
-            outputFile, 
-            '\n'+beautify(code, {
-              indent_size: 4,
-              space_in_empty_paren: true,
-            }), 
-            (err) => {
-            if (err) {
-              console.error('Erro ao adicionar conteúdo ao arquivo:', err);
-            }
-          });
+        // server code generator 
+        const serverGenerator = new ServerGenerator();
+        const modifiedServerCode = serverGenerator.generateFunctions(tree, filesInitialized);
+
+        // runs through all generated servers codes
+        for (var [key, code] of modifiedServerCode) {
+          let outputFile = path.join(outputDir, item);
+          outputFile = `./src-gen/start-${key}.js`;
+          if (!fs.existsSync(outputFile) || !filesInitialized.includes(outputFile)) {
+            fs.writeFileSync(
+              outputFile,
+              generateInitialCode(inputDir, "server", key), // initial code of server file
+            );
+            filesInitialized.push(outputFile);
+          }
+
+          if (code !== null) {
+            fs.appendFileSync(
+              outputFile,
+              '\n' + beautify(code, {
+                indent_size: 4,
+                space_in_empty_paren: true,
+              }),
+              (err) => {
+                if (err) {
+                  console.error('Erro ao adicionar conteúdo ao arquivo:', err);
+                }
+              });
+          }
         }
-      }
       } catch (e) {
         console.log(e);
       }

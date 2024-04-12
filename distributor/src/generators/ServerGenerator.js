@@ -168,7 +168,7 @@ export default class ServerGenerator extends FunctionGenerator {
       );
 
     const isAsync =
-      ctx.identifier().Async() !== null ||
+      ctx.Async() !== null ||
       this.checkAsyncFunction(functionInfo, ctx);
     const server = this.servers.find((s) => s.id === functionInfo.server);
 
@@ -182,8 +182,7 @@ export default class ServerGenerator extends FunctionGenerator {
 
       this.appendString(`async function ${waitForCallFunction}() {`);
       this.appendString(
-        `  const connection = await amqp.connect("${
-          server.rabbitmq.connectionUrl || "amqp://localhost"
+        `  const connection = await amqp.connect("${server.rabbitmq.connectionUrl || "amqp://localhost"
         }");`
       );
       this.appendString(`  console.log("Waiting for calls");`);
@@ -327,7 +326,7 @@ export default class ServerGenerator extends FunctionGenerator {
     else if (
       declarationCtx.functionDeclaration() &&
       ctx.declaration().functionDeclaration().identifier().getText() ===
-        funct.name
+      funct.name
     ) {
       this.currentFunction = funct;
       this.currentServerName = funct.server;
@@ -483,11 +482,11 @@ export default class ServerGenerator extends FunctionGenerator {
             if (
               sourceElements[i].statement().functionDeclaration() &&
               funct.name ===
-                sourceElements[i]
-                  .statement()
-                  .functionDeclaration()
-                  .identifier()
-                  .getText()
+              sourceElements[i]
+                .statement()
+                .functionDeclaration()
+                .identifier()
+                .getText()
             ) {
               this.currentFunction = funct;
               this.currentServerName = funct.server;
@@ -507,5 +506,114 @@ export default class ServerGenerator extends FunctionGenerator {
       }
     }
     return this.codeGenerated;
+  }
+
+  /**
+   * Traverses SourceElements searching for function definitions present in the YAML file to determine
+   * if they should be present in the given server
+   * @param {*} ctx - root of the semantic tree
+   * @param {*} serverName - the server to be checked
+   * @param {*} config - the configuration loaded from the YAML file
+   * @returns - true if this visitor encounters a function that is present in the given server, false otherwise
+   */
+  hasFunctionInServer(ctx, serverName, config) {
+    if (ctx.sourceElements()) {
+      const sourceElements = ctx.sourceElements().children;
+      for (let i in sourceElements) {
+        if (sourceElements[i].statement().functionDeclaration() ||
+          sourceElements[i].statement().exportStatement()) {
+          for (let funct of config.functions) {
+            if (
+              sourceElements[i].statement().functionDeclaration() &&
+              funct.name ===
+              sourceElements[i]
+                .statement()
+                .functionDeclaration()
+                .identifier()
+                .getText() &&
+              funct.server === serverName
+            ) {
+              return true;
+            } else if (sourceElements[i].statement().exportStatement() &&
+              sourceElements[i].statement().exportStatement().declaration() &&
+              sourceElements[i].statement().exportStatement().declaration().functionDeclaration() &&
+              funct.name ===
+              sourceElements[i].statement().exportStatement().declaration().functionDeclaration().identifier().getText() &&
+              funct.server === serverName) {
+              return true;
+
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Checks if the given function is present in the config. This is used to avoid generating an import for
+   * a function that will be imported by the generated code.
+   * @param {*} functionName - the name of the function to check
+   * @param {*} config - the configuration loaded from the YAML file
+   * @returns - true if this function is part of the config file, false otherwise
+   */
+  isAFunctionFromConfigFile(functionName, config) {
+    for (let funct of config.functions) {
+      if (funct.name === functionName) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Traverses SourceElements searching for all elements that are not function definitions present in the YAML file to generate
+   * corresponding code on each server. These elements are, possibly, required imports, constants and other functions.
+   * TODO: We could change this function to generate code for functions too, if they do not appear in the config file,
+   * but this requires some studying
+   * @param {*} fileName - the file where to look for the elements
+   * @param {*} ctx - root of the semantic tree
+   * @param {*} serverName - the server for which code is being generated
+   * @param {*} config - the configuration loaded from the YAML file
+   * @returns - generated server code for all elements except functions
+   */
+  generateGlobalElements(fileName, ctx, serverName, config) {
+    // this.stringBuilder.appendNewLine();
+    // this.stringBuilder.append(`// Scanning global elements in ${fileName} for ${serverName}\n`);
+    if (ctx.sourceElements() && this.hasFunctionInServer(ctx, serverName, config)) {
+      const sourceElements = ctx.sourceElements().children;
+      for (let i in sourceElements) {
+        if (!(
+          sourceElements[i].statement().functionDeclaration() ||
+          sourceElements[i].statement().exportStatement()
+        )) {
+          const stmt = sourceElements[i].statement();
+          if (stmt.importStatement() &&
+            stmt.importStatement().importFromBlock() &&
+            stmt.importStatement().importFromBlock().importModuleItems()) {
+            const importFrom = stmt.importStatement().importFromBlock().importFrom().StringLiteral().getText();
+            const importedModuleItems = stmt.importStatement().importFromBlock().importModuleItems();
+            for (let importAliasName of importedModuleItems.importAliasName()) {
+              const moduleExportName = importAliasName.moduleExportName();
+              const importedBinding = importAliasName.importedBinding();
+              if (!importedBinding) {
+                if (!this.isAFunctionFromConfigFile(moduleExportName.getText(), config)) {
+                  this.stringBuilder.append(`\nimport { ${moduleExportName.getText()} } from ${importFrom};\n`);
+                }
+              } else {
+                if (!this.isAFunctionFromConfigFile(importedBinding.getText(), config)) {
+                  this.stringBuilder.append(`\nimport { ${moduleExportName.getText()} as ${importedBinding.getText()} } from ${importFrom};\n`);
+                }
+              }
+            }
+          } else {
+            this.visitSourceElement(sourceElements[i].statement());
+          }
+        }
+      }
+    }
+    // this.stringBuilder.appendNewLine();
+    // this.stringBuilder.append(`// End of global elements in ${fileName} for ${serverName}\n`);
+    return this.stringBuilder.toString();
   }
 }

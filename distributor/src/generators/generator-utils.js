@@ -1,3 +1,7 @@
+import fs from 'fs';
+import path from 'path';
+
+
 export class StringBuilder {
   constructor() {
     this.strings = [];
@@ -7,6 +11,10 @@ export class StringBuilder {
     if (value) {
       this.strings.push(value);
     }
+  }
+
+  appendNewLine() {
+    this.strings.push('\n');
   }
 
   toString() {
@@ -27,4 +35,23 @@ export function flattenGeneratedCode(genCode) {
   let ret = "";
   flatArray.forEach((s) => (ret += s));
   return ret;
+}
+
+export function getAllJSFiles(dirPath, fileList = []) {
+    const files = fs.readdirSync(dirPath);
+
+    files.forEach(file => {
+        const filePath = path.join(dirPath, file);
+        const isDirectory = fs.statSync(filePath).isDirectory();
+
+        if (isDirectory) {
+            getAllJSFiles(filePath, fileList);
+        } else {
+            if (path.extname(filePath) === '.js') {
+                fileList.push(filePath);
+            }
+        }
+    });
+
+    return fileList;
 }

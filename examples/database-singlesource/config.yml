@@ -1,0 +1,40 @@
+servers:
+  - id: alfa
+    port: 3000
+    url: localhost
+  - id: beta
+    port: 3001
+    url: localhost
+  - id: gamma
+    port: 3002
+    url: localhost
+
+functions:
+  - name: entryPoint
+    parameters: []
+    method: get
+    server: alfa
+  - name: insertUser
+    parameters:
+      - name: email
+        type: string
+      - name: name
+        type: string
+    method: post
+    server: beta
+  - name: findUserByEmail
+    parameters:
+      - name: email
+        type: string
+    method: get
+    server: beta
+  - name: deleteAllUsers
+    parameters: []
+    method: get
+    server: beta
+  - name: generateKey
+    parameters:
+      - name: prefix
+      - type: string
+    method: get
+    server: gamma

@@ -1,0 +1,22 @@
+{
+  "name": "jsdist",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate-single": "js-distributor-scripts single copypaste src src-gen",
+    "generate-watch": "js-distributor-scripts watch copypaste src src-gen"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "express": "^4.19.2",
+    "distributor": "file:../../distributor",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.11.5",
+    "uuid": "^9.0.1"
+  }
+}
