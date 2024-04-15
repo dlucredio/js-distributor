@@ -113,11 +113,9 @@ export default class CopyPasteGenerator extends JavaScriptParserVisitor {
     }
 
     visitVariableDeclarationList(ctx) {
-        console.log("passei:"+ctx.varModifier().getText());
         ctx.variableDeclaration().forEach(vd => {
             const a = vd.assignable();
-            const id = a.identifier();
-            console.log("O nome é "+id.getText());
+            const id = a.identifier();          
         });
     }
 }

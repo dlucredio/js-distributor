@@ -25,10 +25,3 @@ export async function findUserByEmail(email) {
     } = await response.json();
     return result;
 }
-export async function deleteAllUsers() {
-    const response = await fetch('http://localhost:3001/deleteAllUsers');
-    const {
-        result
-    } = await response.json();
-    return result;
-}

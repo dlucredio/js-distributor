@@ -3,7 +3,7 @@ const app = express();
 const port = 3000;
 app.use(express.json());
 app.listen(port, () => {
-  console.log('Servidor rodando na porta ' + port);
+  console.log('Server running in port ' + port);
 });
 import amqp from 'amqplib';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,7 +13,7 @@ const connectionString  = 'postgresql://db:db@localhost:5432/db';
 
 import {
     deleteAllUsers
-} from "./functions-beta.js";
+} from "./functions-gamma.js";
 import {
     findUserByEmail
 } from "./functions-beta.js";

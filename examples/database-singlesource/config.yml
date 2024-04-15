@@ -8,7 +8,13 @@ servers:
   - id: gamma
     port: 3002
     url: localhost
-
+  - id: delta
+    port: 3003
+    url: localhost
+    rabbitmq:
+      exchange: delta_exchange
+      queue: delta_queue
+      connectionUrl: amqp://localhost
 functions:
   - name: entryPoint
     parameters: []
@@ -31,10 +37,10 @@ functions:
   - name: deleteAllUsers
     parameters: []
     method: get
-    server: beta
+    server: gamma
   - name: generateKey
     parameters:
       - name: prefix
       - type: string
-    method: get
-    server: gamma
+    method: rabbit
+    server: delta

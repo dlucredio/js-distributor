@@ -49,19 +49,19 @@ export default class RabbitMQGenerator extends FunctionGenerator {
     this.appendString(`async function ${functionName}(${paramNames}) {`);
     this.appendString(`  const p = new Promise(async (resolve, reject) => {`);
     this.appendString(`    try {`);
-    this.appendString(`      console.log("Conectando ao RabbitMQ...");`);
+    this.appendString(`      console.log("Connecting to RabbitMQ...");`);
     this.appendString(
       `      const connection = await amqp.connect("${connectionUrl}");`
     );
-    this.appendString(`      console.log("Conexão bem-sucedida!");`);
+    this.appendString(`      console.log("Connection established!");`);
     this.appendString(
-      `      console.log("Enviando chamada para a função ${functionName}");`
+      `      console.log("Sending call to function ${functionName}");`
     );
     this.appendString(
       `      const channel = await connection.createChannel();`
     );
     this.appendString(`      let queueName = "${server.rabbitmq.queue}";`);
-    this.appendString(`      console.log("Declarando fila: ${server.rabbitmq.queue}");`);
+    this.appendString(`      console.log("Declaring queue: ${server.rabbitmq.queue}");`);
     this.appendString(`      await channel.assertQueue(queueName, {`);
     this.appendString(`        durable: false,`);
     this.appendString(`      });`);
@@ -82,14 +82,14 @@ export default class RabbitMQGenerator extends FunctionGenerator {
       `            const message = JSON.parse(msg.content.toString());`
     );
     this.appendString(
-      `            console.log("Recebendo resposta para a função ${functionName}");`
+      `            console.log("Receiving response for function ${functionName}");`
     );
     this.appendString(
       `            if (message.funcName === "${functionName}" && message.type === "response") {`
     );
     this.appendString(`              const result = message.result;`);
     this.appendString(
-      `              console.log("Resposta recebida:", result);`
+      `              console.log("Response received:", result);`
     );
     this.appendString(`              resolve(result);`);
     this.appendString(`            }`);
@@ -100,14 +100,14 @@ export default class RabbitMQGenerator extends FunctionGenerator {
     this.appendString(`        }`);
     this.appendString(`      );`);
     this.appendString(
-      `      console.log("Enviando mensagem para a fila: ${server.rabbitmq.queue}");`
+      `      console.log("Sending message to queue: ${server.rabbitmq.queue}");`
     );
     this.appendString(
       `      channel.sendToQueue(queueName, Buffer.from(JSON.stringify(callObj)));`
     );
     this.appendString(`    } catch (error) {`);
     this.appendString(
-      `      console.error("Erro ao processar chamada para a função ${functionName}:", error);`
+      `      console.error("Error processing call to function ${functionName}:", error);`
     );
     this.appendString(`      reject(error);`);
     this.appendString(`    }`);

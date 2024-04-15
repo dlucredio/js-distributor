@@ -105,7 +105,7 @@ export default class WaitForCallGenerator extends FunctionGenerator {
         this.appendNewLine();
         this.appendString(`async function waitForCall${server.id}() {`);
         this.appendString(`  const connection = await amqp.connect("${server.rabbitmq.connectionUrl || 'amqp://localhost'}");`);
-        this.appendString(`  console.log("Esperando por chamadas");`);
+        this.appendString(`  console.log("Waiting for calls");`);
         this.appendString(`  const channel = await connection.createChannel();`);
         this.appendString(`  let queueName = "${server.rabbitmq.queue}";`);
         this.appendString(`  await channel.assertQueue(queueName, { durable: false });`);
@@ -113,7 +113,7 @@ export default class WaitForCallGenerator extends FunctionGenerator {
         this.appendString(`    queueName,`);
         this.appendString(`    async (msg) => {`);
         this.appendString(`      if (msg) {`);
-        this.appendString(`        console.log("Recebendo chamada");`);
+        this.appendString(`        console.log("Receiving call");`);
         this.appendString(`        const message = JSON.parse(msg.content.toString());`);
 
         for (const func of this.functionMap[server.id]) {
@@ -122,14 +122,14 @@ export default class WaitForCallGenerator extends FunctionGenerator {
 
           this.appendString(`        if (message.funcName === "${func.name}" && message.type === "call") {`);
           this.appendString(`          const { ${parameters} } = message.parameters;`);
-          this.appendString(`          console.log("Chamando função ${func.name}", ${parameters});`);
+          this.appendString(`          console.log("Calling function ${func.name}", ${parameters});`);
           this.appendString(`          const result${func.name} = await ${func.name}(${parameters});`);
           this.appendString(`          const response${func.name} = {`);
           this.appendString(`            funcName: "${func.name}",`);
           this.appendString(`            type: "response",`);
           this.appendString(`            result: result${func.name},`);
           this.appendString(`          };`);
-          this.appendString(`          console.log("Enviando resposta para a função ${func.name}");`);
+          this.appendString(`          console.log("Sending response to function ${func.name}");`);
           this.appendString(`          channel.sendToQueue(queueName, Buffer.from(JSON.stringify(response${func.name})));`);
           this.appendString(`        }`);
         }

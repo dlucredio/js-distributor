@@ -148,7 +148,7 @@ function generateInitialCode(inputDir, typeOfCode, serverName) {
     code += `const port = ${getPortOfServer(serverName)};\n`;
     code += `app.use(express.json());\n`;
     code += `app.listen(port, () => {\n`;
-    code += `  console.log('Servidor rodando na porta ' + port);\n`;
+    code += `  console.log('Server running in port ' + port);\n`;
     code += `});\n`;
     code += `import amqp from 'amqplib';`
 

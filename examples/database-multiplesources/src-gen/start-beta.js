@@ -3,7 +3,7 @@ const app = express();
 const port = 3001;
 app.use(express.json());
 app.listen(port, () => {
-  console.log('Servidor rodando na porta ' + port);
+  console.log('Server running in port ' + port);
 });
 import amqp from 'amqplib';import pkg from 'pg';
 const { Client } = pkg ;
@@ -11,7 +11,7 @@ const connectionString  = 'postgresql://db:db@localhost:5432/db';
 
 import {
     generateKey
-} from "./functions-alfa.js";
+} from "./functions-delta.js";
 app.post('/insertUser', async (req, res) => {
     const email = req.body.email;
     const name = req.body.name;
@@ -65,31 +65,6 @@ async function findUserByEmail(email) {
         console.log('Query executed!');
         return result.rows[0];
 
-    } catch (error) {
-        console.error('Error finding user:', error);
-    } finally {
-        await client.end();
-    }
-}
-app.get('/deleteAllUsers', async (req, res) => {
-    const result = await deleteAllUsers();
-    return res.json({
-        result
-    });
-});
-async function deleteAllUsers() {
-    console.log(`Deleting all users`);
-    console.log(`Connecting to database...`);
-    const client = new Client({
-        connectionString: connectionString
-    });
-    try {
-        await client.connect();
-        console.log('Connected to the database!');
-        const query = 'DELETE FROM Users;';
-
-        await client.query(query, []);
-        console.log('Query executed!');
     } catch (error) {
         console.error('Error finding user:', error);
     } finally {
