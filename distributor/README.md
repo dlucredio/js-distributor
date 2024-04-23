@@ -156,3 +156,7 @@ Open a terminal and run "npm run generate-single" if you defined the script in t
 **Running servers**
 
 In order to run the servers and test it, you can run 'node start-alfa.js' and 'node start-gama.js' inside the src-gen directory and using two different terminals. 
+
+## Acknowledgements
+
+This work was supported by São Paulo Research Foundation (FAPESP), grant # 2021/06983-2. The opinions, hypotheses, conclusions, or recommendations expressed in this material are the responsibility of the author(s) and do not necessarily reflect the views of FAPESP.
