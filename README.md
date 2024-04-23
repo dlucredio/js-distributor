@@ -39,3 +39,7 @@ To install RabbitMQ on Ubuntu, you should follow the instructions available at h
 Once the installation is finished, you can check the status of the rabbit server with 'sudo systemctl status rabbitmq-server'. In case the service is not running, you can run 'sudo systemctl enable rabbitmq-server'.
 
 All steps above are also available on the following video https://www.youtube.com/watch?v=N-AqOeaP8Ag
+
+## Acknowledgements
+
+This work was supported by São Paulo Research Foundation (FAPESP), grant # 2021/06983-2. The opinions, hypotheses, conclusions, or recommendations expressed in this material are the responsibility of the author(s) and do not necessarily reflect the views of FAPESP.
