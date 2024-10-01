@@ -59,7 +59,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
 
     if (functionInfo.method.toUpperCase() === "POST") {
       let bodyCallInsideReq = "";
-      if (functionInfo.parameters.length > 0) {
+      if (functionInfo.parameters && functionInfo.parameters.length > 0) {
         let body = `{`;
         for (let parameter of functionInfo.parameters) {
           body += `${parameter.name}: ${parameter.name},`;
