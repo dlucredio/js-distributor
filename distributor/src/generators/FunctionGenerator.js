@@ -74,7 +74,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       serverURL += `', { ${reqPostBody}}`;
     } else if (
       functionInfo.method.toUpperCase() === "GET" &&
-      functionInfo.parameters.length > 0
+      functionInfo.parameters && functionInfo.parameters.length > 0
     ) {
       serverURL += "?";
       for (let i = 0; i < functionInfo.parameters.length; i++) {
