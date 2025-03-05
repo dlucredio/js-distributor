@@ -9,7 +9,11 @@ import CopyPasteGenerator from "./generators/copypaste-generator.js";
 import FunctionGenerator from "./generators/FunctionGenerator.js";
 import ServerGenerator from "./generators/ServerGenerator.js";
 import { getAllJSFiles } from "./generators/generator-utils.js";
+import DockerFileGenerator from "./generators/DockerFileGenerator.js";
 
+
+let serverPorts = {}; // stores the ports of each server
+let functionNames = {}; // stores the names of each function
 export default function main(
   mode,
   target,
@@ -60,7 +64,10 @@ export default function main(
         generateFunctionFiles(inputDirRelative, outputDir, target);
       }
     });
-  } else {
+  }else if (mode === "generateProjects") {
+    generateFunctionFiles(inputDirRelative, outputDir, target);
+    generateProjects(outputDir, "C:\\Users\\thati\\Área de Trabalho\\UFSCAR\\Personal\\js-distributor\\examples\\test");
+  }else {
     console.log("Wrong usage! Learn!");
   }
 }
@@ -213,6 +220,7 @@ function getPortOfServer(serverName) {
  */
 function generateFunctionFiles(inputDir, outputDir, target, filesInitialized = []) {
   let items = fs.readdirSync(inputDir);
+  
   for (let item of items) { // runs through items (files and directories) inside a directory
     const itemPath = path.join(inputDir, item);
 
@@ -238,7 +246,7 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized = [
         for (var [key, code] of modifiedNodeCode) {
           let outputFile = path.join(outputDir, item);
           outputFile = `./src-gen/functions-${key}.js`;
-
+          //TODO: add function names cache.
           // if file does not exist or execution is being done again, new empty file is created
           if (!fs.existsSync(outputFile) || !filesInitialized.includes(outputFile)) {
             fs.writeFileSync(
@@ -247,7 +255,7 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized = [
             );
             filesInitialized.push(outputFile);
           }
-
+          functionNames[key] = outputFile;
           // append of generated code 
           if (code !== null) {
             fs.appendFileSync(
@@ -267,11 +275,16 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized = [
         // server code generator 
         const serverGenerator = new ServerGenerator();
         const modifiedServerCode = serverGenerator.generateFunctions(tree, filesInitialized);
-
+        
+        
         // runs through all generated servers codes
         for (var [key, code] of modifiedServerCode) {
           let outputFile = path.join(outputDir, item);
           outputFile = `./src-gen/start-${key}.js`;
+          serverPorts[key] = {
+            "port": getPortOfServer(key),
+            "filePath": outputFile
+          }
           if (!fs.existsSync(outputFile) || !filesInitialized.includes(outputFile)) {
             fs.writeFileSync(
               outputFile,
@@ -300,4 +313,25 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized = [
     }
   }
   return filesInitialized;
+}
+
+/**
+ * Generate server code
+ * @param {*} inputDir - generated files directory, the output from @generateFunctionFiles
+ * @param {*} outputDir - output directory
+ */
+function generateProjects(inputDir, outputDir) {
+  var dockerGen = new DockerFileGenerator(outputDir, functionNames);
+  
+  console.log("Items: ", functionNames);
+  console.log(inputDir + " - ");
+  for (let serverName in serverPorts) {
+    
+    let serverInfo = serverPorts[serverName];
+    console.log(`Server: ${serverName}, Port: ${serverInfo.port}, File Path: ${serverInfo.filePath}`);
+    dockerGen.generateProject(serverName, serverInfo.filePath, serverInfo.port);
+    //Pass the filename path for only servers(start-*.js) to the docker generator
+    //Copy the server file to the output directory
+    //dockerGen.generateProject(itemPath);
+  }
 }
