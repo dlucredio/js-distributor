@@ -119,7 +119,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.appendString(`export async function ${functionName}(`);
 
       if (ctx.formalParameterList()) {
-        args = this.visitFormalParameterListOnlyRead(ctx.formalParameterList());
+        args = this.visitFormalParameterList(ctx.formalParameterList());
       }
 
       this.appendString(`) {`);
@@ -305,12 +305,13 @@ export default class FunctionGenerator extends CopyPasteGenerator {
   //Override visitFormalParameterList to only read
   visitFormalParameterListOnlyRead(ctx) {
     const args = [];
+    console.log(" argsQtd - " + ctx.formalParameterArg().length);
     if (ctx.formalParameterArg().length !== 0) {
       for (let i = 0; i < ctx.formalParameterArg().length; i++) {
         this.visitFormalParameterArgOnlyRead(ctx.formalParameterArg(i));
         args.push(ctx.formalParameterArg(i).assignable().getText());
       }
-
+      console.log(" args - " + args);
       if (ctx.lastFormalParameterArg()) {
         this.visitLastFormalParameterArgOnlyRead(ctx.lastFormalParameterArg());
         args.push(ctx.formalParameterArg(i).assignable().getText());
@@ -333,6 +334,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
 
   //Override visitFormalParameterList to only read
   visitAssignableOnlyRead(ctx) {
+    console.log("assignable - " + ctx.identifier().getText());
     if (!ctx.identifier()) //this.visitIdentifier(ctx.identifier());
       //else this.visitChildren(ctx);
       this.visitChildren(ctx);

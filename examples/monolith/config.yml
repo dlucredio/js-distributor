@@ -3,25 +3,19 @@ servers:
   - id: alfa
     port: 3000
     url: localhost
+    rabbitmq: 
+      connectionUrl: amqp://localhost
   - id: gama
     port: 3001
     url: localhost
+    rabbitmq: 
+      connectionUrl: amqp://localhost
 
 # functions definition
 functions:
   - name: isAEqualToB
-    parameters:
-      - name: a
-        type: number
-      - name: b
-        type: number
     method: get
     server: alfa
   - name: sub
-    parameters:
-      - name: a
-        type: number
-      - name: b
-        type: number
     method: post
     server: gama
