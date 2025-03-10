@@ -119,7 +119,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.appendString(`export async function ${functionName}(`);
 
       if (ctx.formalParameterList()) {
-        args = this.visitFormalParameterList(ctx.formalParameterList());
+        args = this.visitFormalParameterListOnlyRead(ctx.formalParameterList());
       }
 
       this.appendString(args);
