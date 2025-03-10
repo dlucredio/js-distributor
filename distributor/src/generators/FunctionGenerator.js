@@ -122,6 +122,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
         args = this.visitFormalParameterList(ctx.formalParameterList());
       }
 
+      this.appendString(args);
       this.appendString(`) {`);
       this.appendNewLine();
       let serverURL = this.generateServerUrl(server, functionInfo, args);
