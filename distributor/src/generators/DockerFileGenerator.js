@@ -69,7 +69,9 @@ export default class DockerFileGenerator {
     "dependencies": {
         "express": "^4.18.2",
         "amqplib": "^0.10.3",
-        "node-fetch": "^3.3.2"
+        "node-fetch": "^3.3.2",
+        "pg": "^8.11.5",
+        "uuid": "^9.0.1"
     },
     "devDependencies": {
         "nodemon": "^2.0.15"

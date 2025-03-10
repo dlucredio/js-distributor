@@ -137,7 +137,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
         fetchCode = `const response = await fetch('${serverURL});`;
       } else if (
         functionInfo.method.toUpperCase() === "GET" &&
-        args.length > 0
+        args.length === 0
       ) {
         fetchCode = `const response = await fetch('${serverURL}');`;
       }
