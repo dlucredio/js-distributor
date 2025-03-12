@@ -1,0 +1,17 @@
+# servers definition
+servers:
+  - id: alfa
+    port: 3000
+    url: alfa
+  - id: gama
+    port: 3001
+    url: gama
+
+# functions definition
+functions:
+  - name: isAEqualToB
+    method: get
+    server: alfa
+  - name: sub
+    method: post
+    server: gama

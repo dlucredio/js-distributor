@@ -5,6 +5,7 @@
   "main": "src/main.js",
   "type": "module",
   "scripts": {
+    "generate-projects": "js-distributor-scripts generateProjects copypaste src src-gen",
     "generate-single": "distributor-scripts single copypaste src src-gen",
     "generate-watch": "distributor-scripts watch copypaste src src-gen",
     "start": "node src/main.js",
