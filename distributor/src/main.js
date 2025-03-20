@@ -18,7 +18,8 @@ export default function main(
   mode,
   target,
   inputDirRelative,
-  outputDirRelative
+  outputDirRelative,
+  aux
 ) {
   const inputDir = path.resolve(path.join(".", inputDirRelative));
   const outputDir = path.resolve(path.join(".", outputDirRelative));
@@ -64,9 +65,9 @@ export default function main(
         generateFunctionFiles(inputDirRelative, outputDir, target);
       }
     });
-  }else if (mode === "generateProjects") {
+  }else if (mode === "generateProjects" && aux) {
     generateFunctionFiles(inputDirRelative, outputDir, target);
-    generateProjects(outputDir, projectPath);
+    generateProjects(outputDir, aux);
   }else {
     console.log("Wrong usage! Learn!");
   }

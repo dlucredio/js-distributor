@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate-projects": "js-distributor-scripts generateProjects copypaste src src-gen",
+    "generate-projects": "js-distributor-scripts generateProjects copypaste src src-gen ../test",
     "generate-single": "js-distributor-scripts single copypaste src src-gen",
     "generate-watch": "js-distributor-scripts watch copypaste src src-gen"
   },
