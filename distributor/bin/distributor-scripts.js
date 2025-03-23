@@ -4,6 +4,6 @@ import entrypoint from '../src/main.js';
 
 const args = process.argv.slice(2);
 
-const [ mode, target, inputDirRelative, outputDirRelative ] = args;
+const [ mode, target, inputDirRelative, outputDirRelative, aux ] = args;
 
-entrypoint(mode, target, inputDirRelative, outputDirRelative);
+entrypoint(mode, target, inputDirRelative, outputDirRelative, aux || undefined);

@@ -18,7 +18,8 @@ export default function main(
   mode,
   target,
   inputDirRelative,
-  outputDirRelative
+  outputDirRelative,
+  aux
 ) {
   const inputDir = path.resolve(path.join(".", inputDirRelative));
   const outputDir = path.resolve(path.join(".", outputDirRelative));
@@ -64,9 +65,9 @@ export default function main(
         generateFunctionFiles(inputDirRelative, outputDir, target);
       }
     });
-  }else if (mode === "generateProjects") {
+  }else if (mode === "generateProjects" && aux) {
     generateFunctionFiles(inputDirRelative, outputDir, target);
-    generateProjects(outputDir, projectPath);
+    generateProjects(outputDir, aux);
   }else {
     console.log("Wrong usage! Learn!");
   }
@@ -322,16 +323,8 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized = [
  */
 function generateProjects(inputDir, outputDir) {
   var dockerGen = new DockerFileGenerator(outputDir, functionNames);
-  
-  console.log("Items: ", functionNames);
-  console.log(inputDir + " - ");
   for (let serverName in serverPorts) {
-    
     let serverInfo = serverPorts[serverName];
-    console.log(`Server: ${serverName}, Port: ${serverInfo.port}, File Path: ${serverInfo.filePath}`);
     dockerGen.generateProject(serverName, serverInfo.filePath, serverInfo.port);
-    //Pass the filename path for only servers(start-*.js) to the docker generator
-    //Copy the server file to the output directory
-    //dockerGen.generateProject(itemPath);
   }
 }
