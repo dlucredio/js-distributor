@@ -323,16 +323,8 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized = [
  */
 function generateProjects(inputDir, outputDir) {
   var dockerGen = new DockerFileGenerator(outputDir, functionNames);
-  
-  console.log("Items: ", functionNames);
-  console.log(inputDir + " - ");
   for (let serverName in serverPorts) {
-    
     let serverInfo = serverPorts[serverName];
-    console.log(`Server: ${serverName}, Port: ${serverInfo.port}, File Path: ${serverInfo.filePath}`);
     dockerGen.generateProject(serverName, serverInfo.filePath, serverInfo.port);
-    //Pass the filename path for only servers(start-*.js) to the docker generator
-    //Copy the server file to the output directory
-    //dockerGen.generateProject(itemPath);
   }
 }

@@ -8,42 +8,29 @@ export default class DockerFileGenerator {
     }
 
     generateProject(name, itemPath, port){
-        console.log("Generating project: ", name);
-        console.log("Item path: ", itemPath);
         const projectPath = path.resolve(path.join(this.outputDir, name));
         
-        console.log("Project path: ", projectPath); 
-        
-        //create folder for the server
         fs.mkdirSync(projectPath, { recursive: true }, (err) => {console.error("Error creating project folder: ", err);});
         
-        //Copy server file to the output folder on the server subfolder
         fs.copyFileSync(itemPath, path.resolve(path.join(projectPath, "start-" +name+".js")));
         
-        //copy all function files...
+        //TODO: copy only the functions that are used by the server
         for(let func in this.functionNames){
             const funcPath = path.resolve(path.join(projectPath, "functions-" +func+".js"));
             fs.copyFileSync(this.functionNames[func], funcPath);
         }
 
-        //Create docker file for this server
-            // export port defined on config.yml
+
         const dockerFile = this.writeDockerFile(port);
         fs.writeFileSync(path.resolve(path.join(projectPath, "Dockerfile")), dockerFile);
 
-
-        // Create package.json
         const packageJson = this.writePackageJson(name);
         fs.writeFileSync(path.resolve(path.join(projectPath, "package.json")), packageJson);
-        
-        // Create start.sh (?)
-
-
-
 
     }
 
     writeDockerFile(port){
+        //TODO: how to use correct versions ?
         let dockerFile = "FROM node:14-alpine\n"; //version?
         dockerFile += "WORKDIR /app\n"; 
         dockerFile += "COPY package*.json ./\n";
@@ -55,7 +42,8 @@ export default class DockerFileGenerator {
     }
 
     writePackageJson(name){
-        //copy project dependencys...
+        // TODO: copy only the dependencies that are used by the server
+        // TODO: copy the version
         const packageJsonTemplate = `{
     "name": "ms-${name}",
     "version": "1.0.0",
