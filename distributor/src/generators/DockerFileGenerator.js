@@ -41,7 +41,22 @@ export default class DockerFileGenerator {
         return dockerFile;
     }
 
+    getDependencies(){
+        const packageJsonPath = path.resolve(path.join(process.cwd(), "package.json"));
+        const packageJsonData = fs.readFileSync(packageJsonPath, "utf8")
+
+        const packageJson = JSON.parse(packageJsonData);
+        const dependencies = packageJson.dependencies;
+        //remove distributor dependencies
+        delete dependencies["distributor"];
+        delete dependencies["antlr4"];
+        return dependencies;
+    }
+
     writePackageJson(name){
+        const dependencies = JSON.stringify(this.getDependencies(), null, 8);
+        
+        const jsonStr = dependencies.replace(/\n\}$/, "\n    }");
         // TODO: copy only the dependencies that are used by the server
         // TODO: copy the version
         const packageJsonTemplate = `{
@@ -54,16 +69,7 @@ export default class DockerFileGenerator {
         "start": "node start-${name}.js",
         "dev": "nodemon start-${name}.js"
     },
-    "dependencies": {
-        "express": "^4.18.2",
-        "amqplib": "^0.10.3",
-        "node-fetch": "^3.3.2",
-        "pg": "^8.11.5",
-        "uuid": "^9.0.1"
-    },
-    "devDependencies": {
-        "nodemon": "^2.0.15"
-    },
+    "dependencies": ${jsonStr},
     "keywords": [],
     "author": "",
     "license": "ISC"
