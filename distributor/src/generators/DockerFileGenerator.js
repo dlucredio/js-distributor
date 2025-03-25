@@ -47,7 +47,7 @@ export default class DockerFileGenerator {
 
         const packageJson = JSON.parse(packageJsonData);
         const dependencies = packageJson.dependencies;
-        //remove distributor dependencies
+
         delete dependencies["distributor"];
         delete dependencies["antlr4"];
         return dependencies;
@@ -55,10 +55,7 @@ export default class DockerFileGenerator {
 
     writePackageJson(name){
         const dependencies = JSON.stringify(this.getDependencies(), null, 8);
-        
         const jsonStr = dependencies.replace(/\n\}$/, "\n    }");
-        // TODO: copy only the dependencies that are used by the server
-        // TODO: copy the version
         const packageJsonTemplate = `{
     "name": "ms-${name}",
     "version": "1.0.0",
