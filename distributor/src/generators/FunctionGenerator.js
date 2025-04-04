@@ -45,7 +45,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     return functionMap;
   }
 
-  
+
   /**
   * Generates fetch call URLs corresponding to the functions, using query to
   * pass arguments for GET calls and body for POST calls.
@@ -61,8 +61,8 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       let bodyCallInsideReq = "";
       if (functionInfo.parameters && functionInfo.parameters.length > 0) {
         let body = `{`;
-        for (let parameter of functionInfo.parameters) {
-          body += `${parameter.name}: ${parameter.name},`;
+        for (let parameter of args) {
+          body += `${parameter}: ${parameter},`;
         }
         body += `};`;
         this.appendString(`let body = ${body}`);
@@ -77,11 +77,11 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       functionInfo.parameters && functionInfo.parameters.length > 0
     ) {
       serverURL += "?";
-      for (let i = 0; i < functionInfo.parameters.length; i++) {
-        serverURL += `${functionInfo.parameters[i].name}=' + ${args[i]}`;
+      for (let i = 0; i < args.length; i++) {
+        serverURL += `${args[i]}=' + ${args[i]}`;
         if (
-          functionInfo.parameters.length > 0 &&
-          i !== functionInfo.parameters.length - 1
+          args.length > 0 &&
+          i !== args.length - 1
         ) {
           serverURL += "+ '&";
         }
@@ -89,6 +89,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     }
     return serverURL;
   }
+
   buildFunctionMap(functions) {
     const functionMap = {};
     functions.forEach((func) => {
@@ -118,9 +119,10 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.appendString(`export async function ${functionName}(`);
 
       if (ctx.formalParameterList()) {
-        args = this.visitFormalParameterList(ctx.formalParameterList());
+        args = this.visitFormalParameterListOnlyRead(ctx.formalParameterList());
       }
 
+      this.appendString(args);
       this.appendString(`) {`);
       this.appendNewLine();
       let serverURL = this.generateServerUrl(server, functionInfo, args);
@@ -130,12 +132,12 @@ export default class FunctionGenerator extends CopyPasteGenerator {
         fetchCode = `const response = await fetch('${serverURL});`;
       } else if (
         functionInfo.method.toUpperCase() === "GET" &&
-        functionInfo.parameters.length > 0
+        args.length > 0
       ) {
         fetchCode = `const response = await fetch('${serverURL});`;
       } else if (
         functionInfo.method.toUpperCase() === "GET" &&
-        functionInfo.parameters.length === 0
+        args.length > 0
       ) {
         fetchCode = `const response = await fetch('${serverURL}');`;
       }
@@ -146,10 +148,24 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.appendNewLine();
       this.appendString(`}`);
     } else if (functionInfo.method.toUpperCase() === "RABBIT") {
-      const paramNames = functionInfo.parameters
-        .map((param) => param.name)
+      if (ctx.formalParameterList()) {
+        args = this.visitFormalParameterListOnlyRead(ctx.formalParameterList());
+      }
+
+      const paramNames = args
         .join(", ");
       const connectionUrl = server.rabbitmq.connectionUrl || "amqp://localhost";
+      const isExchange = !!functionInfo.exchange_name;
+      let rpcQueue = `${functionInfo.name}_queue`;
+
+      if (functionInfo.queue) {
+        rpcQueue = functionInfo.queue;
+      }
+
+      let exchange_type = functionInfo.exchange_type ? `${functionInfo.exchange_type}` : 'fanout';
+      let routingKey = functionInfo.routing_key ? `${functionInfo.routing_key}` : ``;
+
+      let responseQueue = 'q.queue';
 
       this.appendString(
         `export async function ${functionName}(${paramNames}) {`
@@ -167,24 +183,41 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.appendString(
         `      const channel = await connection.createChannel();`
       );
-      this.appendString(`      let queueName = "${server.rabbitmq.queue}";`);
-      this.appendString(
-        `      console.log("Declaring queue: ${server.rabbitmq.queue}");`
-      );
-      this.appendString(`      await channel.assertQueue(queueName, {`);
-      this.appendString(`        durable: false,`);
+      this.appendString(`      const q = await channel.assertQueue('', {`);
+      this.appendString(`        exclusive: true,`);
       this.appendString(`      });`);
+      if (isExchange) {
+        this.appendString(`      let ${functionInfo.name}_exchange = '${functionInfo.exchange_name}';`);
+        this.appendString(`      await channel.assertExchange(${functionInfo.name}_exchange, '${exchange_type}', {`);
+        this.appendString(`        durable: false,`);
+        this.appendString(`      });`);
+        if (functionInfo.callback_queue && functionInfo.callback_queue !== 'anonymous') {
+          this.appendString(`      await channel.bindQueue(q.queue, ${functionInfo.name}_exchange, '${functionInfo.callback_queue}');`);
+        }
+      } else {
+        this.appendString(`      let queueName = "${rpcQueue}";`);
+        this.appendString(
+          `      console.log("Declaring queue: ${rpcQueue}");`
+        );
+        if (functionInfo.callback_queue && functionInfo.callback_queue !== 'anonymous') {
+          this.appendString(`      let callbackQueue = "${functionInfo.callback_queue}";`);
+          this.appendString(
+            `  await channel.assertQueue(callbackQueue, { durable: false });`
+          );
+          responseQueue = 'callbackQueue';
+        }
+      }
+      this.appendString(`      const correlationId = generateUuid();`);
       this.appendString(`      const callObj = {`);
       this.appendString(`        funcName: "${functionName}",`);
-      this.appendString(`        type: "call",`);
       this.appendString(`        parameters: {`);
-      for (const paramName of functionInfo.parameters) {
-        this.appendString(`          ${paramName.name}: ${paramName.name},`);
+      for (const parameter of args) {
+        this.appendString(`          ${parameter}: ${parameter},`);
       }
       this.appendString(`        },`);
       this.appendString(`      };`);
       this.appendString(`      channel.consume(`);
-      this.appendString(`        queueName,`);
+      this.appendString(`        ${responseQueue},`);
       this.appendString(`        (msg) => {`);
       this.appendString(`          if (msg) {`);
       this.appendString(
@@ -194,7 +227,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
         `            console.log("Receiving response for function ${functionName}");`
       );
       this.appendString(
-        `            if (message.funcName === "${functionName}" && message.type === "response") {`
+        `            if (msg.properties.correlationId === correlationId) {`
       );
       this.appendString(`              const result = message.result;`);
       this.appendString(
@@ -209,12 +242,21 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.appendString(`          noAck: true,`);
       this.appendString(`        }`);
       this.appendString(`      );`);
-      this.appendString(
-        `      console.log("Sending message to queue: ${server.rabbitmq.queue}");`
-      );
-      this.appendString(
-        `      channel.sendToQueue(queueName, Buffer.from(JSON.stringify(callObj)));`
-      );
+      if (isExchange) {
+        this.appendString(
+          `      channel.publish(${functionInfo.name}_exchange, '${routingKey}', Buffer.from(JSON.stringify(callObj))`);
+      } else {
+        this.appendString(
+          `      console.log("Sending message to queue: ${rpcQueue}");`
+        );
+        this.appendString(
+          `      channel.sendToQueue(queueName, Buffer.from(JSON.stringify(callObj))`);
+      }
+      this.appendString(`           , {correlationId: correlationId`);
+      if (!functionInfo.callback_queue || functionInfo.callback_queue === 'anonymous') {
+        this.appendString(`           ,replyTo: q.queue`);
+      }
+      this.appendString(`       });`);
       this.appendString(`    } catch (error) {`);
       this.appendString(
         `      console.error("Error processing call to function ${functionName}:", error);`
@@ -223,6 +265,11 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       this.appendString(`    }`);
       this.appendString(`  });`);
       this.appendString(`  return p;`);
+      // Function generateUuid()
+      this.appendString(`  function generateUuid() {`);
+      this.appendString(`    return Math.random().toString() + Math.random().toString() + Math.random().toString();`);
+      this.appendString(`  }`);
+      // End Function generateUuid()
       this.appendString(`}`);
       this.appendNewLine();
     }
@@ -256,6 +303,48 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     return args;
   }
 
+  //Override visitFormalParameterList to only read
+  visitFormalParameterListOnlyRead(ctx) {
+    const args = [];
+    if (ctx.formalParameterArg().length !== 0) {
+      for (let i = 0; i < ctx.formalParameterArg().length; i++) {
+        this.visitFormalParameterArgOnlyRead(ctx.formalParameterArg(i));
+        args.push(ctx.formalParameterArg(i).assignable().getText());
+      }
+
+      if (ctx.lastFormalParameterArg()) {
+        this.visitLastFormalParameterArgOnlyRead(ctx.lastFormalParameterArg());
+        args.push(ctx.formalParameterArg(i).assignable().getText());
+      }
+    } else {
+      this.visitLastFormalParameterArgOnlyRead(ctx.lastFormalParameterArg());
+      args.push(ctx.formalParameterArg(i).assignable().getText());
+    }
+
+    return args;
+  }
+
+  //Override visitFormalParameterList to only read
+  visitFormalParameterArgOnlyRead(ctx) {
+    this.visitAssignableOnlyRead(ctx.assignable());
+    if (ctx.children.length > 1) {
+      this.visit(ctx.children[2]);
+    }
+  }
+
+  //Override visitFormalParameterList to only read
+  visitAssignableOnlyRead(ctx) {
+    if (!ctx.identifier()) //this.visitIdentifier(ctx.identifier());
+      //else this.visitChildren(ctx);
+      this.visitChildren(ctx);
+  }
+
+  //Override visitFormalParameterList to only read
+  visitLastFormalParameterArgOnlyRead(ctx) {
+    this.appendTokens(ctx.Ellipsis());
+    this.visitChildren(ctx);
+  }
+
   /**
   * Overriding of visitExportStatement to test if there is any function defined in the YAML file with
   * export in the input file and generate corresponding code.
@@ -269,7 +358,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     else if (
       declarationCtx.functionDeclaration() &&
       ctx.declaration().functionDeclaration().identifier().getText() ===
-        funct.name
+      funct.name
     ) {
       this.currentFunction = funct;
       this.currentServerName = funct.server;
@@ -282,7 +371,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     }
   }
 
-  
+
   /**
   * Helper function to test YAML function definitions by export.
   * @param {*} sourceElementCtx - sourceElement context
@@ -305,7 +394,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
-        
+
         if (
           sourceElements[i].statement().functionDeclaration() ||
           sourceElements[i].statement().exportStatement()

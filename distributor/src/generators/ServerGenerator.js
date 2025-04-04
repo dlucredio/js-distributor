@@ -172,6 +172,12 @@ export default class ServerGenerator extends FunctionGenerator {
       this.checkAsyncFunction(functionInfo, ctx);
     const server = this.servers.find((s) => s.id === functionInfo.server);
 
+    let args = [];
+
+    if (ctx.formalParameterList()) {
+      args = this.visitFormalParameterListOnlyRead(ctx.formalParameterList());
+    }
+
     // if the generated function is a rabbitmq method, return to generate nothing
     if (
       functionInfo &&
@@ -187,31 +193,63 @@ export default class ServerGenerator extends FunctionGenerator {
       );
       this.appendString(`  console.log("Waiting for calls");`);
       this.appendString(`  const channel = await connection.createChannel();`);
-      this.appendString(`  let queueName = "${server.rabbitmq.queue}";`);
-      this.appendString(
-        `  await channel.assertQueue(queueName, { durable: false });`
-      );
-      this.appendString(`  channel.consume(`);
-      this.appendString(`    queueName,`);
-      this.appendString(`    async (msg) => {`);
-      this.appendString(`      if (msg) {`);
-      this.appendString(`        console.log("Receiving call");`);
-      this.appendString(
-        `        const message = JSON.parse(msg.content.toString());`
-      );
 
       // Loop through the functions associated with the server
       for (const func of this.functions) {
         // if the function is not rabbit or does not belong to the server, skip to the next one
         if (func.method.toUpperCase() !== "RABBIT" || func.server !== server.id)
           continue;
-        const parameters = func.parameters
-          .map((param) => param.name)
+        const parameters = args
           .join(", ");
 
-        this.appendString(
-          `        if (message.funcName === "${func.name}" && message.type === "call") {`
-        );
+        let isExchange = !!func.exchange_name;
+
+        let rpcQueue = `${func.name}_queue`;
+
+        if (func.queue) {
+          rpcQueue = func.queue;
+        }
+
+        let exchange_type = func.exchange_type ? `${func.exchange_type}` : 'fanout';
+        let routingKey = func.routing_key ? `${func.routing_key}` : ``;
+
+        if (isExchange) {
+          this.appendString(`      let ${func.name}_exchange = '${func.exchange_name}';`);
+          this.appendString(
+            `  await channel.assertExchange(${func.name}_exchange, '${exchange_type}', { durable: false });`
+          );
+
+          this.appendString(
+            `  const q${func.name} = await channel.assertQueue('', { exclusive: true });`
+          );
+          this.appendString(
+            `  await channel.bindQueue(q${func.name}.queue, ${func.name}_exchange, '${routingKey}');`
+          );
+          this.appendString(`  channel.consume(`);
+          this.appendString(`    q${func.name}.queue,`);
+          this.appendString(`    async (msg) => {`);
+          this.appendString(`      if (msg) {`);
+          this.appendString(`        console.log("Receiving call");`);
+          this.appendString(
+            `        const message = JSON.parse(msg.content.toString());`
+          );
+        } else {
+          this.appendString(`  let ${func.name}_queueName = "${rpcQueue}";`);
+          this.appendString(
+            `  await channel.assertQueue(${func.name}_queueName, { durable: false });`
+          );
+          this.appendString(`  channel.consume(`);
+          this.appendString(`    ${func.name}_queueName,`);
+          this.appendString(`    async (msg) => {`);
+          this.appendString(`      if (msg) {`);
+          this.appendString(`        console.log("Receiving call");`);
+          this.appendString(
+            `        const message = JSON.parse(msg.content.toString());`
+          );
+          this.appendString(
+            `        if (message.funcName === "${func.name}") {`
+          );
+        }
         this.appendString(
           `          const { ${parameters} } = message.parameters;`
         );
@@ -223,20 +261,48 @@ export default class ServerGenerator extends FunctionGenerator {
         );
         this.appendString(`          const response${func.name} = {`);
         this.appendString(`            funcName: "${func.name}",`);
-        this.appendString(`            type: "response",`);
         this.appendString(`            result: result${func.name},`);
         this.appendString(`          };`);
         this.appendString(
           `          console.log("Sending response to function ${func.name}");`
         );
-        this.appendString(
-          `          channel.sendToQueue(queueName, Buffer.from(JSON.stringify(response${func.name})));`
-        );
-        this.appendString(`        }`);
+        if (isExchange) {
+          if (!func.callback_queue || func.callback_queue === 'anonymous') {
+            this.appendString(
+              `          channel.publish('', msg.properties.replyTo, Buffer.from(JSON.stringify(response${func.name})), {`
+            );
+          } else {
+            this.appendString(
+              `          channel.publish(${func.name}_exchange, '${func.callback_queue}', Buffer.from(JSON.stringify(response${func.name})), {`
+            );
+          }
+          this.appendString(
+            `          correlationId: msg.properties.correlationId`
+          );
+          this.appendString(`        });`);
+          this.appendString(`        }`);
+          this.appendString(`    }, { noAck: true });`);
+        } else {
+          if (func.callback_queue && func.callback_queue !== 'anonymous') {
+            this.appendString(
+              `          channel.sendToQueue('${func.callback_queue}', Buffer.from(JSON.stringify(response${func.name})), {`
+            );
+          } else {
+            this.appendString(
+              `          channel.sendToQueue(msg.properties.replyTo, Buffer.from(JSON.stringify(response${func.name})), {`
+            );
+          }
+          this.appendString(
+            `          correlationId: msg.properties.correlationId`
+          );
+          this.appendString(`        });`);
+          this.appendString(`        }`);
+        }
+        if (!func.exchange_name) {
+          this.appendString(`        }`);
+          this.appendString(`    }, { noAck: true });`);
+        }
       }
-
-      this.appendString(`      }`);
-      this.appendString(`    }, { noAck: true });`);
       this.appendString(`}`);
       this.appendNewLine();
       this.appendString(`waitForCall${server.id}();`);
@@ -255,9 +321,9 @@ export default class ServerGenerator extends FunctionGenerator {
         functionInfo.method.toUpperCase() === "POST" ? "body" : "query";
 
       // Processing function parameters from yaml
-      functionInfo.parameters.forEach((param) => {
+      args.forEach((param) => {
         this.appendString(
-          `  const ${param.name} = req.${queryOrBody}.${param.name};`
+          `  const ${param} = req.${queryOrBody}.${param};`
         );
       });
       this.appendString();
@@ -265,8 +331,7 @@ export default class ServerGenerator extends FunctionGenerator {
       // generating call of the original function
       if (isAsync) this.appendString(`  const result = await ${functionName}(`);
       else this.appendString(`  const result = ${functionName}(`);
-      const paramNames = functionInfo.parameters
-        .map((param) => param.name)
+      const paramNames = args
         .join(", ");
       this.appendString(`    ${paramNames}`);
       this.appendString(`  );`);
@@ -275,8 +340,7 @@ export default class ServerGenerator extends FunctionGenerator {
       this.appendString();
     }
 
-    const paramNames = functionInfo.parameters
-      .map((param) => param.name)
+    const paramNames = args
       .join(", ");
     // copy of the original function that stays on the server to be called by the route
     if (isAsync)
