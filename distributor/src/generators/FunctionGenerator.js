@@ -59,7 +59,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
 
     if (functionInfo.method.toUpperCase() === "POST") {
       let bodyCallInsideReq = "";
-      if (functionInfo.parameters.length > 0) {
+      if (functionInfo.parameters && functionInfo.parameters.length > 0) {
         let body = `{`;
         for (let parameter of functionInfo.parameters) {
           body += `${parameter.name}: ${parameter.name},`;
@@ -74,7 +74,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       serverURL += `', { ${reqPostBody}}`;
     } else if (
       functionInfo.method.toUpperCase() === "GET" &&
-      functionInfo.parameters.length > 0
+      functionInfo.parameters && functionInfo.parameters.length > 0
     ) {
       serverURL += "?";
       for (let i = 0; i < functionInfo.parameters.length; i++) {
