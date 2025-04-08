@@ -400,6 +400,38 @@ export default class ServerGenerator extends FunctionGenerator {
       else newCode += this.stringBuilder.toString();
       this.codeGenerated.set(funct.server, newCode);
       this.currentServerName = "";
+    } else {
+      const sourceElements = declarationCtx.functionDeclaration().functionBody().sourceElements().children;
+      for (let i in sourceElements) {
+        if (
+          sourceElements[i].statement().functionDeclaration() ||
+          sourceElements[i].statement().exportStatement()
+        ) {
+          this.stringBuilder = new StringBuilder();
+          if (
+            sourceElements[i].statement().functionDeclaration() &&
+            funct.name ===
+            sourceElements[i]
+              .statement()
+              .functionDeclaration()
+              .identifier()
+              .getText()
+          ) {
+            this.currentFunction = funct;
+            this.currentServerName = funct.server;
+            this.visitFunctionDeclaration(
+              sourceElements[i].statement().functionDeclaration()
+            );
+            let newCode = this.codeGenerated.get(funct.server);
+            if (!newCode) newCode = this.stringBuilder.toString();
+            else newCode += this.stringBuilder.toString();
+            this.codeGenerated.set(funct.server, newCode);
+            this.currentServerName = "";
+          } else if (sourceElements[i].statement().exportStatement()) {
+            this.checkExportFunctionsDeclarations(sourceElements[i], funct);
+          }
+        }
+      }
     }
   }
 

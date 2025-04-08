@@ -59,7 +59,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
 
     if (functionInfo.method.toUpperCase() === "POST") {
       let bodyCallInsideReq = "";
-      if (args.length > 0) {
+      if (functionInfo.parameters && functionInfo.parameters.length > 0) {
         let body = `{`;
         for (let parameter of args) {
           body += `${parameter}: ${parameter},`;
@@ -74,7 +74,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       serverURL += `', { ${reqPostBody}}`;
     } else if (
       functionInfo.method.toUpperCase() === "GET" &&
-      args.length > 0
+      functionInfo.parameters && functionInfo.parameters.length > 0
     ) {
       serverURL += "?";
       for (let i = 0; i < args.length; i++) {
@@ -367,6 +367,44 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       else newCode += this.stringBuilder.toString();
       this.codeGenerated.set(funct.server, newCode);
       this.currentServerName = "";
+    } else {
+      const sourceElements = declarationCtx.functionDeclaration().functionBody().sourceElements().children;
+
+      for (let i in sourceElements) {
+        if (
+          sourceElements[i].statement().functionDeclaration() ||
+          sourceElements[i].statement().exportStatement()
+        ) {
+          this.stringBuilder = new StringBuilder();
+          const statement = sourceElements[i].statement();
+          if (statement.functionDeclaration()) {
+            const functionName = statement
+              .functionDeclaration()
+              .identifier()
+              .getText();
+            if (funct.name === functionName) {
+              if (
+                funct.method.toUpperCase() === "POST" ||
+                funct.method.toUpperCase() === "GET" ||
+                funct.method.toUpperCase() === "RABBIT"
+              ) {
+                this.visitFunctionDeclaration(
+                  statement.functionDeclaration()
+                );
+                let newCode = this.codeGenerated.get(funct.server);
+                if (newCode === undefined) {
+                  newCode = this.stringBuilder.toString();
+                } else {
+                  newCode += this.stringBuilder.toString();
+                }
+                this.codeGenerated.set(funct.server, newCode);
+              }
+            }
+          } else if (statement.exportStatement()) {
+            this.checkExportFunctionsDeclarations(sourceElements[i], funct);
+          }
+        }
+      }
     }
   }
 
