@@ -279,6 +279,44 @@ export default class FunctionGenerator extends CopyPasteGenerator {
       else newCode += this.stringBuilder.toString();
       this.codeGenerated.set(funct.server, newCode);
       this.currentServerName = "";
+    } else {
+      const sourceElements = declarationCtx.functionDeclaration().functionBody().sourceElements().children;
+
+      for (let i in sourceElements) {
+        if (
+          sourceElements[i].statement().functionDeclaration() ||
+          sourceElements[i].statement().exportStatement()
+        ) {
+          this.stringBuilder = new StringBuilder();
+          const statement = sourceElements[i].statement();
+          if (statement.functionDeclaration()) {
+            const functionName = statement
+              .functionDeclaration()
+              .identifier()
+              .getText();
+            if (funct.name === functionName) {
+              if (
+                funct.method.toUpperCase() === "POST" ||
+                funct.method.toUpperCase() === "GET" ||
+                funct.method.toUpperCase() === "RABBIT"
+              ) {
+                this.visitFunctionDeclaration(
+                  statement.functionDeclaration()
+                );
+                let newCode = this.codeGenerated.get(funct.server);
+                if (newCode === undefined) {
+                  newCode = this.stringBuilder.toString();
+                } else {
+                  newCode += this.stringBuilder.toString();
+                }
+                this.codeGenerated.set(funct.server, newCode);
+              }
+            }
+          } else if (statement.exportStatement()) {
+            this.checkExportFunctionsDeclarations(sourceElements[i], funct);
+          }
+        }
+      }
     }
   }
 
@@ -305,7 +343,10 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
-        
+
+        console.log(sourceElements[i].statement().functionDeclaration())
+        console.log(sourceElements[i].statement().exportStatement())
+
         if (
           sourceElements[i].statement().functionDeclaration() ||
           sourceElements[i].statement().exportStatement()
