@@ -1,0 +1,33 @@
+servers:
+  - id: alfa
+    port: 3000
+    url: alfa
+  - id: beta
+    port: 3001
+    url: beta
+  - id: gamma
+    port: 3002
+    url: gamma
+  - id: delta
+    port: 3003
+    url: delta
+    rabbitmq:
+      exchange: delta_exchange
+      queue: delta_queue
+      connectionUrl: amqp://rabbit
+functions:
+  - name: entryPoint
+    method: get
+    server: alfa
+  - name: insertUser
+    method: post
+    server: beta
+  - name: findUserByEmail
+    method: get
+    server: beta
+  - name: deleteAllUsers
+    method: get
+    server: gamma
+  - name: generateKey
+    method: rabbit
+    server: delta

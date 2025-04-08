@@ -137,7 +137,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
         fetchCode = `const response = await fetch('${serverURL});`;
       } else if (
         functionInfo.method.toUpperCase() === "GET" &&
-        args.length > 0
+        args.length === 0
       ) {
         fetchCode = `const response = await fetch('${serverURL}');`;
       }
@@ -311,7 +311,6 @@ export default class FunctionGenerator extends CopyPasteGenerator {
         this.visitFormalParameterArgOnlyRead(ctx.formalParameterArg(i));
         args.push(ctx.formalParameterArg(i).assignable().getText());
       }
-
       if (ctx.lastFormalParameterArg()) {
         this.visitLastFormalParameterArgOnlyRead(ctx.lastFormalParameterArg());
         args.push(ctx.formalParameterArg(i).assignable().getText());

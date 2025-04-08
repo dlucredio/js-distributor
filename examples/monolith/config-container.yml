@@ -2,14 +2,10 @@
 servers:
   - id: alfa
     port: 3000
-    url: localhost
-    rabbitmq: 
-      connectionUrl: amqp://localhost
+    url: alfa
   - id: gama
     port: 3001
-    url: localhost
-    rabbitmq: 
-      connectionUrl: amqp://localhost
+    url: gama
 
 # functions definition
 functions:
