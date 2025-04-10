@@ -9,7 +9,7 @@ import CopyPasteGenerator from "./generators/copypaste-generator.js";
 import FunctionGenerator from "./generators/FunctionGenerator.js";
 import ServerGenerator from "./generators/ServerGenerator.js";
 import { getAllJSFiles } from "./generators/generator-utils.js";
-import DockerFileGenerator from "./generators/DockerFileGenerator.js";
+import DockerGenerator from "./generators/DockerGenerator.js";
 
 
 let serverPorts = {}; // stores the ports of each server
@@ -322,9 +322,14 @@ function generateFunctionFiles(inputDir, outputDir, target, filesInitialized = [
  * @param {*} outputDir - output directory
  */
 function generateProjects(inputDir, outputDir) {
-  var dockerGen = new DockerFileGenerator(outputDir, functionNames);
+  const yamlPath = './config.yml';
+  const config = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
+  const servers = config.servers;
+  var dockerGen = new DockerGenerator(outputDir, functionNames);
   for (let serverName in serverPorts) {
     let serverInfo = serverPorts[serverName];
-    dockerGen.generateProject(serverName, serverInfo.filePath, serverInfo.port);
+    const serv = servers.find(server => server.id === serverName);
+    const dockerPath = serv.dockerFilePath;
+    dockerGen.generateProject(serverName, serverInfo.filePath, serverInfo.port, dockerPath);
   }
 }
