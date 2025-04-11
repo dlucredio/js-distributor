@@ -1,5 +1,6 @@
-import { StringBuilder } from "./generator-utils.js";
+import { StringBuilder } from "./GeneratorUtils.js";
 import FunctionGenerator from "./FunctionGenerator.js";
+import config from "../config/Configuration.js";
 import fs from "fs";
 import beautify from "js-beautify";
 
@@ -12,7 +13,7 @@ export default class WaitForCallGenerator extends FunctionGenerator {
    */
   constructor() {
     super();
-    this.functionMap = this.buildFunctionMap(this.functions);
+    this.functionMap = this.buildFunctionMap(config.functions);
     this.functionsImportedInsideServer = new Set();
     this.filesInitialized = [];
   }
@@ -83,11 +84,11 @@ export default class WaitForCallGenerator extends FunctionGenerator {
    */
   visitFunctionDeclaration(ctx) {
     const functionName = ctx.identifier().getText();
-    const functionInfo = this.functions.find((func) => func.name === functionName);
+    const functionInfo = config.functions.find((func) => func.name === functionName);
 
     if (functionInfo.method.toUpperCase() !== 'RABBIT') return;
     if (functionInfo) {
-      const server = this.servers.find((s) => s.id === functionInfo.server && functionInfo.method.toUpperCase() === 'RABBIT');
+      const server = config.servers.find((s) => s.id === functionInfo.server && functionInfo.method.toUpperCase() === 'RABBIT');
 
       if (!server) return;
       if (server) {
@@ -162,9 +163,9 @@ export default class WaitForCallGenerator extends FunctionGenerator {
       for (let i in sourceElements) {
         if (sourceElements[i].statement().functionDeclaration()) {
           this.stringBuilder = new StringBuilder();
-          for (let funct of this.functions) {
+          for (let funct of config.functions) {
             if (funct.name === sourceElements[i].statement().functionDeclaration().identifier().getText()) {
-              const serverInfo = this.servers.find((server) => server.id === funct.server);
+              const serverInfo = config.servers.find((server) => server.id === funct.server);
               if (!this.codeGenerated.has(funct.server) && funct.method.toUpperCase() === 'RABBIT') {
                 this.currentServerName = funct.server;
                 this.visitFunctionDeclaration(sourceElements[i].statement().functionDeclaration());

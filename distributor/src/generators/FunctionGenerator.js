@@ -1,42 +1,21 @@
-import CopyPasteGenerator from "./copypaste-generator.js";
-import { StringBuilder } from "./generator-utils.js";
-import fs from "fs";
-import yaml from "js-yaml";
-import path from "path";
+import CopyPasteGenerator from "./CopyPasteGenerator.js";
+import { StringBuilder } from "./GeneratorUtils.js";
+import config from "../config/Configuration.js";
 
 export default class FunctionGenerator extends CopyPasteGenerator {
   constructor(outputDir) {
     super();
     this.outputDir = outputDir;
-    this.servers = [];
-    this.functions = [];
-    this.numServers = 0;
     this.nameOfProject = "";
     this.functionDeclared = {};
     this.codeGenerated = new Map();
     this.amqpImported = false;
-    this.functionMap = this.buildFunctionMap(this.functions);
-    this.loadYAML();
+    this.functionMap = this.buildFunctionMap();
   }
 
-  /**
-   * Loads information from the YAML file into the class attributes.
-   */
-  loadYAML() {
-    try {
-      const yamlPath = path.resolve("config.yml");
-      const config = yaml.load(fs.readFileSync(yamlPath, "utf8"));
-      this.servers = config.servers;
-      this.functions = config.functions;
-      this.numServers = this.servers.length;
-    } catch (e) {
-      console.error("Erro ao carregar o arquivo YAML:", e);
-    }
-  }
-
-  buildFunctionMap(functions) {
+  buildFunctionMap() {
     const functionMap = {};
-    functions.forEach((func) => {
+    config.functions.forEach((func) => {
       if (!functionMap[func.server]) {
         functionMap[func.server] = [];
       }
@@ -44,7 +23,6 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     });
     return functionMap;
   }
-
 
   /**
   * Generates fetch call URLs corresponding to the functions, using query to
@@ -90,17 +68,6 @@ export default class FunctionGenerator extends CopyPasteGenerator {
     return serverURL;
   }
 
-  buildFunctionMap(functions) {
-    const functionMap = {};
-    functions.forEach((func) => {
-      if (!functionMap[func.server]) {
-        functionMap[func.server] = [];
-      }
-      functionMap[func.server].push(func);
-    });
-    return functionMap;
-  }
-
   /**
   * Overriding of the visitFunctionDeclaration from copypaste to generate fetch call codes
   * or Rabbit's WaitForCall.
@@ -108,11 +75,11 @@ export default class FunctionGenerator extends CopyPasteGenerator {
   */
   visitFunctionDeclaration(ctx) {
     const functionName = ctx.identifier().getText();
-    const functionInfo = this.functions.find(
+    const functionInfo = config.functions.find(
       (func) => func.name === functionName
     );
     const serverName = functionInfo.server;
-    const server = this.servers.find((server) => server.id === serverName);
+    const server = config.servers.find((server) => server.id === serverName);
     let args = [];
 
     if (functionInfo.method.toUpperCase() !== "RABBIT") {
@@ -437,7 +404,7 @@ export default class FunctionGenerator extends CopyPasteGenerator {
           sourceElements[i].statement().exportStatement()
         ) {
           this.stringBuilder = new StringBuilder();
-          for (let funct of this.functions) {
+          for (let funct of config.functions) {
             const statement = sourceElements[i].statement();
             if (statement.functionDeclaration()) {
               const functionName = statement

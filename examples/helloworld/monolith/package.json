@@ -1,0 +1,20 @@
+{
+  "name": "helloworld",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate-single": "js-distributor-scripts single config2.yml src ../distributed",
+    "generate-watch": "js-distributor-scripts watch config2.yml src ../distributed"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "amqplib": "^0.10.7",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
+    "distributor": "file:../../../distributor"
+  }
+}

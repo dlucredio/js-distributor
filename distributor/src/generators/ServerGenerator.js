@@ -1,6 +1,6 @@
-import { StringBuilder } from "./generator-utils.js";
+import { StringBuilder } from "./GeneratorUtils.js";
 import FunctionGenerator from "./FunctionGenerator.js";
-import fs from "fs";
+import config from "../config/Configuration.js";
 import beautify from "js-beautify";
 
 export default class ServerGenerator extends FunctionGenerator {
@@ -40,7 +40,7 @@ export default class ServerGenerator extends FunctionGenerator {
     /* checks if there is another function defined in the yaml inside the body of the tested function;
   if there is, the tested function may make a call to another one that is in another server
   and, therefore, it is asynchronous */
-    for (let funct of this.functions) {
+    for (let funct of config.functions) {
       if (
         funct.name !== functionInfo.name &&
         functionDeclCtx.functionBody().getText().includes(funct.name) &&
@@ -62,7 +62,7 @@ export default class ServerGenerator extends FunctionGenerator {
     if (ctx.arrowFunctionBody()) {
       // checks if there is any yaml function inside the body of the arrow function that does not belong
       // to the current server; if there is, its call is a fetch and therefore the function is async
-      for (let functionInfo of this.functions) {
+      for (let functionInfo of config.functions) {
         let functionServer = functionInfo.server;
         if (
           ctx.arrowFunctionBody().getText().includes(functionInfo.name) &&
@@ -85,7 +85,7 @@ export default class ServerGenerator extends FunctionGenerator {
     if (ctx.functionBody()) {
       // checks if there is any yaml function inside the body of the arrow function that does not belong
       // to the current server; if there is, its call is a fetch and therefore the function is async
-      for (let functionInfo of this.functions) {
+      for (let functionInfo of config.functions) {
         let functionServer = functionInfo.server;
         if (
           ctx.functionBody().getText().includes(functionInfo.name) &&
@@ -158,7 +158,7 @@ export default class ServerGenerator extends FunctionGenerator {
    */
   visitFunctionDeclaration(ctx) {
     const functionName = ctx.identifier().getText();
-    const functionInfo = this.functions.find(
+    const functionInfo = config.functions.find(
       (func) => func.name === functionName
     );
 
@@ -170,7 +170,7 @@ export default class ServerGenerator extends FunctionGenerator {
     const isAsync =
       ctx.Async() !== null ||
       this.checkAsyncFunction(functionInfo, ctx);
-    const server = this.servers.find((s) => s.id === functionInfo.server);
+    const server = config.servers.find((s) => s.id === functionInfo.server);
 
     let args = [];
 
@@ -195,7 +195,7 @@ export default class ServerGenerator extends FunctionGenerator {
       this.appendString(`  const channel = await connection.createChannel();`);
 
       // Loop through the functions associated with the server
-      for (const func of this.functions) {
+      for (const func of config.functions) {
         // if the function is not rabbit or does not belong to the server, skip to the next one
         if (func.method.toUpperCase() !== "RABBIT" || func.server !== server.id)
           continue;
@@ -357,7 +357,7 @@ export default class ServerGenerator extends FunctionGenerator {
    */
   visitArgumentsExpression(ctx) {
     const functionName = ctx.children[0].getText();
-    const functionInfo = this.functions.find(
+    const functionInfo = config.functions.find(
       (func) => func.name === functionName
     );
 
@@ -574,7 +574,7 @@ export default class ServerGenerator extends FunctionGenerator {
           sourceElements[i].statement().exportStatement()
         ) {
           this.stringBuilder = new StringBuilder();
-          for (let funct of this.functions) {
+          for (let funct of config.functions) {
             if (
               sourceElements[i].statement().functionDeclaration() &&
               funct.name ===
@@ -609,10 +609,9 @@ export default class ServerGenerator extends FunctionGenerator {
    * if they should be present in the given server
    * @param {*} ctx - root of the semantic tree
    * @param {*} serverName - the server to be checked
-   * @param {*} config - the configuration loaded from the YAML file
    * @returns - true if this visitor encounters a function that is present in the given server, false otherwise
    */
-  hasFunctionInServer(ctx, serverName, config) {
+  hasFunctionInServer(ctx, serverName) {
     if (ctx.sourceElements()) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
@@ -650,10 +649,9 @@ export default class ServerGenerator extends FunctionGenerator {
    * Checks if the given function is present in the config. This is used to avoid generating an import for
    * a function that will be imported by the generated code.
    * @param {*} functionName - the name of the function to check
-   * @param {*} config - the configuration loaded from the YAML file
    * @returns - true if this function is part of the config file, false otherwise
    */
-  isAFunctionFromConfigFile(functionName, config) {
+  isAFunctionFromConfigFile(functionName) {
     for (let funct of config.functions) {
       if (funct.name === functionName) {
         return true;
@@ -670,13 +668,12 @@ export default class ServerGenerator extends FunctionGenerator {
    * @param {*} fileName - the file where to look for the elements
    * @param {*} ctx - root of the semantic tree
    * @param {*} serverName - the server for which code is being generated
-   * @param {*} config - the configuration loaded from the YAML file
    * @returns - generated server code for all elements except functions
    */
-  generateGlobalElements(fileName, ctx, serverName, config) {
+  generateGlobalElements(fileName, ctx, serverName) {
     // this.stringBuilder.appendNewLine();
     // this.stringBuilder.append(`// Scanning global elements in ${fileName} for ${serverName}\n`);
-    if (ctx.sourceElements() && this.hasFunctionInServer(ctx, serverName, config)) {
+    if (ctx.sourceElements() && this.hasFunctionInServer(ctx, serverName)) {
       const sourceElements = ctx.sourceElements().children;
       for (let i in sourceElements) {
         if (!(
@@ -693,11 +690,11 @@ export default class ServerGenerator extends FunctionGenerator {
               const moduleExportName = importAliasName.moduleExportName();
               const importedBinding = importAliasName.importedBinding();
               if (!importedBinding) {
-                if (!this.isAFunctionFromConfigFile(moduleExportName.getText(), config)) {
+                if (!this.isAFunctionFromConfigFile(moduleExportName.getText())) {
                   this.stringBuilder.append(`\nimport { ${moduleExportName.getText()} } from ${importFrom};\n`);
                 }
               } else {
-                if (!this.isAFunctionFromConfigFile(importedBinding.getText(), config)) {
+                if (!this.isAFunctionFromConfigFile(importedBinding.getText())) {
                   this.stringBuilder.append(`\nimport { ${moduleExportName.getText()} as ${importedBinding.getText()} } from ${importFrom};\n`);
                 }
               }

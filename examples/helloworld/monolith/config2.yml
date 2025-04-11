@@ -1,0 +1,23 @@
+servers:
+  - id: alpha
+    port: 3000
+    url: localhost
+    functions:
+      - pattern: '*'
+        method: get
+  - id: beta
+    port: 3001
+    url: localhost
+    functions:
+    - pattern: split
+      method: get
+    - pattern: join
+      method: get
+  - id: gamma
+    port: 3002
+    url: localhost
+    functions:
+    - pattern: '*Case'
+      method: get
+    - pattern: saveProduct
+      method: get
