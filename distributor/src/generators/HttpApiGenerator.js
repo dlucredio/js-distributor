@@ -5,8 +5,7 @@ function generateHttpRequestCode(functionName, serverInfo, functionInfo, args = 
 
     let fetchUrl = `http://${serverInfo.url}:${serverInfo.port}/${functionName}`;
 
-    if (functionInfo.method.toUpperCase() === "GET") {
-
+    if (functionInfo.method === "http-get") {
         if (args.length > 0) {
             fetchUrl += "?";
             for (let i = 0; i < args.length; i++) {

@@ -1,0 +1,9 @@
+servers:
+  - id: alpha
+    port: 3000
+    url: localhost
+    functions:
+      - pattern: '*'
+  - id: beta
+    port: 3001
+    url: localhost

@@ -1,38 +1,32 @@
-// 1. Converts uppercase letters to lowercase manually
 export function toLowerCase(str) {
     let result = '';
     for (let i = 0; i < str.length; i++) {
         let code = str.charCodeAt(i);
-        // Uppercase letters: A-Z (65-90)
+
         if (code >= 65 && code <= 90) {
-            result += String.fromCharCode(code + 32); // Convert to lowercase
+            result += String.fromCharCode(code + 32);
         } else {
-            result += str[i]; // Keep original character
+            result += str[i];
         }
     }
     return result;
 }
-
-// 2. Converts lowercase letters to uppercase manually
 export function toUpperCase(str) {
     let result = '';
     for (let i = 0; i < str.length; i++) {
         let code = str.charCodeAt(i);
-        // Lowercase letters: a-z (97-122)
+
         if (code >= 97 && code <= 122) {
-            result += String.fromCharCode(code - 32); // Convert to uppercase
+            result += String.fromCharCode(code - 32);
         } else {
-            result += str[i]; // Keep original character
+            result += str[i];
         }
     }
     return result;
 }
-
-// 3. Splits a string into an array based on a separator
 export function split(str, separator = ",") {
     let result = [];
     let temp = '';
-    
     for (let i = 0; i < str.length; i++) {
         if (str[i] === separator) {
             result.push(temp);
@@ -41,19 +35,22 @@ export function split(str, separator = ",") {
             temp += str[i];
         }
     }
-    result.push(temp); // Add the last segment
+    result.push(temp);
     return result;
 }
-
-// 4. Joins an array into a string with a specified separator (default is comma)
 export function join(arr, separator = ',') {
     let result = '';
-    
     for (let i = 0; i < arr.length; i++) {
         result += arr[i];
         if (i < arr.length - 1) {
-            result += separator; // Add separator between elements
+            result += separator;
         }
     }
     return result;
 }
+export {
+    toLowerCase as toLowerCase_localRef,
+    toUpperCase as toUpperCase_localRef,
+    split as split_localRef,
+    join as join_localRef,
+};

@@ -10,20 +10,62 @@ class ConfigSingleton {
     }
 
     getYamlContent() {
-        return yaml.load(fs.readFileSync(this.yamlPath, 'utf8'));
+        const yamlContent = yaml.load(fs.readFileSync(this.yamlPath, 'utf8'));
+
+        // Let's add the defaults and do some validation/preparation
+        // - Lowercase function methods
+        // - Check for valid methods
+        const validMethods = ['http-get', 'http-post', 'rabbit'];
+        for (const serverInfo of yamlContent.servers) {
+            // Every server must have a genFolder
+            // If none is specified, we use 'src-gen'
+            if (!serverInfo.genFolder) {
+                serverInfo.genFolder = 'src-gen';
+            }
+            if(!isIterable(serverInfo.functions)) {
+                serverInfo.functions = [];
+            }
+            // Every function must have a method
+            // If none is specified, we use 'http-get'
+            for (const functionInfo of serverInfo.functions) {
+                if (!functionInfo.method) {
+                    functionInfo.method = 'http-get';
+                } else {
+                    functionInfo.method = functionInfo.method.toLowerCase();
+                    if (!validMethods.includes(functionInfo.method)) {
+                        throw new ConfigError(`Error: function ${functionInfo.pattern} in server ${serverInfo.id} has invalid method: ${functionInfo.method}`);
+                    }
+                }
+            }
+        }
+
+        return yamlContent;
     }
+}
+
+function isIterable(obj) {
+    return obj != null && typeof obj[Symbol.iterator] === 'function';
 }
 
 function init(configFile) {
     if (instance) {
-        throw new Error("Configuration already initialized.");
+        throw new ConfigError("Configuration already initialized.");
     }
     instance = new ConfigSingleton(configFile);
 };
 
+export class ConfigError extends Error {
+    constructor(message) {
+        super(message);
+    }
+}
+
+// TODO: modify this to rely not only on functionName, but also
+// other information, such as path, so that we can have more
+// than one function with the same name
 function getServerInfo(functionName) {
     if (!instance) {
-        throw new Error("Configuration not initialized. Use config.init(configFile) first.");
+        throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
     }
     const servers = instance.getYamlContent().servers;
     const ret = [];
@@ -38,14 +80,17 @@ function getServerInfo(functionName) {
         }
     }
     if (ret.length == 0) {
-        throw Error(`Error in ${instance.yamlPath}. Function ${functionName} is not assigned to a server.`)
+        throw new ConfigError(`Error in ${instance.yamlPath}. Function ${functionName} is not assigned to a server.`)
     }
     return getMoreSpecificPattern(ret);
 }
 
+// TODO: modify this to rely not only on functionName, but also
+// other information, such as path, so that we can have more
+// than one function with the same name
 function getFunctionInfo(serverInfo, functionName) {
     if (!instance) {
-        throw new Error("Configuration not initialized. Use config.init(configFile) first.");
+        throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
     }
     const ret = [];
     const functions = serverInfo.functions;
@@ -57,7 +102,7 @@ function getFunctionInfo(serverInfo, functionName) {
         }
     }
     if (ret.length == 0) {
-        throw Error(`Error in ${instance.yamlPath}. Function ${functionName} is not assigned to server ${serverInfo.id}.`)
+        throw ConfigError(`Error in ${instance.yamlPath}. Function ${functionName} is not assigned to server ${serverInfo.id}.`)
     }
     return getMoreSpecificPattern(ret);
 }
@@ -108,7 +153,7 @@ function getMoreSpecificPattern(list) {
 
 function getServers() {
     if (!instance) {
-        throw new Error("Configuration not initialized. Use config.init(configFile) first.");
+        throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
     }
     return instance.getYamlContent().servers;
 }
@@ -116,16 +161,3 @@ function getServers() {
 export default {
     init, getServerInfo, getServers, getFunctionInfo
 }
-
-// get servers() {
-//     if (!instance) {
-//         throw new Error("Configuration not initialized. Use config.init(configFile) first.");
-//     }
-//     return instance.getYamlContent().servers;
-// },
-// get functions() {
-//     if (!instance) {
-//         throw new Error("Configuration not initialized. Use config.init(configFile) first.");
-//     }
-//     return instance.getYamlContent().functions;
-// }

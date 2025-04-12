@@ -1,8 +1,7 @@
-import beautify from "js-beautify";
-
 import CopyPasteGenerator from "./CopyPasteGenerator.js";
 import config from "../config/Configuration.js";
 import httpApiGenerator from "./HttpApiGenerator.js";
+import { getFunctionToBeExposedExportedName } from "./GeneratorUtils.js";
 
 
 export default class FunctionSeparator extends CopyPasteGenerator {
@@ -13,18 +12,26 @@ export default class FunctionSeparator extends CopyPasteGenerator {
     }
 
     separate(serverId) {
+        this.functionsToBeExposed = [];
         this.serverId = serverId;
         this.stringBuilder.clear();
         this.visitProgram(this.parseTree);
+
+        // Let's export the functions that must be exposed to other servers
+        // We will use a new, generated name, because the original function
+        // may or may not be exposed already
+        if (this.functionsToBeExposed.length > 0) {
+            this.stringBuilder.writeLine("export {");
+            for (const ftbe of this.functionsToBeExposed) {
+                this.stringBuilder.writeLine(ftbe.functionName + " as " + getFunctionToBeExposedExportedName(ftbe.functionName) + ",");
+            }
+            this.stringBuilder.writeLine("};");
+        }
+        return this.functionsToBeExposed;
     }
 
     getGeneratedCode() {
-        const rawCode = this.stringBuilder.toString();
-        const beautifiedCode = beautify(rawCode, {
-            indent_size: 4,
-            space_in_empty_paren: true,
-        });
-        return beautifiedCode;
+        return this.stringBuilder.toString();
     }
 
     isInThisServer(functionName) {
@@ -39,6 +46,12 @@ export default class FunctionSeparator extends CopyPasteGenerator {
             this.generateRemoteFunction(ctx, functionName);
         } else {
             super.visitFunctionDeclaration(ctx);
+            const serverInfo = config.getServerInfo(functionName);
+            const functionInfo = config.getFunctionInfo(serverInfo, functionName);
+            this.functionsToBeExposed.push({
+                functionName: functionName,
+                functionInfo: functionInfo,
+            });
         }
     }
 

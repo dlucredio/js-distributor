@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import beautify from "js-beautify";
+
 
 export class StringBuilder {
     constructor() {
@@ -14,6 +16,11 @@ export class StringBuilder {
         if (value) {
             this.strings.push(value);
         }
+    }
+
+    writeLine(line) {
+        this.append(line);
+        this.appendNewLine();
     }
 
     appendNewLine() {
@@ -59,7 +66,24 @@ export function getAllJSFiles(dirPath, fileList = []) {
     return fileList;
 }
 
-export function createFoldersIfNecessary(filePath) {
+function createFoldersIfNecessary(filePath) {
     const dir = path.dirname(filePath);
     fs.mkdirSync(dir, { recursive: true });
+}
+
+function beautifyCode(rawCode) {
+    const beautifiedCode = beautify(rawCode, {
+        indent_size: 4,
+        space_in_empty_paren: true,
+    });
+    return beautifiedCode;
+}
+
+export function getFunctionToBeExposedExportedName(functionName) {
+    return functionName+"_localRef";
+}
+
+export function writeJavaScriptFile(jsFile, content) {
+    createFoldersIfNecessary(jsFile);
+    fs.writeFileSync(jsFile, beautifyCode(content), 'utf8');
 }

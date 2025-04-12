@@ -2,18 +2,16 @@ servers:
   - id: alpha
     port: 3000
     url: localhost
+    genFolder: 'source-generated'
     functions:
       - pattern: main
-        method: get
+        method: http-get
       - pattern: toLowerCase
-        method: get
+      - pattern: '*'
   - id: beta
     port: 3001
     url: localhost
     functions:
     - pattern: toUpperCase
-      method: get
     - pattern: split
-      method: get
     - pattern: join
-      method: get

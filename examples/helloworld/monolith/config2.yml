@@ -4,20 +4,20 @@ servers:
     url: localhost
     functions:
       - pattern: '*'
-        method: get
+        method: http-get
   - id: beta
     port: 3001
     url: localhost
     functions:
     - pattern: split
-      method: get
+      method: http-get
     - pattern: join
-      method: get
+      method: http-get
   - id: gamma
     port: 3002
     url: localhost
     functions:
     - pattern: '*Case'
-      method: get
+      method: http-get
     - pattern: saveProduct
-      method: get
+      method: http-get
