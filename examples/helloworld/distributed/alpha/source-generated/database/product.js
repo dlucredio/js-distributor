@@ -1,4 +1,4 @@
-function saveProduct(id, name = "") {
+async function saveProduct(id, name = "") {
     console.log("Saving product...");
 }
 export {

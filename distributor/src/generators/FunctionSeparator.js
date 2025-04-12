@@ -1,7 +1,7 @@
 import CopyPasteGenerator from "./CopyPasteGenerator.js";
 import config from "../config/Configuration.js";
-import httpApiGenerator from "./HttpApiGenerator.js";
 import { getFunctionToBeExposedExportedName } from "./GeneratorUtils.js";
+import httpRequestTemplates from "./templates/HttpRequest.js";
 
 
 export default class FunctionSeparator extends CopyPasteGenerator {
@@ -48,9 +48,13 @@ export default class FunctionSeparator extends CopyPasteGenerator {
             super.visitFunctionDeclaration(ctx);
             const serverInfo = config.getServerInfo(functionName);
             const functionInfo = config.getFunctionInfo(serverInfo, functionName);
+            const args = this.getArgs(ctx);
+            const isAsync = ctx.Async() ? true : false;
             this.functionsToBeExposed.push({
                 functionName: functionName,
                 functionInfo: functionInfo,
+                args: args,
+                isAsync: isAsync,
             });
         }
     }
@@ -71,8 +75,11 @@ export default class FunctionSeparator extends CopyPasteGenerator {
             this.visitFormalParameterList(ctx.formalParameterList());
         this.appendString(") {");
         const args = this.getArgs(ctx);
-        const requestCode = httpApiGenerator.generateHttpRequestCode(functionName, serverInfo, functionInfo, args);
-        this.appendString(requestCode);
+
+        if (functionInfo.method === "http-get") {
+            this.appendString(httpRequestTemplates.httpGetFetch(functionName, serverInfo.url, serverInfo.port, args));
+        }
+
         this.appendString("}");
     }
 

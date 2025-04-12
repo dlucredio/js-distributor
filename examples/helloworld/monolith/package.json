@@ -5,16 +5,17 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate-single": "js-distributor-scripts single config3.yml src ../distributed",
-    "generate-watch": "js-distributor-scripts watch config1.yml src ../distributed"
+    "generate-single": "rimraf ../distributed && js-distributor-scripts single config1.yml src ../distributed",
+    "generate-watch": "rimraf ../distributed && js-distributor-scripts watch config1.yml src ../distributed"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
     "amqplib": "^0.10.7",
+    "distributor": "file:../../../distributor",
     "express": "^5.1.0",
     "node-fetch": "^3.3.2",
-    "distributor": "file:../../../distributor"
+    "rimraf": "^6.0.1"
   }
 }

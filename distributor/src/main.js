@@ -6,7 +6,7 @@ import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
 import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 import { writeJavaScriptFile } from "./generators/GeneratorUtils.js";
 import FunctionSeparator from "./generators/FunctionSeparator.js";
-import ServerGenerator from "./generators/ServerGenerator.js";
+import startServerTemplates from "./generators/templates/StartServer.js";
 
 export default function main(
     mode,
@@ -73,7 +73,7 @@ function generate(inputDir, outputDir) {
 
     separateFunctionsIntoServers(functionsToBeExposed, inputDir, inputDir, outputDir);
 
-    // Now let's generate the server initialization code
+    // Now let's generate the server initialization code (if necessary)
     generateServerInitializationCode(functionsToBeExposed, outputDir);
 
     console.log("Done!");
@@ -105,6 +105,7 @@ function separateFunctionsIntoServers(functionsToBeExposed, originalInputDir, in
             const parser = new JavaScriptParser(tokens);
             parser.buildParseTrees = true;
             const tree = parser.program();
+
             const functionSeparator = new FunctionSeparator(tree);
 
             for (const s of servers) {
@@ -123,7 +124,7 @@ function separateFunctionsIntoServers(functionsToBeExposed, originalInputDir, in
                 writeJavaScriptFile(outputFile, serverCode);
 
                 // Now let's save the data for the remote functions
-                for(const rf of functionsToBeExposedInServer) {
+                for (const rf of functionsToBeExposedInServer) {
                     functionsToBeExposed[s.id].functionsToBeExposedInServer.push({
                         ...rf,
                         path: relativePath
@@ -135,11 +136,13 @@ function separateFunctionsIntoServers(functionsToBeExposed, originalInputDir, in
 }
 
 function generateServerInitializationCode(functionsToBeExposed, outputDir) {
-    for(const [serverId, ftbe] of Object.entries(functionsToBeExposed)) {
-        const serverFolder = path.join(outputDir, serverId);
-        const sourceGenFolder = path.join(serverFolder, ftbe.serverInfo.genFolder);
-        const outputFile = path.join(sourceGenFolder, `start_${serverId}.js`);
-        const serverInitializationCode = ServerGenerator.generateServerInitializationCode(ftbe.serverInfo, ftbe.functionsToBeExposedInServer);
-        writeJavaScriptFile(outputFile, serverInitializationCode);
+    for (const [serverId, ftbe] of Object.entries(functionsToBeExposed)) {
+        if (ftbe.functionsToBeExposedInServer.length > 0) {
+            const serverFolder = path.join(outputDir, serverId);
+            const sourceGenFolder = path.join(serverFolder, ftbe.serverInfo.genFolder);
+            const outputFile = path.join(sourceGenFolder, `start_${serverId}.js`);
+            const serverInitializationCode = startServerTemplates.startServerTemplate(ftbe.serverInfo, ftbe.functionsToBeExposedInServer);
+            writeJavaScriptFile(outputFile, serverInitializationCode);
+        }
     }
 }
