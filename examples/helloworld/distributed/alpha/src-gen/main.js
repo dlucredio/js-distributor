@@ -6,16 +6,9 @@ import {
     main2
 } from "./main2.js";
 async function main() {
-    let lowerCase = strUtils.toLowerCase("HELLO,World,everyONE!");
-    const upperCase = strUtils.toUpperCase(lowerCase);
-    let list = await strUtils.split(upperCase, ",");
-    lists.push(list, "ANOTHER WORD");
-    let backToString = strUtils.join(list);
-    console.log(lowerCase);
-    console.log(upperCase);
-    await log(list);
-    console.log(backToString);
-    await main2();
-    console.log("Done");
+    const response = await fetch(`http://gamma:3002/main`);
+    const {
+        result
+    } = await response.json();
+    return result;
 }
-main();

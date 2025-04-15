@@ -19,7 +19,14 @@ import ast from "./transformations/ASTModifications.js";
 import npmHelper from "./helpers/NpmHelper.js";
 import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
 
-export default async function entrypoint(mode, configFile, inputDirRelative, outputDirRelative, cleanOutput, generateProjects, generateDocker) {
+export default async function entrypoint(
+    mode,
+    configFile,
+    inputDirRelative,
+    outputDirRelative,
+    cleanOutput,
+    generateProjects,
+    generateDocker) {
     try {
         config.init(configFile);
         console.log(`Loaded configuration file ${configFile}`)

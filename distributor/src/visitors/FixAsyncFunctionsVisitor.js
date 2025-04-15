@@ -35,16 +35,19 @@ export class FixAsyncFunctionsVisitor extends JavaScriptParserVisitor {
                 const newNodeWithAwait = ast.addAwaitToFunctionCallIfNecessary(nodeWithArgs);
                 if (newNodeWithAwait) {
                     const declaringFunction = this.findDeclaringFunction(newNodeWithAwait);
-                    if(!declaringFunction) {
-                        throw new Error("Error! Could not find declaring function for a statement");
-                    }
-                    const added = ast.addAsyncIfNecessary(declaringFunction);
-                    if(added) {
-                        this.newAsyncFunctions.push({
-                            callPatterns: [declaringFunction.identifier().getText()],
-                            serverInfo: this.serverInfo,
-                            relativePath: this.relativePath,
-                        });
+                    if (!declaringFunction) {
+                        // Maybe this is a top-level statement. Not necessarily a problem
+                        // Let's issue a warning:
+                        console.log(`Warning. Could not find declaring function for statement ${newNodeWithAwait.getText()} in server ${this.serverInfo.id} / ${this.relativePath}`);
+                    } else {
+                        const added = ast.addAsyncIfNecessary(declaringFunction);
+                        if (added) {
+                            this.newAsyncFunctions.push({
+                                callPatterns: [declaringFunction.identifier().getText()],
+                                serverInfo: this.serverInfo,
+                                relativePath: this.relativePath,
+                            });
+                        }
                     }
                 }
             }

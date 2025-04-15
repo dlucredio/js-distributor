@@ -1,13 +1,13 @@
 servers:
   - id: alpha
     port: 3000
-    url: localhost
+    url: alpha
     functions:
       - declarationPattern: 'saveProduct'
       - declarationPattern: 'saveCustomer'
   - id: beta
     port: 3001
-    url: localhost
+    url: beta
     functions:
     - declarationPattern: split
       callPatterns:
@@ -17,3 +17,8 @@ servers:
       method: http-post
     - declarationPattern: log
       method: http-post
+  - id: gamma
+    port: 3002
+    url: gamma
+    functions:
+    - declarationPattern: main
