@@ -1,6 +1,10 @@
+// External imports
 import path from "path";
 import fs from "fs";
 import yaml from "js-yaml";
+
+// Internal imports
+import helpers from '../helpers/GenericHelpers.js';
 
 let instance = null;
 
@@ -22,29 +26,30 @@ class ConfigSingleton {
             if (!serverInfo.genFolder) {
                 serverInfo.genFolder = 'src-gen';
             }
-            if(!isIterable(serverInfo.functions)) {
+            if (!helpers.isIterable(serverInfo.functions)) {
                 serverInfo.functions = [];
             }
             // Every function must have a method
             // If none is specified, we use 'http-get'
+            // And it must have a list of call patterns
+            // If there is none, we copy from the declarationPattern
             for (const functionInfo of serverInfo.functions) {
                 if (!functionInfo.method) {
                     functionInfo.method = 'http-get';
                 } else {
                     functionInfo.method = functionInfo.method.toLowerCase();
                     if (!validMethods.includes(functionInfo.method)) {
-                        throw new ConfigError(`Error: function ${functionInfo.pattern} in server ${serverInfo.id} has invalid method: ${functionInfo.method}`);
+                        throw new ConfigError(`Error: function ${functionInfo.declarationPattern} in server ${serverInfo.id} has invalid method: ${functionInfo.method}`);
                     }
+                }
+                if (!helpers.isIterable(functionInfo.callPatterns)) {
+                    functionInfo.callPatterns = [functionInfo.declarationPattern];
                 }
             }
         }
 
         return yamlContent;
     }
-}
-
-function isIterable(obj) {
-    return obj != null && typeof obj[Symbol.iterator] === 'function';
 }
 
 function init(configFile) {
@@ -67,20 +72,22 @@ function getServerInfo(functionName) {
     if (!instance) {
         throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
     }
-    const servers = instance.getYamlContent().servers;
+    const yamlContent = instance.getYamlContent();
+    const servers = yamlContent.servers;
     const ret = [];
     for (const s of servers) {
         const functions = s.functions;
         if (functions) {
             for (const f of functions) {
-                if (matchFunctionName(f.pattern, functionName)) {
-                    ret.push([f.pattern, s]);
+                if (matchPatternWithText(f.declarationPattern, functionName)) {
+                    ret.push([f.declarationPattern, s]);
                 }
             }
         }
     }
+
     if (ret.length == 0) {
-        throw new ConfigError(`Error in ${instance.yamlPath}. Function ${functionName} is not assigned to a server.`)
+        return null;
     }
     return getMoreSpecificPattern(ret);
 }
@@ -96,23 +103,32 @@ function getFunctionInfo(serverInfo, functionName) {
     const functions = serverInfo.functions;
     if (functions) {
         for (const f of functions) {
-            if (matchFunctionName(f.pattern, functionName)) {
-                ret.push([f.pattern, f]);
+            if (matchPatternWithText(f.declarationPattern, functionName)) {
+                ret.push([f.declarationPattern, f]);
             }
         }
     }
     if (ret.length == 0) {
-        throw ConfigError(`Error in ${instance.yamlPath}. Function ${functionName} is not assigned to server ${serverInfo.id}.`)
+        return null;
     }
     return getMoreSpecificPattern(ret);
 }
 
-function matchFunctionName(pattern, functionName) {
+function matchPatternWithText(pattern, text) {
     if (pattern === '*') return true;
     const escapedPattern = pattern.replace(/[-/\\^$+?.()|[\]{}]/g, '\\$&');
     const regexPattern = '^' + escapedPattern.replace(/\*/g, '.*') + '$';
     const regex = new RegExp(regexPattern);
-    return regex.test(functionName);
+    return regex.test(text);
+}
+
+function matchCallPattern(callStatement, callPatterns) {
+    for (const callPattern of callPatterns) {
+        if (matchPatternWithText(callPattern, callStatement)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function comparePatternSpecificity(p1, p2) {
@@ -158,6 +174,13 @@ function getServers() {
     return instance.getYamlContent().servers;
 }
 
+function hasHttpFunctions(serverInfo) {
+    return serverInfo.functions.some(
+        f => f.method === 'http-get' ||
+            f.method === 'http-post'
+    );
+}
+
 export default {
-    init, getServerInfo, getServers, getFunctionInfo
+    init, getServerInfo, getServers, getFunctionInfo, matchCallPattern, hasHttpFunctions
 }

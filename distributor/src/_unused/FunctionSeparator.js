@@ -37,6 +37,7 @@ export default class FunctionSeparator extends CopyPasteGenerator {
     isInThisServer(functionName) {
         // Let's find the server where this function will reside
         const server = config.getServerInfo(functionName);
+        if (config.isReplicate(server)) { return true; }
         return server.id === this.serverId;
     }
 
@@ -47,6 +48,7 @@ export default class FunctionSeparator extends CopyPasteGenerator {
         } else {
             super.visitFunctionDeclaration(ctx);
             const serverInfo = config.getServerInfo(functionName);
+            if (config.isReplicate(server)) { return; }
             const functionInfo = config.getFunctionInfo(serverInfo, functionName);
             const args = this.getArgs(ctx);
             const isAsync = ctx.Async() ? true : false;

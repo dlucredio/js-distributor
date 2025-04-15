@@ -309,9 +309,9 @@ arrayElement
 propertyAssignment
     : propertyName ':' singleExpression                                             # PropertyExpressionAssignment
     | '[' singleExpression ']' ':' singleExpression                                 # ComputedPropertyExpressionAssignment
-    | Async? '*'? propertyName '(' formalParameterList?  ')'  functionBody  # FunctionProperty
-    | getter '(' ')' functionBody                                           # PropertyGetter
-    | setter '(' formalParameterArg ')' functionBody                        # PropertySetter
+    | Async? '*'? propertyName '(' formalParameterList?  ')'  functionBody          # FunctionProperty
+    | getter '(' ')' functionBody                                                   # PropertyGetter
+    | setter '(' formalParameterArg ')' functionBody                                # PropertySetter
     | Ellipsis? singleExpression                                                    # PropertyShorthand
     ;
 

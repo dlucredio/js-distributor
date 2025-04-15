@@ -1,50 +1,63 @@
 #!/usr/bin/env node
 
+import { Command } from 'commander';
 import fs from 'fs';
-import path from 'path';
+import chalk from 'chalk';
+import gradient from 'gradient-string';
 import entrypoint from '../src/main.js';
 
-const args = process.argv.slice(2);
+const colorGradient = gradient([
+  '#714674',
+  '#9F6976',
+  '#CC8B79',
+  '#FAAE7B',
+  '#FFADAD'
+]);
 
-const [mode, configFile, inputDirRelative, outputDirRelative] = args;
+// Show header banner
+console.log(colorGradient.multiline(`
+::::::'##::'######:::::::::::'########::'####::'######::'########:'########::'####:'########::'##::::'##:'########::'#######::'########::
+:::::: ##:'##... ##:::::::::: ##.... ##:. ##::'##... ##:... ##..:: ##.... ##:. ##:: ##.... ##: ##:::: ##:... ##..::'##.... ##: ##.... ##:
+:::::: ##: ##:::..::::::::::: ##:::: ##:: ##:: ##:::..::::: ##:::: ##:::: ##:: ##:: ##:::: ##: ##:::: ##:::: ##:::: ##:::: ##: ##:::: ##:
+:::::: ##:. ######::'#######: ##:::: ##:: ##::. ######::::: ##:::: ########::: ##:: ########:: ##:::: ##:::: ##:::: ##:::: ##: ########::
+'##::: ##::..... ##:........: ##:::: ##:: ##:::..... ##:::: ##:::: ##.. ##:::: ##:: ##.... ##: ##:::: ##:::: ##:::: ##:::: ##: ##.. ##:::
+ ##::: ##:'##::: ##:::::::::: ##:::: ##:: ##::'##::: ##:::: ##:::: ##::. ##::: ##:: ##:::: ##: ##:::: ##:::: ##:::: ##:::: ##: ##::. ##::
+. ######::. ######::::::::::: ########::'####:. ######::::: ##:::: ##:::. ##:'####: ########::. #######::::: ##::::. #######:: ##:::. ##:
+:......::::......::::::::::::........:::....:::......::::::..:::::..:::::..::....::........::::.......::::::..::::::.......:::..:::::..::
+ `));
 
-function showUsageAndExit() {
-    console.error(`
-Usage:
-  js-distributor-scripts <mode> <configFile> <inputDir> <outputDir>
+const program = new Command();
 
-Arguments:
-  mode           "single" or "watch"
-  configFile     Path to existing config file
-  inputDir       Path to existing input directory
-  outputDir      Path to output directory
-`);
+program
+  .name('js-distributor')
+  .description('Distributes JavaScript components across folders, either once or in watch mode.')
+  .version('1.0.0');
+
+program
+  .option('-m, --mode <mode>', 'Mode to run in: "single" or "watch"', 'single')
+  .option('-c, --configFile <path>', 'Path to config file', 'config.yml')
+  .requiredOption('-i, --inputDir <path>', 'Input directory containing source files')
+  .requiredOption('-o, --outputDir <path>', 'Directory where output will be written')
+  .option('--cleanOutput', 'Whether to clean output before running', false)
+  .option('--generateProjects', 'Generate project files for each output unit', false)
+  .option('--generateDocker', 'Generate Docker files for the projects', false);
+
+program.parse(process.argv);
+
+const options = program.opts();
+
+// Validate configFile exists
+if (!fs.existsSync(options.configFile) || !fs.lstatSync(options.configFile).isFile()) {
+    console.error(chalk.red(`❌ Config file "${options.configFile}" does not exist.`));
     process.exit(1);
-}
+  }
+  
 
-// Validate mode
-if (mode !== 'single' && mode !== 'watch') {
-    console.error(`Invalid mode: "${mode}". Expected "single" or "watch".`);
-    showUsageAndExit();
-}
-
-// Validate configFile exists and is a file
-if (!configFile || !fs.existsSync(configFile) || !fs.statSync(configFile).isFile()) {
-    console.error(`Invalid config file: "${configFile}" does not exist or is not a file.`);
-    showUsageAndExit();
-}
-
-// Validate inputDirRelative exists and is a directory
-if (!inputDirRelative || !fs.existsSync(inputDirRelative) || !fs.statSync(inputDirRelative).isDirectory()) {
-    console.error(`Invalid input directory: "${inputDirRelative}" does not exist or is not a directory.`);
-    showUsageAndExit();
-}
-
-// Validate outputDirRelative is specified
-if (!outputDirRelative) {
-    console.error(`Missing output directory.`);
-    showUsageAndExit();
+// Validate inputDir exists
+if (!fs.existsSync(options.inputDir) || !fs.lstatSync(options.inputDir).isDirectory()) {
+  console.error(chalk.red(`❌ Input directory "${options.inputDir}" does not exist or is not a directory.`));
+  process.exit(1);
 }
 
 // All validations passed, call the entrypoint
-entrypoint(mode, configFile, inputDirRelative, outputDirRelative);
+entrypoint(options.mode, options.configFile, options.inputDir, options.outputDir, options.cleanOutput, options.generateProjects, options.generateDocker);

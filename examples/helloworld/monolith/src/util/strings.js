@@ -1,5 +1,6 @@
 // 1. Converts uppercase letters to lowercase manually
 export function toLowerCase(str) {
+    console.log("toLowerCase(" + str + ")");
     let result = '';
     for (let i = 0; i < str.length; i++) {
         let code = str.charCodeAt(i);
@@ -15,6 +16,7 @@ export function toLowerCase(str) {
 
 // 2. Converts lowercase letters to uppercase manually
 export function toUpperCase(str) {
+    console.log("toUpperCase(" + str + ")");
     let result = '';
     for (let i = 0; i < str.length; i++) {
         let code = str.charCodeAt(i);
@@ -30,9 +32,10 @@ export function toUpperCase(str) {
 
 // 3. Splits a string into an array based on a separator
 export function split(str, separator = ",") {
+    console.log("split(" + str + "," + separator + ")");
     let result = [];
     let temp = '';
-    
+
     for (let i = 0; i < str.length; i++) {
         if (str[i] === separator) {
             result.push(temp);
@@ -47,8 +50,9 @@ export function split(str, separator = ",") {
 
 // 4. Joins an array into a string with a specified separator (default is comma)
 export function join(arr, separator = ',') {
+    console.log("join(" + arr + "," + separator + ")");
     let result = '';
-    
+
     for (let i = 0; i < arr.length; i++) {
         result += arr[i];
         if (i < arr.length - 1) {

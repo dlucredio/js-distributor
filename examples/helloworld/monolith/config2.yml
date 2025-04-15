@@ -1,23 +1,25 @@
+replicate:
+  functions:
+  - declarationPattern: '*'
 servers:
   - id: alpha
     port: 3000
     url: localhost
     functions:
-      - pattern: '*'
+      - declarationPattern: '*Case'
         method: http-get
   - id: beta
     port: 3001
     url: localhost
     functions:
-    - pattern: split
+    - declarationPattern: split
       method: http-get
-    - pattern: join
+    - declarationPattern: join
       method: http-get
   - id: gamma
     port: 3002
     url: localhost
     functions:
-    - pattern: '*Case'
+    - declarationPattern: saveProduct
       method: http-get
-    - pattern: saveProduct
-      method: http-get
+    - declarationPattern: push

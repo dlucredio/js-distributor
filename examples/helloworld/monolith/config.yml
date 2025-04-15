@@ -1,0 +1,19 @@
+servers:
+  - id: alpha
+    port: 3000
+    url: localhost
+    functions:
+      - declarationPattern: 'saveProduct'
+      - declarationPattern: 'saveCustomer'
+  - id: beta
+    port: 3001
+    url: localhost
+    functions:
+    - declarationPattern: split
+      callPatterns:
+        - 'strUtils.split'
+      method: http-get
+    - declarationPattern: join
+      method: http-post
+    - declarationPattern: log
+      method: http-post

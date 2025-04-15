@@ -1,11 +1,19 @@
-export async function toLowerCase(str) {
-    const response = await fetch(`http://localhost:3000/toLowerCase?str=${str}`);
-    const {
-        result
-    } = await response.json();
+export function toLowerCase(str) {
+    console.log("toLowerCase(" + str + ")");
+    let result = '';
+    for (let i = 0; i < str.length; i++) {
+        let code = str.charCodeAt(i);
+
+        if (code >= 65 && code <= 90) {
+            result += String.fromCharCode(code + 32);
+        } else {
+            result += str[i];
+        }
+    }
     return result;
 }
 export function toUpperCase(str) {
+    console.log("toUpperCase(" + str + ")");
     let result = '';
     for (let i = 0; i < str.length; i++) {
         let code = str.charCodeAt(i);
@@ -19,6 +27,7 @@ export function toUpperCase(str) {
     return result;
 }
 export function split(str, separator = ",") {
+    console.log("split(" + str + "," + separator + ")");
     let result = [];
     let temp = '';
     for (let i = 0; i < str.length; i++) {
@@ -33,6 +42,7 @@ export function split(str, separator = ",") {
     return result;
 }
 export function join(arr, separator = ',') {
+    console.log("join(" + arr + "," + separator + ")");
     let result = '';
     for (let i = 0; i < arr.length; i++) {
         result += arr[i];
@@ -43,7 +53,5 @@ export function join(arr, separator = ',') {
     return result;
 }
 export {
-    toUpperCase as toUpperCase_localRef,
-    split as split_localRef,
-    join as join_localRef,
+    split as split_localRef, join as join_localRef
 };

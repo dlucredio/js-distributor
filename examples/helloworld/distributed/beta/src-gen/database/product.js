@@ -1,4 +1,4 @@
-async function saveProduct(id, name = "") {
+export async function saveProduct(id, name = "") {
     const response = await fetch(`http://localhost:3000/saveProduct?id=${id}&name=${name}`);
     const {
         result

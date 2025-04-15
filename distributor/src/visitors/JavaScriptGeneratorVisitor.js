@@ -1,13 +1,10 @@
+// ANTLR code imports
 import JavaScriptParserVisitor from "../antlr4/JavaScriptParserVisitor.js";
-import { StringBuilder } from "./GeneratorUtils.js";
 
-/**
-  Class that generates copy-pasted code.
-*/
-export default class CopyPasteGenerator extends JavaScriptParserVisitor {
-    /**
-    Constructor of the CopyPasteGenerator class.
-  */
+// Internal imports
+import { StringBuilder } from "../helpers/GeneratorHelpers.js"
+
+export default class JavaScriptGeneratorVisitor extends JavaScriptParserVisitor {
     constructor() {
         super();
         this.stringBuilder = new StringBuilder();
@@ -38,6 +35,10 @@ export default class CopyPasteGenerator extends JavaScriptParserVisitor {
      */
     appendNewLine() {
         this.stringBuilder.append("\n");
+    }
+
+    getGeneratedCode() {
+        return this.stringBuilder.toString();
     }
 
     /**

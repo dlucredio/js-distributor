@@ -1,7 +1,7 @@
+// External imports
 import fs from 'fs';
 import path from 'path';
 import beautify from "js-beautify";
-
 
 export class StringBuilder {
     constructor() {
