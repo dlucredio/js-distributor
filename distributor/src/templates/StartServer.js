@@ -1,30 +1,59 @@
 // Internal imports
 import { StringBuilder } from "../helpers/GeneratorHelpers.js";
 import config from "../config/Configuration.js";
+import rabbitMQTemplates from "./RabbitMQ.js";
 
 export const startServerTemplate = (serverInfo, functionsToBeExposedInServer) => `
-${config.hasHttpFunctions(serverInfo) && `
+${config.hasHttpFunctions(serverInfo) ? `
 import express from 'express';
-`}
+` : ``}
 
+${config.hasRabbitFunctions(serverInfo) ? `
+import amqp from 'amqplib';
+` : ``}
+    
 ${exposedFunctionImports(functionsToBeExposedInServer)}
 
+${config.hasHttpFunctions(serverInfo) ? `
 const app = express();
-const port = ${serverInfo.port};
+const port = ${serverInfo.http.port};
 app.use(express.json());
 
-// routes
+// HTTP GET functions
+${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-get').map((f) => `
+    app.get('/${f.functionName}', ${f.isAsync ? "async " : ""} (req, res) => {
+        ${f.args.map(a => `const ${a} = req.query.${a};`).join("")}
+        const result = ${f.isAsync ? "await " : ""} ${f.functionName}(${f.args.join(", ")});
+        return res.json({ result });
+    });
+`).join("")}
 
-// HTTP GET
-${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-get').map(exposedFunctionRoutesAsGet).join("")}
-
-// HTTP POST
-${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-post').map(exposedFunctionRoutesAsPost).join("")}
-
+// HTTP POST functions
+${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-post').map((f) => `
+    app.post('/${f.functionName}', ${f.isAsync ? "async " : ""} (req, res) => {
+        ${f.args.map(a => `const ${a} = req.body.${a};`).join("")}
+        const result = ${f.isAsync ? "await " : ""} ${f.functionName}(${f.args.join(", ")});
+        return res.json({ result });
+    });
+`).join("")}
 
 app.listen(port, () => {
     console.log('Server running in port ' + port);
 });
+` : ``}
+
+${config.hasRabbitFunctions(serverInfo) ? `
+async function waitForCalls() {
+    const connection = await amqp.connect("${config.getRabbitConfig().url}:${config.getRabbitConfig().port}");
+    console.log("Waiting for calls via RabbitMQ");
+    const channel = await connection.createChannel();
+
+    // RabbitMQ consumers
+    ${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'rabbit').map(rabbitMQTemplates.generateWaitForCalls).join("")}
+}
+
+waitForCalls();
+` : ``}
 
 `;
 
@@ -47,24 +76,8 @@ function exposedFunctionImports(functionsToBeExposedInServer) {
     // Generate imports for local exposed functions
     for (const [path, functions] of Object.entries(groupedByPath)) {
         const functionsList = functions.join(", ");
-        stringBuilder.writeLine(`import { ${functionsList} } from "./${path}";`); 
+        stringBuilder.writeLine(`import { ${functionsList} } from "./${path}";`);
     }
 
     return stringBuilder.toString();
 }
-
-const exposedFunctionRoutesAsGet = (ftbe) => `
-app.get('/${ftbe.functionName}', ${ftbe.isAsync ? "async " : ""} (req, res) => {
-    ${ftbe.args.map(a => `const ${a} = req.query.${a};`).join("")}
-const result = ${ftbe.isAsync ? "await " : ""} ${ftbe.functionName}(${ftbe.args.join(", ")});
-return res.json({ result });
-});
-`;
-
-const exposedFunctionRoutesAsPost = (ftbe) => `
-app.post('/${ftbe.functionName}', ${ftbe.isAsync ? "async " : ""} (req, res) => {
-    ${ftbe.args.map(a => `const ${a} = req.body.${a};`).join("")}
-const result = ${ftbe.isAsync ? "await " : ""} ${ftbe.functionName}(${ftbe.args.join(", ")});
-return res.json({ result });
-});
-`;

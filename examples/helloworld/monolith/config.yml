@@ -1,13 +1,21 @@
+default:
+  rabbit:
+    url: myrabbit
+    port: 5672
 servers:
   - id: alpha
-    port: 3000
-    url: alpha
+    http:
+      url: alpha
+      port: 3000
     functions:
       - declarationPattern: 'saveProduct'
+        method: rabbit
       - declarationPattern: 'saveCustomer'
+        method: rabbit
   - id: beta
-    port: 3001
-    url: beta
+    http:
+      url: beta
+      port: 3001
     functions:
     - declarationPattern: split
       callPatterns:
@@ -18,7 +26,8 @@ servers:
     - declarationPattern: log
       method: http-post
   - id: gamma
-    port: 3002
-    url: gamma
+    http:
+      port: 3002
+      url: gamma
     functions:
     - declarationPattern: main

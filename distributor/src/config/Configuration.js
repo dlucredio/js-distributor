@@ -33,6 +33,8 @@ class ConfigSingleton {
             // If none is specified, we use 'http-get'
             // And it must have a list of call patterns
             // If there is none, we copy from the declarationPattern
+            // And if must have a rabbit_config (for RabbitMQ)
+            // If there is none, we create and check some default values
             for (const functionInfo of serverInfo.functions) {
                 if (!functionInfo.method) {
                     functionInfo.method = 'http-get';
@@ -44,6 +46,27 @@ class ConfigSingleton {
                 }
                 if (!helpers.isIterable(functionInfo.callPatterns)) {
                     functionInfo.callPatterns = [functionInfo.declarationPattern];
+                }
+                if (!functionInfo.rabbitConfig) {
+                    functionInfo.rabbitConfig = {
+                        queue: null,
+                        exchangeType: null,
+                        exchangeName: null,
+                        routingKey: null,
+                        callbackQueue: null
+                    }
+                }
+                if(!functionInfo.rabbitConfig.queue) {
+                    functionInfo.rabbitConfig.queue = functionInfo.declarationPattern + "_queue"
+                }
+                if(!functionInfo.rabbitConfig.exchangeType) {
+                    functionInfo.rabbitConfig.exchangeType = "fanout"
+                }
+                if(!functionInfo.rabbitConfig.routingKey) {
+                    functionInfo.rabbitConfig.routingKey = ""
+                }
+                if(!functionInfo.rabbitConfig.callbackQueue) {
+                    functionInfo.rabbitConfig.callbackQueue = "anonymous"
                 }
             }
         }
@@ -174,6 +197,13 @@ function getServers() {
     return instance.getYamlContent().servers;
 }
 
+function getRabbitConfig() {
+    if (!instance) {
+        throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
+    }
+    return instance.getYamlContent().default.rabbit;
+}
+
 function hasHttpFunctions(serverInfo) {
     return serverInfo.functions.some(
         f => f.method === 'http-get' ||
@@ -181,6 +211,13 @@ function hasHttpFunctions(serverInfo) {
     );
 }
 
+function hasRabbitFunctions(serverInfo) {
+    return serverInfo.functions.some(
+        f => f.method === 'rabbit'
+    );
+}
+
+
 export default {
-    init, getServerInfo, getServers, getFunctionInfo, matchCallPattern, hasHttpFunctions
+    init, getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, hasHttpFunctions, hasRabbitFunctions
 }

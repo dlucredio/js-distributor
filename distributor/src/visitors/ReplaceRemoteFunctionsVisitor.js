@@ -3,7 +3,7 @@ import JavaScriptParserVisitor from "../antlr4/JavaScriptParserVisitor.js";
 
 // Internal imports
 import config from '../config/Configuration.js';
-import httpRequestTemplates from '../templates/HttpRequest.js'
+import httpAPITemplates from '../templates/HttpAPI.js'
 import ast from '../transformations/ASTModifications.js';
 
 export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
@@ -58,10 +58,13 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
 
             // Let's call the templates to fill with the proper remote bodies
             if (functionInfo.method === "http-get") {
-                const newBody = httpRequestTemplates.httpGetFetch(functionName, serverInfo.url, serverInfo.port, args);
+                const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
                 ast.replaceFunctionBody(ctx, newBody);
             } else if(functionInfo.method === "http-post") {
-                const newBody = httpRequestTemplates.httpPostFetch(functionName, serverInfo.url, serverInfo.port, args);
+                const newBody = httpAPITemplates.httpPostFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
+                ast.replaceFunctionBody(ctx, newBody);
+            } else if(functionInfo.method === "rabbit") {
+                const newBody = "{ console.log('not implemented'); }";
                 ast.replaceFunctionBody(ctx, newBody);
             }
 
