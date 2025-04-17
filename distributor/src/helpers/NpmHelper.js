@@ -24,8 +24,6 @@ async function initNodeProject(folder, serverInfo, remoteFunctions) {
         command += " amqplib uuid";
     }
 
-    // TODO: add rabbit dependency if needed
-
     console.log(`Executing command "${command}" on directory ${folder}`);
 
     const result = await new Promise((resolve, reject) => {
