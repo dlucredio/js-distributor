@@ -44,8 +44,8 @@ app.listen(port, () => {
 
 ${config.hasRabbitFunctions(serverInfo) ? `
 async function waitForCalls() {
-    const connection = await amqp.connect("${config.getRabbitConfig().url}:${config.getRabbitConfig().port}");
-    console.log("Waiting for calls via RabbitMQ");
+    const connection = await amqp.connect("amqp://${config.getRabbitConfig().url}:${config.getRabbitConfig().port}");
+    console.log("Waiting for calls via RabbitMQ on port ${config.getRabbitConfig().port}");
     const channel = await connection.createChannel();
 
     // RabbitMQ consumers

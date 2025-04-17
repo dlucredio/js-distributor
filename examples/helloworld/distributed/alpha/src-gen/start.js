@@ -6,8 +6,8 @@ import {
     saveProduct_localRef as saveProduct
 } from "./database/product.js";
 async function waitForCalls() {
-    const connection = await amqp.connect("myrabbit:5672");
-    console.log("Waiting for calls via RabbitMQ");
+    const connection = await amqp.connect("amqp://localhost:5672");
+    console.log("Waiting for calls via RabbitMQ on port 5672");
     const channel = await connection.createChannel();
     const saveCustomer_queueName = "saveCustomer_queue";
     await channel.assertQueue(saveCustomer_queueName, {

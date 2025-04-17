@@ -104,7 +104,7 @@ async function process(inputDir, outputDir, generateProjects, generateDocker) {
 
     // Finally, we initialize the NPM projects (if the user requested it)
     if (generateProjects) {
-        await initializeProjects(serverStructures, outputDir);
+        await initializeProjects(serverStructures, outputDir, allRemoteFunctions);
     }
 
     // And create the Docker infrastructure (if the user requested it)
@@ -203,10 +203,11 @@ function generateCode(serverStructures, outputDir) {
     }
 }
 
-async function initializeProjects(serverStructures, outputDir) {
+async function initializeProjects(serverStructures, outputDir, allRemoteFunctions) {
     for (const { serverInfo } of serverStructures) {
         const serverFolder = path.join(outputDir, serverInfo.id);
-        await npmHelper.initNodeProject(serverFolder, serverInfo);
+        const remoteFunctionsInServer = allRemoteFunctions.filter(rf => rf.serverInfo.id === serverInfo.id);
+        await npmHelper.initNodeProject(serverFolder, serverInfo, remoteFunctionsInServer);
     }
 }
 

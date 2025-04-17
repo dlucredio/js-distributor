@@ -3,7 +3,8 @@ import JavaScriptParserVisitor from "../antlr4/JavaScriptParserVisitor.js";
 
 // Internal imports
 import config from '../config/Configuration.js';
-import httpAPITemplates from '../templates/HttpAPI.js'
+import httpAPITemplates from '../templates/HttpAPI.js';
+import rabbitMQTemplates from '../templates/RabbitMQ.js';
 import ast from '../transformations/ASTModifications.js';
 
 export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
@@ -13,10 +14,19 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
         this.relativePath = relativePath;
         this.remoteFunctions = [];
         this.exposedFunctions = [];
+        this.consumesRabbitFunctions = false;
     }
 
     visitProgram(ctx) {
         super.visitProgram(ctx);
+
+        // Let's add the required imports
+        if(this.consumesRabbitFunctions) {
+            const importStatements = rabbitMQTemplates.importStatements();
+            for(const is of importStatements) {
+                ast.addImportStatementNode(ctx, is);
+            }
+        }
 
         // Let's export the functions that must be exposed to other servers
         // We will use a new, generated name, because the original function
@@ -64,8 +74,9 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
                 const newBody = httpAPITemplates.httpPostFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
                 ast.replaceFunctionBody(ctx, newBody);
             } else if(functionInfo.method === "rabbit") {
-                const newBody = "{ console.log('not implemented'); }";
+                const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
                 ast.replaceFunctionBody(ctx, newBody);
+                this.consumesRabbitFunctions = true;
             }
 
             // Since all remote code uses await, we must make the function async
@@ -76,6 +87,7 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
                 callPatterns: functionInfo.callPatterns,
                 serverInfo: this.serverInfo,
                 relativePath: this.relativePath,
+                method: functionInfo.method
             });
         } else {
             // Not a remote function. Let's check if it must be expoed

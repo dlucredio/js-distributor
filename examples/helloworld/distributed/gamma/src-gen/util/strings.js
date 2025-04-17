@@ -1,3 +1,7 @@
+import amqp from 'amqplib';
+import {
+    v4 as uuidv4
+} from 'uuid';
 export function toLowerCase(str) {
     console.log("toLowerCase(" + str + ")");
     let result = '';
@@ -27,25 +31,70 @@ export function toUpperCase(str) {
     return result;
 }
 export async function split(str, separator = ",") {
-    const response = await fetch(`http://beta:3001/split?str=${str}&separator=${separator}`);
-    const {
-        result
-    } = await response.json();
-    return result;
-}
-export async function join(arr, separator = ',') {
-    const response = await fetch(`http://beta:3001/join`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            "arr": arr,
-            "separator": separator
-        })
+    const p = new Promise(async (resolve, reject) => {
+        try {
+            console.log("Connecting to RabbitMQ...");
+            const connection = await amqp.connect("amqp://localhost:5672");
+
+            console.log("Connection established!");
+            console.log("Sending call to function split");
+            const channel = await connection.createChannel();
+
+            const q = await channel.assertQueue('', {
+                exclusive: true,
+            });
+
+            const queueName = "split_queue";
+
+            console.log("Declaring queue: " + queueName);
+            const correlationId = uuidv4();
+
+            const callObj = {
+                funcName: "split",
+                parameters: {
+                    str: str,
+                    separator: separator
+                }
+            };
+
+            channel.consume(q.queue, (msg) => {
+                if (msg) {
+                    const message = JSON.parse(msg.content.toString());
+                    console.log("Receiving response for function split");
+                    if (msg.properties.correlationId === correlationId) {
+                        const result = message.result;
+
+                        console.log("Response received:", result);
+                        resolve(result);
+                        channel.cancel(msg.fields.consumerTag);
+                    }
+                }
+            }, {
+                noAck: true,
+            });
+            console.log("Sending message to queue: split_queue");
+            channel.sendToQueue(queueName, Buffer.from(JSON.stringify(callObj)), {
+                correlationId: correlationId,
+                replyTo: q.queue
+            });
+        } catch (error) {
+            console.error("Error processing call to function split:", error);
+            reject(error);
+        }
     });
-    const {
-        result
-    } = await response.json();
+    return p;
+}
+export function join(arr, separator = ',') {
+    console.log("join(" + arr + "," + separator + ")");
+    let result = '';
+    for (let i = 0; i < arr.length; i++) {
+        result += arr[i];
+        if (i < arr.length - 1) {
+            result += separator;
+        }
+    }
     return result;
 }
+export {
+    join as join_localRef
+};

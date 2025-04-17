@@ -5,7 +5,7 @@ import lists, {
 import {
     main2
 } from "./main2.js";
-async function main() {
+export async function main() {
     let lowerCase = strUtils.toLowerCase("HELLO,World,everyONE!");
     const upperCase = strUtils.toUpperCase(lowerCase);
     let list = await strUtils.split(upperCase, ",");
@@ -15,8 +15,9 @@ async function main() {
     console.log(upperCase);
     await log(list);
     console.log(backToString);
-    await main2();
+    const ret = await main2();
     console.log("Done");
+    return ret;
 }
 export {
     main as main_localRef

@@ -1,3 +1,12 @@
+import config from "../config/Configuration.js";
+
+function importStatements() {
+    return [
+        "import { v4 as uuidv4 } from 'uuid';",
+        "import amqp from 'amqplib';"
+    ];
+}
+
 function generateWaitForCalls(f) {
     const hasExchange = !!f.functionInfo.rabbitConfig.exchangeName;
     return `
@@ -63,6 +72,87 @@ function generateWaitForCalls(f) {
     `;
 }
 
+function rabbitProducerCode(functionName, functionInfo, args) {
+    const hasExchange = !!functionInfo.rabbitConfig.exchangeName;
+    const responseQueue = 'q.queue';
+    if(!hasExchange && functionInfo.rabbitConfig.callbackQueue !== 'anonymous') {
+        responseQueue = 'callbackQueue';
+    }
+
+    return `
+{
+    const p = new Promise(async (resolve, reject) => {
+        try {
+            console.log("Connecting to RabbitMQ...");
+            const connection = await amqp.connect("amqp://${config.getRabbitConfig().url}:${config.getRabbitConfig().port}");
+            console.log("Connection established!");
+            console.log("Sending call to function ${functionName}");
+            const channel = await connection.createChannel();
+            const q = await channel.assertQueue('', {
+                exclusive: true,
+            });
+            ${hasExchange ? `
+                const ${functionName}_exchange = '${functionInfo.rabbitConfig.exchangeName}';
+                await channel.assertExchange(${functionName}_exchange, '${functionInfo.rabbitConfig.exchangeType}', {
+                    durable: false,
+                });
+                ${functionInfo.rabbitConfig.callbackQueue !== 'anonymous' ? `
+                    await channel.bindQueue(q.queue, ${functionName}_exchange, '${functionInfo.rabbitConfig.callbackQueue}');
+                ` : ``}
+            ` : `
+                const queueName = "${functionInfo.rabbitConfig.queue}";
+                console.log("Declaring queue: " + queueName);
+                ${functionInfo.rabbitConfig.callbackQueue !== 'anonymous' ? `
+                    const callbackQueue = "${functionInfo.rabbitConfig.callbackQueue}";
+                    await channel.assertQueue(callbackQueue, { durable: false });
+                ` : ``}
+            `}
+            const correlationId = uuidv4();
+            const callObj = {
+                funcName: "${functionName}",
+                parameters: {
+                    ${args.map(a => a + " : " + a).join(", ")}
+                },
+            };
+            channel.consume(
+                ${responseQueue},
+                (msg) => {
+                    if (msg) {
+                        const message = JSON.parse(msg.content.toString());
+                        console.log("Receiving response for function ${functionName}");
+                        if (msg.properties.correlationId === correlationId) {
+                            const result = message.result;
+                            console.log("Response received:", result);
+                            resolve(result);
+                            channel.cancel(msg.fields.consumerTag);
+                        }
+                    }
+                },
+                {
+                    noAck: true,
+                }
+            );
+            ${hasExchange ? `
+                channel.publish(${functionName}_exchange, '${functionInfo.rabbitConfig.routingKey}', Buffer.from(JSON.stringify(callObj))
+            ` : `
+                console.log("Sending message to queue: ${functionInfo.rabbitConfig.queue}");
+                channel.sendToQueue(queueName, Buffer.from(JSON.stringify(callObj))
+            `}
+            , {
+                correlationId: correlationId
+                ${functionInfo.rabbitConfig.callbackQueue === 'anonymous' ? `, replyTo: q.queue` : ``}
+            });
+        } catch (error) {
+            console.error("Error processing call to function ${functionName}:", error);
+            reject(error);
+        }
+    });
+    return p;
+}
+    `;
+}
+
+
 export default {
-    generateWaitForCalls
+    importStatements, generateWaitForCalls, rabbitProducerCode
 }

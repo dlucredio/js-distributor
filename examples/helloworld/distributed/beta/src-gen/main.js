@@ -5,8 +5,8 @@ import lists, {
 import {
     main2
 } from "./main2.js";
-async function main() {
-    const response = await fetch(`http://gamma:3002/main`);
+export async function main() {
+    const response = await fetch(`http://localhost:3002/main`);
     const {
         result
     } = await response.json();

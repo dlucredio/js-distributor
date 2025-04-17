@@ -30,6 +30,17 @@ function addExportStatementNode(ctx, exportStatement) {
     appendChildNode(ctx.sourceElements(), exportStatementNode);
 }
 
+function addImportStatementNode(ctx, importStatement) {
+    const parser = generateParserForString(importStatement);
+    const importStatementNode = parser.importStatement();
+
+    // ctx.sourceElements() is never null in this scenario, because
+    // if we are adding an import statement, this means there is
+    // at least one function declaration in this tree
+    appendChildNode(ctx.sourceElements(), importStatementNode, false);
+}
+
+
 function addAsyncIfNecessary(ctx) {
     if(ctx.Async()) {
         return false;
@@ -73,13 +84,17 @@ function replaceNode(oldNode, newNode) {
     newNode.parent = parent;
 }
 
-function appendChildNode(parentNode, newNode) {
+function appendChildNode(parentNode, newNode, end = true) {
     if (!parentNode || !parentNode.children) {
         throw new Error("Parent node is invalid or has no children array.");
     }
 
     newNode.parent = parentNode;
-    parentNode.children.push(newNode);
+    if(end) {
+        parentNode.children.push(newNode);
+    } else {
+        parentNode.children.unshift(newNode);
+    }
 }
 
 function generateParserForString(text) {
@@ -96,5 +111,6 @@ export default {
     addAwaitToFunctionCallIfNecessary,
     replaceFunctionBody,
     generateCompleteTree,
-    addExportStatementNode
+    addExportStatementNode,
+    addImportStatementNode
 }

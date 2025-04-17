@@ -1,25 +1,33 @@
-replicate:
-  functions:
-  - declarationPattern: '*'
+default:
+  rabbit:
+    url: myrabbit
+    port: 5672
 servers:
   - id: alpha
-    port: 3000
-    url: localhost
+    http:
+      url: alpha
+      port: 3000
     functions:
-      - declarationPattern: '*Case'
-        method: http-get
+      - declarationPattern: 'saveProduct'
+        method: rabbit
+      - declarationPattern: 'saveCustomer'
+        method: rabbit
   - id: beta
-    port: 3001
-    url: localhost
+    http:
+      url: beta
+      port: 3001
     functions:
     - declarationPattern: split
+      callPatterns:
+        - 'strUtils.split'
       method: http-get
     - declarationPattern: join
-      method: http-get
+      method: http-post
+    - declarationPattern: log
+      method: http-post
   - id: gamma
-    port: 3002
-    url: localhost
+    http:
+      port: 3002
+      url: gamma
     functions:
-    - declarationPattern: saveProduct
-      method: http-get
-    - declarationPattern: push
+    - declarationPattern: main
