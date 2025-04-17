@@ -1,0 +1,10 @@
+Testar:
+
+1. Nomes das funções únicos e idênticos na declaração e na chamada
+2. Nomes das funções únicos mas com chamada diferente da declaração
+3. Nomes das funções que coincidem com funções nativas no Javascript (* não é pra funcionar direito)
+4. Nomes das funções não únicos (mesmo nome aparecendo em módulos diferentes) (* não é pra funcionar direito)
+5. Todas as funções explicitamente definidas nos servers
+6. Algumas funções replicadas em todos os servers
+7. Testar propagação dos await/async (ex: Função A chama função B, que chama função C, mas a função C é remota apenas, A e B são locais)
+8. Definir funções com const x = function() ou const x = () => {} ou const x = a => ...

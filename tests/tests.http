@@ -1,0 +1,14 @@
+GET http://localhost:3002/main
+
+###
+GET http://localhost:3001/split?str=ab*cd*fg*hi*jkl&separator=*
+
+###
+POST http://localhost:3001/join
+Content-Type: application/json
+
+{
+    "arr": ["ola","está","funcionando","!"],
+    "separator": "==="
+}
+

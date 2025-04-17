@@ -1,0 +1,19 @@
+services:
+
+    alpha:
+        build: ./alpha
+
+        restart: always
+
+    beta:
+        build: ./beta
+
+        restart: always
+
+    gamma:
+        build: ./gamma
+
+        ports:
+            - "3002:3002"
+
+        restart: always

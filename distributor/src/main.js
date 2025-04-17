@@ -1,330 +1,228 @@
+// External imports
 import antlr4 from "antlr4";
 import path from "path";
 import fs from "fs";
-import yaml from "js-yaml";
-import beautify from "js-beautify";
+
+// ANTLR code imports
 import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
 import JavaScriptParser from "./antlr4/JavaScriptParser.js";
-import CopyPasteGenerator from "./generators/copypaste-generator.js";
-import FunctionGenerator from "./generators/FunctionGenerator.js";
-import ServerGenerator from "./generators/ServerGenerator.js";
-import { getAllJSFiles } from "./generators/generator-utils.js";
-import DockerFileGenerator from "./generators/DockerFileGenerator.js";
 
+// Internal imports
+import config, { ConfigError } from "./config/Configuration.js";
+import { writeJavaScriptFile } from "./helpers/GeneratorHelpers.js";
+import JavaScriptGeneratorVisitor from "./visitors/JavaScriptGeneratorVisitor.js";
+import { ReplaceRemoteFunctionsVisitor } from "./visitors/ReplaceRemoteFunctionsVisitor.js";
+import { FixAsyncFunctionsVisitor } from "./visitors/FixAsyncFunctionsVisitor.js";
+import { PrepareTreeVisitor } from "./visitors/PrepareTreeVisitor.js";
+import { startServerTemplate } from "./templates/StartServer.js"
+import ast from "./transformations/ASTModifications.js";
+import npmHelper from "./helpers/NpmHelper.js";
+import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
 
-let serverPorts = {}; // stores the ports of each server
-let functionNames = {}; // stores the names of each function
-export default function main(
-  mode,
-  target,
-  inputDirRelative,
-  outputDirRelative,
-  aux
-) {
-  const inputDir = path.resolve(path.join(".", inputDirRelative));
-  const outputDir = path.resolve(path.join(".", outputDirRelative));
+export default async function entrypoint(
+    mode,
+    configFile,
+    inputDirRelative,
+    outputDirRelative,
+    cleanOutput,
+    generateProjects,
+    generateDocker) {
+    try {
+        config.init(configFile);
+        console.log(`Loaded configuration file ${configFile}`)
 
-  fs.mkdirSync(outputDir, { recursive: true }, (err) => {
-    console.log(err);
-  });
+        const inputDir = path.resolve(path.join(".", inputDirRelative));
+        const outputDir = path.resolve(path.join(".", outputDirRelative));
 
-  if (mode === "single") {
-    // generateCodeDir(target, inputDirRelative, outputDir);
-    generateFunctionFiles(inputDirRelative, outputDir, target);
-  } else if (mode === "watch") {
-    let fsWait = false;
-
-    console.log(`Watching ${inputDir} and config.yml for changes...`);
-
-    fs.watch('config.yml', (event, filename) => {
-      if (filename) {
-        if (fsWait) return;
-        fsWait = true;
-        setTimeout(() => {
-          fsWait = false;
-        }, 500);
-        console.log(
-          `File ${filename} has changed (${event}). Generating code and function files again...`
-        );
-        // generateCodeDir(target, inputDirRelative, outputDir);
-        generateFunctionFiles(inputDirRelative, outputDir, target);
-      }
-    });
-
-    fs.watch(inputDir, { recursive: true }, (event, filename) => {
-      if (filename) {
-        if (fsWait) return;
-        fsWait = true;
-        setTimeout(() => {
-          fsWait = false;
-        }, 500);
-        console.log(
-          `File ${filename} has changed (${event}). Generating code and function files again...`
-        );
-        // generateCodeDir(target, inputDirRelative, outputDir);
-        generateFunctionFiles(inputDirRelative, outputDir, target);
-      }
-    });
-  }else if (mode === "generateProjects" && aux) {
-    generateFunctionFiles(inputDirRelative, outputDir, target);
-    generateProjects(outputDir, aux);
-  }else {
-    console.log("Wrong usage! Learn!");
-  }
-}
-
-function generateCodeDir(target, inputDir, outputDir) {
-  fs.readdir(inputDir, (err, items) => {
-    if (err) {
-      console.log("Error reading ", inputDir);
-    }
-
-    items.forEach((item) => {
-      const itemPath = path.join(inputDir, item);
-
-      const isDirectory = fs.statSync(itemPath).isDirectory();
-
-      if (isDirectory) {
-        generateCodeDir(target, itemPath, outputDir)
-      } else {
-        const outputFile = path.join(outputDir, itemPath.slice(3));
-        generateCode(target, itemPath, outputFile);
-      }
-    })
-  });
-}
-
-function generateCode(target, inputFile, outputFile) {
-  try {
-    console.log(`Generating ${inputFile} -> ${outputFile}`);
-
-    const input = fs.readFileSync(inputFile, { encoding: "utf8" });
-    const chars = new antlr4.InputStream(input);
-    const lexer = new JavaScriptLexer(chars);
-    const tokens = new antlr4.CommonTokenStream(lexer);
-    const parser = new JavaScriptParser(tokens);
-    parser.buildParseTrees = true;
-    const tree = parser.program();
-
-    let generatedContent = null;
-
-    if (target === "copypaste") {
-      const generator = new CopyPasteGenerator();
-      generator.visitProgram(tree);
-      generatedContent = generator.stringBuilder.toString();
-    }
-
-    if (fs.existsSync(outputFile)) {
-      fs.rmSync(outputFile);
-    }
-
-    const directoryPath = path.dirname(outputFile);
-
-    fs.mkdirSync(directoryPath, { recursive: true }, (err) => {
-      console.log(err);
-    });
-
-    if (generatedContent !== null) {
-      fs.writeFileSync(
-        outputFile,
-        beautify(generatedContent, {
-          indent_size: 4,
-          space_in_empty_paren: true,
-        })
-      );
-    }
-  } catch (e) {
-    console.log(e);
-  }
-}
-
-/**
- * Initialize server and functions files with necessary and static code 
- * @param {*} typeOfCode - 'function' ou 'server': indicate wheater to initialize with server or 
- * function code 
- * @param {*} serverName  
- * @returns - initial code to initialize file
- */
-function generateInitialCode(inputDir, typeOfCode, serverName) {
-  if (typeOfCode === 'function') {
-    let code = "import fetch from 'node-fetch';\n";
-    code += `import amqp from 'amqplib';`
-    return code;
-  } else if (typeOfCode === 'server') {
-    let code = "import express from 'express';\n";
-    code += "const app = express();\n";
-    code += `const port = ${getPortOfServer(serverName)};\n`;
-    code += `app.use(express.json());\n`;
-    code += `app.listen(port, () => {\n`;
-    code += `  console.log('Server running in port ' + port);\n`;
-    code += `});\n`;
-    code += `import amqp from 'amqplib';`
-
-    code += generateGlobalElements(inputDir, serverName);
-
-    return code;
-  }
-};
-
-function generateGlobalElements(inputDir, serverName) {
-  try {
-    const yamlPath = path.resolve("config.yml");
-    const config = yaml.load(fs.readFileSync(yamlPath, "utf8"));
-
-    const jsFiles = getAllJSFiles(inputDir);
-
-    let code = '';
-
-    for (let jsFile of jsFiles) {
-      const input = fs.readFileSync(jsFile, { encoding: "utf8" });
-      const chars = new antlr4.InputStream(input);
-      const lexer = new JavaScriptLexer(chars);
-      const tokens = new antlr4.CommonTokenStream(lexer);
-      const parser = new JavaScriptParser(tokens);
-      parser.buildParseTrees = true;
-      const tree = parser.program();
-
-      const serverGenerator = new ServerGenerator();
-      code += serverGenerator.generateGlobalElements(jsFile, tree, serverName, config);
-
-    }
-
-    return code;
-
-  } catch (e) {
-    console.error(`Error generating global elements for server ${serverName}: `, e);
-  }
-
-}
-
-
-/**
- * Get port from a given server
- * @param {*} serverName 
- * @returns - port associated to the given server 
- */
-function getPortOfServer(serverName) {
-  const yamlPath = './config.yml';
-  const config = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
-  let serverInfo = config.servers.find((server) => server.id === serverName);
-  return serverInfo.port;
-}
-
-/**
- * Recursive function that runs through all directories and input files, generating the corresponding 
- * code of functions and servers 
- * @param {*} inputDir - current input directory
- * @param {*} outputDir - output directory
- * @param {*} target - target of generation
- * @param {*} filesInitialized - already initialized files array  
- * @returns - array with files initialized
- */
-function generateFunctionFiles(inputDir, outputDir, target, filesInitialized = []) {
-  let items = fs.readdirSync(inputDir);
-  
-  for (let item of items) { // runs through items (files and directories) inside a directory
-    const itemPath = path.join(inputDir, item);
-
-    // if item is a directory, recursive call is made
-    if (fs.statSync(itemPath).isDirectory()) {
-      filesInitialized = generateFunctionFiles(itemPath, outputDir, target, filesInitialized)
-    } else if (itemPath.slice(-2) === "js") { // if item is an input file, code generation is made
-      try {
-        // get semantic tree
-        const input = fs.readFileSync(itemPath, { encoding: "utf8" });
-        const chars = new antlr4.InputStream(input);
-        const lexer = new JavaScriptLexer(chars);
-        const tokens = new antlr4.CommonTokenStream(lexer);
-        const parser = new JavaScriptParser(tokens);
-        parser.buildParseTrees = true;
-        const tree = parser.program();
-
-        // generator of functions of each server
-        const functionGenerator = new FunctionGenerator();
-        const modifiedNodeCode = functionGenerator.generateFunctions(tree);
-
-        // runs through all generated functions codes
-        for (var [key, code] of modifiedNodeCode) {
-          let outputFile = path.join(outputDir, item);
-          outputFile = `./src-gen/functions-${key}.js`;
-          //TODO: add function names cache.
-          // if file does not exist or execution is being done again, new empty file is created
-          if (!fs.existsSync(outputFile) || !filesInitialized.includes(outputFile)) {
-            fs.writeFileSync(
-              outputFile,
-              generateInitialCode(inputDir, "function"), // initial code of function file
-            );
-            filesInitialized.push(outputFile);
-          }
-          functionNames[key] = outputFile;
-          // append of generated code 
-          if (code !== null) {
-            fs.appendFileSync(
-              outputFile,
-              '\n' + beautify(code, {
-                indent_size: 4,
-                space_in_empty_paren: true,
-              }),
-              (err) => {
-                if (err) {
-                  console.error('Erro ao adicionar conteúdo ao arquivo:', err);
-                }
-              });
-          }
+        if (cleanOutput) {
+            console.log(`Cleaning directory ${outputDir}`);
+            await fs.promises.rm(outputDir, { recursive: true, force: true });
+            console.log(`Output directory successfully erased!`);
         }
 
-        // server code generator 
-        const serverGenerator = new ServerGenerator();
-        const modifiedServerCode = serverGenerator.generateFunctions(tree, filesInitialized);
-        
-        
-        // runs through all generated servers codes
-        for (var [key, code] of modifiedServerCode) {
-          let outputFile = path.join(outputDir, item);
-          outputFile = `./src-gen/start-${key}.js`;
-          serverPorts[key] = {
-            "port": getPortOfServer(key),
-            "filePath": outputFile
-          }
-          if (!fs.existsSync(outputFile) || !filesInitialized.includes(outputFile)) {
-            fs.writeFileSync(
-              outputFile,
-              generateInitialCode(inputDir, "server", key), // initial code of server file
-            );
-            filesInitialized.push(outputFile);
-          }
 
-          if (code !== null) {
-            fs.appendFileSync(
-              outputFile,
-              '\n' + beautify(code, {
-                indent_size: 4,
-                space_in_empty_paren: true,
-              }),
-              (err) => {
-                if (err) {
-                  console.error('Erro ao adicionar conteúdo ao arquivo:', err);
+        if (mode === "single") {
+            process(inputDir, outputDir, generateProjects, generateDocker);
+        } else if (mode === "watch") {
+            let fsWait = false;
+
+            console.log(`Watching ${inputDir} and ${configFile} for changes...`);
+
+            const fileChangeEvent = (event, filename) => {
+                if (filename) {
+                    if (fsWait) return;
+                    fsWait = true;
+                    setTimeout(() => {
+                        fsWait = false;
+                    }, 500);
+                    console.log(
+                        `File ${filename} has changed (${event}). Generating code and function files again...`
+                    );
+                    process(inputDir, outputDir, generateProjects, generateDocker);
                 }
-              });
-          }
+            };
+
+            fs.watch(configFile, fileChangeEvent);
+            fs.watch(inputDir, { recursive: true }, fileChangeEvent);
         }
-      } catch (e) {
-        console.log(e);
-      }
+    } catch (e) {
+        if (e instanceof ConfigError) {
+            console.error(e.message);
+        } else {
+            throw e;
+        }
     }
-  }
-  return filesInitialized;
 }
 
-/**
- * Generate server code
- * @param {*} inputDir - generated files directory, the output from @generateFunctionFiles
- * @param {*} outputDir - output directory
- */
-function generateProjects(inputDir, outputDir) {
-  var dockerGen = new DockerFileGenerator(outputDir, functionNames);
-  for (let serverName in serverPorts) {
-    let serverInfo = serverPorts[serverName];
-    dockerGen.generateProject(serverName, serverInfo.filePath, serverInfo.port);
-  }
+async function process(inputDir, outputDir, generateProjects, generateDocker) {
+    console.log(`Starting to process directory ${inputDir}`);
+
+    // Let's duplicate the monolith structure for each server
+    const serverStructures = [];
+    const servers = config.getServers();
+    for (const s of servers) {
+        const ASTs = [];
+        parseCode(ASTs, inputDir, inputDir, outputDir);
+        serverStructures.push({
+            serverInfo: s,
+            asts: ASTs
+        });
+    }
+
+    // We replace all remote functions with a remote call
+    const [allRemoteFunctions, allExposedFunctions] = replaceRemoteFunctions(serverStructures);
+
+    // Because we added async to these functions, we must now
+    // find all places where they are called and add an await
+    fixAsyncFunctions(serverStructures, allRemoteFunctions);
+
+    // Now we need to generate the code to start the servers
+    generateStartCode(serverStructures, allExposedFunctions);
+
+    // Now let's generate the final code: one folder for each server
+    generateCode(serverStructures, outputDir);
+
+    // Finally, we initialize the NPM projects (if the user requested it)
+    if (generateProjects) {
+        await initializeProjects(serverStructures, outputDir, allRemoteFunctions);
+    }
+
+    // And create the Docker infrastructure (if the user requested it)
+    if (generateDocker) {
+        generateDockerInfrastructure(serverStructures, outputDir);
+    }
+
+    console.log(`Done!`);
+}
+
+function parseCode(asts, originalInputDir, inputDir, outputDir) {
+
+    // First let's parse the original code for the project
+    // and store it in a proper structure
+    let items = fs.readdirSync(inputDir);
+    for (let item of items) {
+        const itemPath = path.join(inputDir, item);
+
+        // if item is a directory, recursive call is made
+        if (fs.statSync(itemPath).isDirectory()) {
+            parseCode(asts, originalInputDir, itemPath, outputDir)
+        } else if (itemPath.slice(-2) === "js") { // if item is an input file, let's parse it
+            // Let's parse the file
+            const relativePath = path.relative(originalInputDir, itemPath);
+            const input = fs.readFileSync(itemPath, { encoding: "utf8" });
+            const chars = new antlr4.InputStream(input);
+            const lexer = new JavaScriptLexer(chars);
+            const tokens = new antlr4.CommonTokenStream(lexer);
+            const parser = new JavaScriptParser(tokens);
+            parser.buildParseTrees = true;
+            const tree = parser.program();
+            const prepareTreeVisitor = new PrepareTreeVisitor();
+            prepareTreeVisitor.visit(tree);
+            asts.push({
+                relativePath: relativePath,
+                tree: tree
+            });
+        }
+    }
+}
+
+function replaceRemoteFunctions(serverStructures) {
+    const allRemoteFunctions = [];
+    const allExposedFunctions = [];
+    for (const { serverInfo, asts } of serverStructures) {
+        for (const { relativePath, tree } of asts) {
+            const replaceRemoteFunctionsVisitor = new ReplaceRemoteFunctionsVisitor(serverInfo, relativePath);
+            replaceRemoteFunctionsVisitor.visitProgram(tree);
+            allRemoteFunctions.push(...replaceRemoteFunctionsVisitor.getRemoteFunctions());
+            allExposedFunctions.push(...replaceRemoteFunctionsVisitor.getExposedFunctions());
+        }
+    }
+    return [allRemoteFunctions, allExposedFunctions];
+}
+
+function fixAsyncFunctions(serverStructures, allRemoteFunctions) {
+    const newAsyncFunctions = [];
+    for (const { serverInfo, asts } of serverStructures) {
+        // Let's filter only those functions for this server
+        const allRemoteFunctionsInServer = allRemoteFunctions.filter(rf => rf.serverInfo.id === serverInfo.id);
+        for (const { relativePath, tree } of asts) {
+            const fixAsyncFunctionsVisitor = new FixAsyncFunctionsVisitor(serverInfo, relativePath, allRemoteFunctionsInServer, newAsyncFunctions);
+            fixAsyncFunctionsVisitor.visitProgram(tree);
+        }
+    }
+    if (newAsyncFunctions.length > 0) {
+        fixAsyncFunctions(serverStructures, newAsyncFunctions);
+    }
+}
+
+function generateStartCode(serverStructures, allExposedFunctions) {
+    for (const { serverInfo, asts } of serverStructures) {
+        console.log(`Generating start code for server ${serverInfo.id}`);
+        const allExposedFunctionsInServer = allExposedFunctions.filter(rf => rf.serverInfo.id === serverInfo.id);
+        const newCode = startServerTemplate(serverInfo, allExposedFunctionsInServer);
+        const newTree = ast.generateCompleteTree(newCode);
+        asts.push({
+            relativePath: 'start.js',
+            tree: newTree
+        });
+    }
+}
+
+function generateCode(serverStructures, outputDir) {
+    for (const { serverInfo, asts } of serverStructures) {
+        const serverFolder = path.join(outputDir, serverInfo.id);
+        const sourceGenFolder = path.join(serverFolder, serverInfo.genFolder);
+
+        for (const { relativePath, tree } of asts) {
+            const javaScriptGeneratorVisitor = new JavaScriptGeneratorVisitor();
+            javaScriptGeneratorVisitor.visitProgram(tree);
+            const generatedCode = javaScriptGeneratorVisitor.getGeneratedCode();
+            const javaScriptFile = path.join(sourceGenFolder, relativePath);
+            writeJavaScriptFile(javaScriptFile, generatedCode);
+        }
+    }
+}
+
+async function initializeProjects(serverStructures, outputDir, allRemoteFunctions) {
+    for (const { serverInfo } of serverStructures) {
+        const serverFolder = path.join(outputDir, serverInfo.id);
+        const remoteFunctionsInServer = allRemoteFunctions.filter(rf => rf.serverInfo.id === serverInfo.id);
+        await npmHelper.initNodeProject(serverFolder, serverInfo, remoteFunctionsInServer);
+    }
+}
+
+function generateDockerInfrastructure(serverStructures, outputDir) {
+    console.log("Generating Docker infrastructure");
+    for (const { serverInfo } of serverStructures) {
+        const serverFolder = path.join(outputDir, serverInfo.id);
+        const dockerfileContent = dockerfileTemplate(serverInfo).trim();
+        const dockerfile = path.join(serverFolder, "Dockerfile");
+        fs.writeFileSync(dockerfile, dockerfileContent);
+        console.log(`Created file ${dockerfile}`);
+    }
+
+    const composeFile = path.join(outputDir, "compose.yaml");
+    const composeContent = composeTemplate(serverStructures).trim();
+    fs.writeFileSync(composeFile, composeContent);
+    console.log(`Created file ${composeFile}`);
 }

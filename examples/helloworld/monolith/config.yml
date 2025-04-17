@@ -1,0 +1,34 @@
+default:
+  rabbit:
+    url: localhost
+    port: 5672
+servers:
+  - id: alpha
+    http:
+      url: localhost
+      port: 3000
+    functions:
+      - declarationPattern: 'saveProduct'
+        method: rabbit
+      - declarationPattern: 'saveCustomer'
+        method: rabbit
+  - id: beta
+    http:
+      url: localhost
+      port: 3001
+    functions:
+    - declarationPattern: split
+      callPatterns:
+        - 'strUtils.split'
+      method: rabbit
+    - declarationPattern: log
+      method: rabbit
+  - id: gamma
+    http:
+      url: localhost
+      port: 3002
+    functions:
+    - declarationPattern: join
+      method: rabbit
+    - declarationPattern: main
+      method: http-get
