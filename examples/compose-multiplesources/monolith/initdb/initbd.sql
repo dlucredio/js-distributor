@@ -1,0 +1,4 @@
+CREATE TABLE Users (
+    name VARCHAR(100) PRIMARY KEY NOT NULL,
+    email VARCHAR(100) NOT NULL
+);
