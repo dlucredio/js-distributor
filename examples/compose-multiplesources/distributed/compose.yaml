@@ -1,0 +1,33 @@
+services:
+
+    alpha:
+        build: ./alpha
+
+        ports:
+            - "3000:3000"
+
+        restart: always
+
+    beta:
+        build: ./beta
+
+        ports:
+            - "3001:3001"
+
+        restart: always
+
+    gamma:
+        build: ./gamma
+
+        ports:
+            - "3002:3002"
+
+        restart: always
+
+    zeta:
+        build: ./zeta
+
+        ports:
+            - "3003:3003"
+
+        restart: always

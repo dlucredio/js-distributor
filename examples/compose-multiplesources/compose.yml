@@ -1,9 +1,9 @@
-version: '3'
+version: "3"
 services:
-  postgres_wh:
+  db:
     image: postgres:13.1
     healthcheck:
-      test: [ "CMD", "pg_isready", "-q", "-d", "postgres", "-U", "db" ]
+      test: ["CMD", "pg_isready", "-q", "-d", "postgres", "-U", "db"]
       timeout: 45s
       interval: 10s
       retries: 10
@@ -18,3 +18,8 @@ services:
       - ./initdb:/docker-entrypoint-initdb.d/
     ports:
       - 5432:5432
+    networks:
+      - app_network
+networks:
+  app_network:
+    driver: bridge
