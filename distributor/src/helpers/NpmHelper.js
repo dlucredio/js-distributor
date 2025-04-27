@@ -11,6 +11,7 @@ async function initNodeProject(folder, serverInfo, remoteFunctions) {
     console.log(`Initializing node project in folder ${folder}`);
     const packageJsonContent = packageJsonTemplate(serverInfo).trim();
     const packageJsonFile = path.join(folder, "package.json");
+    //inject dependencies
     fs.writeFileSync(packageJsonFile, packageJsonContent);
     console.log(`Created file ${packageJsonFile}`);
 
@@ -45,6 +46,27 @@ async function initNodeProject(folder, serverInfo, remoteFunctions) {
     console.log(result);
     console.log(`Finished initializing project for server ${serverInfo.id}!`);
 
+}
+
+
+function getDependencies(serverInfo) {
+
+    // find package.json file
+    // If the command is executed from the root of the project, only need the cwd.
+    // If the command is executed from the folder of the server, need to use the path of the server.
+    // Its possible to use the -i option to get the relative path, but the best option would be to create another option to get the root project path.
+    const dependencies = [];
+
+    if (config.hasHttpFunctions(serverInfo)) {
+        dependencies.push("express");
+    }
+
+    if (config.hasRabbitFunctions(serverInfo) || serverInfo.remoteFunctions.some(f => f.method === 'rabbit')) {
+        dependencies.push("amqplib");
+        dependencies.push("uuid");
+    }
+
+    return dependencies;
 }
 
 export default { initNodeProject };
