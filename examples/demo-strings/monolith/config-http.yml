@@ -1,0 +1,30 @@
+servers:
+  - id: alpha
+    http:
+      url: localhost
+      port: 3000
+    functions:
+      - declarationPattern: toUpperCaseString
+        callPatterns:
+          - toUpperCaseString
+          - tuc
+          - util.toUpperCaseString
+        method: http-get
+  - id: beta
+    http:
+      url: localhost
+      port: 3001
+    functions:
+      - declarationPattern: toLowerCaseString
+        method: http-get
+        callPatterns:
+          - toLowerCaseString
+          - tlc
+          - util.toLowerCaseString
+  - id: gamma
+    http:
+      url: localhost
+      port: 3002
+    functions:
+      - declarationPattern: print
+        method: http-get

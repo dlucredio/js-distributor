@@ -1,0 +1,16 @@
+default:
+  rabbit:
+    url: myrabbit
+    port: 5672
+servers:
+  - id: alpha
+    http:
+      url: localhost
+      port: 3000
+    functions:
+    - declarationPattern: main
+      method: http-get
+  - id: beta
+    functions:
+    - declarationPattern: toUpperCase
+      method: rabbit

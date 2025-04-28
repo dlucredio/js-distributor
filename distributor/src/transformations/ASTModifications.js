@@ -7,10 +7,13 @@ import JavaScriptParser from "../antlr4/JavaScriptParser.js";
 
 // Internal imports
 import astHelpers from "../helpers/AstHelpers.js";
+import { PrepareTreeVisitor } from "../visitors/PrepareTreeVisitor.js";
 
 function generateCompleteTree(content) {
     const parser = generateParserForString(content);
-    return parser.program();
+    const tree = parser.program();
+    new PrepareTreeVisitor().visit(tree);
+    return tree;
 }
 
 function replaceFunctionBody(ctx, newBody) {
@@ -74,6 +77,7 @@ function replaceNode(oldNode, newNode) {
     if (!parent || !parent.children) {
         throw new Error("Old node has no parent or children to replace.");
     }
+    new PrepareTreeVisitor().visit(newNode);
 
     const index = parent.children.findIndex(child => child.nodeId === oldNode.nodeId);
     if (index === -1) {
@@ -88,6 +92,7 @@ function appendChildNode(parentNode, newNode, end = true) {
     if (!parentNode || !parentNode.children) {
         throw new Error("Parent node is invalid or has no children array.");
     }
+    new PrepareTreeVisitor().visit(newNode);
 
     newNode.parent = parentNode;
     if(end) {
