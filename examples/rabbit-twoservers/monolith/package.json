@@ -1,0 +1,16 @@
+{
+  "name": "monolith",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate-single": "js-distributor-scripts --cleanOutput --generateProjects --generateDocker -i src -o ../distributed"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "distributor": "file:../../../distributor"
+  }  
+}

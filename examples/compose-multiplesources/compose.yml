@@ -1,9 +1,9 @@
-version: '3'
+version: "3"
 services:
-  postgres_wh:
+  db:
     image: postgres:13.1
     healthcheck:
-      test: [ "CMD", "pg_isready", "-q", "-d", "postgres", "-U", "db" ]
+      test: ["CMD", "pg_isready", "-q", "-d", "postgres", "-U", "db"]
       timeout: 45s
       interval: 10s
       retries: 10
@@ -15,12 +15,11 @@ services:
       - APP_DB_PASS=db
       - APP_DB_NAME=db
     volumes:
-      - ./dbjsdist:/docker-entrypoint-initdb.d/
+      - ./initdb:/docker-entrypoint-initdb.d/
     ports:
       - 5432:5432
-  rabbit:
-    image: rabbitmq:3-management
-    hostname: myrabbit
-    ports:
-      - 5672:5672 # For AMPQ connection
-      - 8080:15672 # Web interface
+    networks:
+      - app_network
+networks:
+  app_network:
+    driver: bridge

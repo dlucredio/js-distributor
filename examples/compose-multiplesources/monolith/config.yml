@@ -1,0 +1,31 @@
+servers:
+  - id: alpha
+    http:
+      url: alpha
+      port: 3000
+    functions:
+      - declarationPattern: "main"
+        method: http-get
+  - id: beta
+    http:
+      url: beta
+      port: 3001
+    functions:
+      - declarationPattern: "createUser"
+        method: http-post
+  - id: gamma
+    http:
+      url: gamma
+      port: 3002
+    functions:
+      - declarationPattern: getUserById
+        method: http-get
+      - declarationPattern: updateUser
+        method: http-post
+  - id: zeta
+    http:
+      url: zeta
+      port: 3003
+    functions:
+      - declarationPattern: deleteUser
+        method: http-get

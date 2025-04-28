@@ -34,10 +34,10 @@ function generateWaitForCalls(f) {
                 async (msg) => {
                     if (msg) {
                         console.log("Receiving call");
-                        const message = JSON.parse(msg.content.toString());
-                        if (message.funcName === "${f.functionName}") {
+                        const message_call_received = JSON.parse(msg.content.toString());
+                        if (message_call_received.funcName === "${f.functionName}") {
         `}
-        const { ${f.args.join(", ")} } = message.parameters;
+        const { ${f.args.join(", ")} } = message_call_received.parameters;
         console.log("Calling function ${f.functionName}", ${f.args});
         const result_${f.functionName} = ${f.isAsync ? "await " : ""} ${f.functionName}(${f.args.join(", ")});
         const response_${f.functionName} = {

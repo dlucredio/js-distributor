@@ -1,0 +1,38 @@
+include:
+  - ../compose.yml
+services:
+  alpha:
+    build: ./alpha
+    networks:
+      - app_network
+    ports:
+      - "3000:3000"
+
+    restart: always
+
+  beta:
+    build: ./beta
+    networks:
+      - app_network
+    ports:
+      - "3001:3001"
+
+    restart: always
+
+  gamma:
+    build: ./gamma
+    networks:
+      - app_network
+    ports:
+      - "3002:3002"
+
+    restart: always
+
+  zeta:
+    build: ./zeta
+    networks:
+      - app_network
+    ports:
+      - "3003:3003"
+
+    restart: always
