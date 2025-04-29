@@ -9,12 +9,53 @@ import config from '../config/Configuration.js';
 
 async function initNodeProject(folder, serverInfo, remoteFunctions) {
     console.log(`Initializing node project in folder ${folder}`);
-    const packageJsonContent = packageJsonTemplate(serverInfo).trim();
+    let packageJsonContent = packageJsonTemplate(serverInfo).trim();
     const packageJsonFile = path.join(folder, "package.json");
-    //inject dependencies
+    // Ensure the package.json has a dependencies section
+    let packageJson = JSON.parse(packageJsonContent);
+    if (!packageJson.dependencies) 
+        packageJson.dependencies = getDependencies(serverInfo);
+    
+    packageJsonContent = JSON.stringify(packageJson, null, 2);
     fs.writeFileSync(packageJsonFile, packageJsonContent);
     console.log(`Created file ${packageJsonFile}`);
 
+    await installDependency(serverInfo);
+
+    console.log(`Finished initializing project for server ${serverInfo.id}!`);
+}
+
+
+function getDependencies(serverInfo) {
+    let dependencies;
+    // find package.json file
+    // If the command is executed from the root of the project, only need the cwd.
+    let cwd = process.cwd();
+    const packageJsonPath = path.join(cwd, "package.json");
+    
+    if (fs.existsSync(packageJsonPath)) {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        if (packageJson && packageJson.dependencies) {
+            dependencies = packageJson.dependencies;
+        }
+    }else {
+        // get path root from var args.
+        // load the dep
+    }
+
+    if (!dependencies) {
+        // If the package.json file does not exist, create a new one with the default dependencies
+        // Or just throw an error ?
+    }
+    
+    // remove unecessary dependencies
+    delete dependencies['distributor'];
+    
+
+    return dependencies;
+}
+
+async function installDependency(serverInfo, folder) {
     let command = "npm install";
 
     if (config.hasHttpFunctions(serverInfo)) {
@@ -24,49 +65,30 @@ async function initNodeProject(folder, serverInfo, remoteFunctions) {
     if (config.hasRabbitFunctions(serverInfo) || remoteFunctions.some(f => f.method === 'rabbit')) {
         command += " amqplib uuid";
     }
-
     console.log(`Executing command "${command}" on directory ${folder}`);
+    let result;
+    try{
+        result = await new Promise((resolve, reject) => {
+            exec(command, { cwd: folder }, (error, stdout, stderr) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
 
-    const result = await new Promise((resolve, reject) => {
-        exec(command, { cwd: folder }, (error, stdout, stderr) => {
-            if (error) {
-                reject(error);
-                return;
-            }
+                if (stderr) {
+                    console.error(`stderr: ${stderr}`);
+                    reject(stderr);
+                    return;
+                }
 
-            if (stderr) {
-                console.error(`stderr: ${stderr}`);
-                reject(stderr);
-                return;
-            }
-
-            resolve(stdout);
+                resolve(stdout);
+            });
         });
-    });
-    console.log(result);
-    console.log(`Finished initializing project for server ${serverInfo.id}!`);
-
-}
-
-
-function getDependencies(serverInfo) {
-
-    // find package.json file
-    // If the command is executed from the root of the project, only need the cwd.
-    // If the command is executed from the folder of the server, need to use the path of the server.
-    // Its possible to use the -i option to get the relative path, but the best option would be to create another option to get the root project path.
-    const dependencies = [];
-
-    if (config.hasHttpFunctions(serverInfo)) {
-        dependencies.push("express");
+    }catch (error) {
+        console.error(`Error executing command "${command}": ${error}`);
+    }finally {
+        console.log(result);
     }
-
-    if (config.hasRabbitFunctions(serverInfo) || serverInfo.remoteFunctions.some(f => f.method === 'rabbit')) {
-        dependencies.push("amqplib");
-        dependencies.push("uuid");
-    }
-
-    return dependencies;
 }
 
 export default { initNodeProject };
