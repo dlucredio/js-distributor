@@ -189,7 +189,6 @@ function getMoreSpecificPattern(list) {
     return mostSpecific[1];
 }
 
-
 function getServers() {
     if (!instance) {
         throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
