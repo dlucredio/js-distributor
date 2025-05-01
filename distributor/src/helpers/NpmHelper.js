@@ -21,7 +21,7 @@ async function initNodeProject(folder, serverInfo, remoteFunctions) {
   fs.writeFileSync(packageJsonFile, packageJsonContent);
   console.log(`Created file ${packageJsonFile}`);
 
-  await installDependency(serverInfo);
+  await installDependency(serverInfo, folder);
 
   console.log(`Finished initializing project for server ${serverInfo.id}!`);
 }
@@ -29,7 +29,6 @@ async function initNodeProject(folder, serverInfo, remoteFunctions) {
 function getDependencies(serverInfo) {
   let dependencies;
   // find package.json file
-  // If the command is executed from the root of the project, only need the cwd.
   let rootDir = args.getRootDir();
   const packageJsonPath = path.join(rootDir, "package.json");
 
@@ -43,11 +42,7 @@ function getDependencies(serverInfo) {
       "Could not find package.json. See if rootDir is configurated."
     );
   }
-  if (!dependencies) {
-    // If the package.json file does not exist, create a new one with the default dependencies
-    // Or just throw an error ?
-  }
-  console.log("Package.json found");
+  
 
   // remove unecessary dependencies
   delete dependencies["distributor"];
@@ -89,8 +84,9 @@ async function installDependency(serverInfo, folder) {
     });
   } catch (error) {
     console.error(`Error executing command "${command}": ${error}`);
+    result = error;
   } finally {
-    console.log(result);
+    return result;
   }
 }
 

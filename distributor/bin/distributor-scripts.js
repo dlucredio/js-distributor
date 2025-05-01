@@ -41,7 +41,7 @@ program
     .option('--cleanOutput', 'Whether to clean output before running', false)
     .option('--generateProjects', 'Generate project files for each output unit', false)
     .option('--generateDocker', 'Generate Docker files for the projects', false)
-    .option('--rootDir', 'Root directory for the project', process.cwd(),false);
+    .option('--rootDir <path>', 'Root directory for relative paths', process.cwd());
 
 program.parse(process.argv);
 
