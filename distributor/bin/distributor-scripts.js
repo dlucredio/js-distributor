@@ -40,7 +40,8 @@ program
     .requiredOption('-o, --outputDir <path>', 'Directory where output will be written')
     .option('--cleanOutput', 'Whether to clean output before running', false)
     .option('--generateProjects', 'Generate project files for each output unit', false)
-    .option('--generateDocker', 'Generate Docker files for the projects', false);
+    .option('--generateDocker', 'Generate Docker files for the projects', false)
+    .option('--rootDir <path>', 'Root directory for relative paths', process.cwd());
 
 program.parse(process.argv);
 
@@ -66,5 +67,6 @@ entrypoint(options.mode,
     options.outputDir,
     options.cleanOutput,
     options.generateProjects,
-    options.generateDocker
+    options.generateDocker,
+    options.rootDir
 );

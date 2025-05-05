@@ -1,50 +1,93 @@
 // External imports
-import fs from 'fs';
-import path from 'path';
-import { exec } from 'child_process';
+import fs from "fs";
+import path from "path";
+import { exec } from "child_process";
 
 // Internal imports
-import { packageJsonTemplate } from '../templates/NpmPackageJson.js';
-import config from '../config/Configuration.js';
+import args from "../config/Args.js";
+import { packageJsonTemplate } from "../templates/NpmPackageJson.js";
+import config from "../config/Configuration.js";
 
 async function initNodeProject(folder, serverInfo, remoteFunctions) {
-    console.log(`Initializing node project in folder ${folder}`);
-    const packageJsonContent = packageJsonTemplate(serverInfo).trim();
-    const packageJsonFile = path.join(folder, "package.json");
-    fs.writeFileSync(packageJsonFile, packageJsonContent);
-    console.log(`Created file ${packageJsonFile}`);
+  console.log(`Initializing node project in folder ${folder}`);
+  let packageJsonContent = packageJsonTemplate(serverInfo).trim();
+  const packageJsonFile = path.join(folder, "package.json");
+  // Ensure the package.json has a dependencies section
+  let packageJson = JSON.parse(packageJsonContent);
+  if (!packageJson.dependencies)
+    packageJson.dependencies = getDependencies(serverInfo);
 
-    let command = "npm install";
+  packageJsonContent = JSON.stringify(packageJson, null, 2);
+  fs.writeFileSync(packageJsonFile, packageJsonContent);
+  console.log(`Created file ${packageJsonFile}`);
 
-    if (config.hasHttpFunctions(serverInfo)) {
-        command += " express";
+  await installDependency(serverInfo, folder);
+
+  console.log(`Finished initializing project for server ${serverInfo.id}!`);
+}
+
+function getDependencies(serverInfo) {
+  let dependencies;
+  // find package.json file
+  let rootDir = args.getRootDir();
+  const packageJsonPath = path.join(rootDir, "package.json");
+
+  if (fs.existsSync(packageJsonPath)) {
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+    if (packageJson && packageJson.dependencies) {
+      dependencies = packageJson.dependencies;
     }
+  } else {
+    throw new Error(
+      "Could not find package.json. See if rootDir is configurated."
+    );
+  }
+  
 
-    if (config.hasRabbitFunctions(serverInfo) || remoteFunctions.some(f => f.method === 'rabbit')) {
-        command += " amqplib uuid";
-    }
+  // remove unecessary dependencies
+  delete dependencies["distributor"];
 
-    console.log(`Executing command "${command}" on directory ${folder}`);
+  return dependencies;
+}
 
-    const result = await new Promise((resolve, reject) => {
-        exec(command, { cwd: folder }, (error, stdout, stderr) => {
-            if (error) {
-                reject(error);
-                return;
-            }
+async function installDependency(serverInfo, folder) {
+  let command = "npm install";
 
-            if (stderr) {
-                console.error(`stderr: ${stderr}`);
-                reject(stderr);
-                return;
-            }
+  if (config.hasHttpFunctions(serverInfo)) {
+    command += " express";
+  }
 
-            resolve(stdout);
-        });
+  if (
+    config.hasRabbitFunctions(serverInfo) ||
+    remoteFunctions.some((f) => f.method === "rabbit")
+  ) {
+    command += " amqplib uuid";
+  }
+  console.log(`Executing command "${command}" on directory ${folder}`);
+  let result;
+  try {
+    result = await new Promise((resolve, reject) => {
+      exec(command, { cwd: folder }, (error, stdout, stderr) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        if (stderr) {
+          console.error(`stderr: ${stderr}`);
+          reject(stderr);
+          return;
+        }
+
+        resolve(stdout);
+      });
     });
-    console.log(result);
-    console.log(`Finished initializing project for server ${serverInfo.id}!`);
-
+  } catch (error) {
+    console.error(`Error executing command "${command}": ${error}`);
+    result = error;
+  } finally {
+    return result;
+  }
 }
 
 export default { initNodeProject };
