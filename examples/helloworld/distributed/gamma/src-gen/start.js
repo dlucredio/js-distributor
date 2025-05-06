@@ -29,12 +29,12 @@ async function waitForCalls() {
     channel.consume(join_queueName, async (msg) => {
         if (msg) {
             console.log("Receiving call");
-            const message = JSON.parse(msg.content.toString());
-            if (message.funcName === "join") {
+            const message_call_received = JSON.parse(msg.content.toString());
+            if (message_call_received.funcName === "join") {
                 const {
                     arr,
                     separator
-                } = message.parameters;
+                } = message_call_received.parameters;
 
                 console.log("Calling function join", arr, separator);
                 const result_join = join(arr, separator);

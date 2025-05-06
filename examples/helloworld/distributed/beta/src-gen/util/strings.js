@@ -69,7 +69,7 @@ export async function join(arr, separator = ',') {
                 parameters: {
                     arr: arr,
                     separator: separator
-                }
+                },
             };
 
             channel.consume(q.queue, (msg) => {

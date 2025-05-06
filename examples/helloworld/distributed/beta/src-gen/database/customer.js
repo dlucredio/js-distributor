@@ -30,7 +30,7 @@ export async function saveCustomer(name, address, age, email, number, ssn) {
                     email: email,
                     number: number,
                     ssn: ssn
-                }
+                },
             };
 
             channel.consume(q.queue, (msg) => {

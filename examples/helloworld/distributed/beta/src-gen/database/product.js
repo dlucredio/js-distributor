@@ -29,7 +29,7 @@ export async function saveProduct(id, name = "produto") {
                 parameters: {
                     id: id,
                     name: name
-                }
+                },
             };
 
             channel.consume(q.queue, (msg) => {

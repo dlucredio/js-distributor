@@ -16,11 +16,11 @@ async function waitForCalls() {
     channel.consume(log_queueName, async (msg) => {
         if (msg) {
             console.log("Receiving call");
-            const message = JSON.parse(msg.content.toString());
-            if (message.funcName === "log") {
+            const message_call_received = JSON.parse(msg.content.toString());
+            if (message_call_received.funcName === "log") {
                 const {
                     list
-                } = message.parameters;
+                } = message_call_received.parameters;
 
                 console.log("Calling function log", list);
                 const result_log = log(list);
@@ -46,12 +46,12 @@ async function waitForCalls() {
     channel.consume(split_queueName, async (msg) => {
         if (msg) {
             console.log("Receiving call");
-            const message = JSON.parse(msg.content.toString());
-            if (message.funcName === "split") {
+            const message_call_received = JSON.parse(msg.content.toString());
+            if (message_call_received.funcName === "split") {
                 const {
                     str,
                     separator
-                } = message.parameters;
+                } = message_call_received.parameters;
 
                 console.log("Calling function split", str, separator);
                 const result_split = split(str, separator);

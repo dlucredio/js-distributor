@@ -16,8 +16,8 @@ async function waitForCalls() {
     channel.consume(saveCustomer_queueName, async (msg) => {
         if (msg) {
             console.log("Receiving call");
-            const message = JSON.parse(msg.content.toString());
-            if (message.funcName === "saveCustomer") {
+            const message_call_received = JSON.parse(msg.content.toString());
+            if (message_call_received.funcName === "saveCustomer") {
                 const {
                     name,
                     address,
@@ -25,7 +25,7 @@ async function waitForCalls() {
                     email,
                     number,
                     ssn
-                } = message.parameters;
+                } = message_call_received.parameters;
 
                 console.log("Calling function saveCustomer", name, address, age, email, number, ssn);
                 const result_saveCustomer = await saveCustomer(name, address, age, email, number, ssn);
@@ -51,12 +51,12 @@ async function waitForCalls() {
     channel.consume(saveProduct_queueName, async (msg) => {
         if (msg) {
             console.log("Receiving call");
-            const message = JSON.parse(msg.content.toString());
-            if (message.funcName === "saveProduct") {
+            const message_call_received = JSON.parse(msg.content.toString());
+            if (message_call_received.funcName === "saveProduct") {
                 const {
                     id,
                     name
-                } = message.parameters;
+                } = message_call_received.parameters;
 
                 console.log("Calling function saveProduct", id, name);
                 const result_saveProduct = saveProduct(id, name);

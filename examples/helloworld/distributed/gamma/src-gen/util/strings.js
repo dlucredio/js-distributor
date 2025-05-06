@@ -54,7 +54,7 @@ export async function split(str, separator = ",") {
                 parameters: {
                     str: str,
                     separator: separator
-                }
+                },
             };
 
             channel.consume(q.queue, (msg) => {

@@ -5,6 +5,14 @@ import fs from 'fs';
 import chalk from 'chalk';
 import gradient from 'gradient-string';
 import entrypoint from '../src/main.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const packageJsonPath = path.join(__dirname, '..', 'package.json');
+const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
 
 const colorGradient = gradient([
     '#714674',
@@ -26,22 +34,17 @@ console.log(colorGradient.multiline(`
 :......::::......::::::::::::........:::....:::......::::::..:::::..:::::..::....::........::::.......::::::..::::::.......:::..:::::..::
  `));
 
+console.log(`Version: ${pkg.version}`);
+
 const program = new Command();
 
 program
     .name('js-distributor')
     .description('Distributes JavaScript components across folders, either once or in watch mode.')
-    .version('1.0.0');
+    .version(pkg.version);
 
 program
-    .option('-m, --mode <mode>', 'Mode to run in: "single" or "watch"', 'single')
     .option('-c, --configFile <path>', 'Path to config file', 'config.yml')
-    .requiredOption('-i, --inputDir <path>', 'Input directory containing source files')
-    .requiredOption('-o, --outputDir <path>', 'Directory where output will be written')
-    .option('--cleanOutput', 'Whether to clean output before running', false)
-    .option('--generateProjects', 'Generate project files for each output unit', false)
-    .option('--generateDocker', 'Generate Docker files for the projects', false)
-    .option('--rootDir <path>', 'Root directory for relative paths', process.cwd());
 
 program.parse(process.argv);
 
@@ -53,20 +56,4 @@ if (!fs.existsSync(options.configFile) || !fs.lstatSync(options.configFile).isFi
     process.exit(1);
 }
 
-
-// Validate inputDir exists
-if (!fs.existsSync(options.inputDir) || !fs.lstatSync(options.inputDir).isDirectory()) {
-    console.error(chalk.red(`❌ Input directory "${options.inputDir}" does not exist or is not a directory.`));
-    process.exit(1);
-}
-
-// All validations passed, call the entrypoint
-entrypoint(options.mode,
-    options.configFile,
-    options.inputDir,
-    options.outputDir,
-    options.cleanOutput,
-    options.generateProjects,
-    options.generateDocker,
-    options.rootDir
-);
+entrypoint(options.configFile);

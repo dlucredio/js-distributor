@@ -16,15 +16,41 @@ class ConfigSingleton {
     getYamlContent() {
         const yamlContent = yaml.load(fs.readFileSync(this.yamlPath, 'utf8'));
 
+        // Basic validation
+        // inputFolder exists? If not, raise error
+        if (!fs.existsSync(yamlContent.codeGenerationParameters.inputFolder) || !fs.lstatSync(yamlContent.codeGenerationParameters.inputFolder).isDirectory()) {
+            throw new ConfigError(`Error: inputFolder "${yamlContent.codeGenerationParameters.inputFolder}" does not exist or is not a directory`);
+        } else {
+            // If exists, let's adjust it so that it resolves relative to current folder
+            yamlContent.codeGenerationParameters.inputFolder = path.resolve(path.join(".", yamlContent.codeGenerationParameters.inputFolder));
+        }
+
+        // Let's also resolve the outputFolder relative to current folder
+        yamlContent.codeGenerationParameters.outputFolder = path.resolve(path.join(".", yamlContent.codeGenerationParameters.outputFolder));
+
+        if(!yamlContent.codeGenerationParameters.mode) {
+            yamlContent.codeGenerationParameters.mode = "single";
+        } else if(yamlContent.codeGenerationParameters.mode !== "single" && yamlContent.codeGenerationParameters.mode !== "watch") {
+            throw new ConfigError(`Error: config.yml property "codeGenerationParameters.mode should be either "single" or "watch"`);
+        }
+
+        if(!yamlContent.codeGenerationParameters.ignore) {
+            yamlContent.codeGenerationParameters.ignore = []
+        }
+        
+        if(!Array.isArray(yamlContent.codeGenerationParameters.ignore)) {
+            throw new ConfigError(`Error: config.yml property "codeGenerationParameters.ignore should be a list`);
+        }
+
         // Let's add the defaults and do some validation/preparation
         // - Lowercase function methods
         // - Check for valid methods
         const validMethods = ['http-get', 'http-post', 'rabbit'];
         for (const serverInfo of yamlContent.servers) {
             // Every server must have a genFolder
-            // If none is specified, we use 'src-gen'
+            // If none is specified, we leave it empty
             if (!serverInfo.genFolder) {
-                serverInfo.genFolder = 'src-gen';
+                serverInfo.genFolder = '';
             }
             if (!helpers.isIterable(serverInfo.functions)) {
                 serverInfo.functions = [];
@@ -86,6 +112,14 @@ export class ConfigError extends Error {
     constructor(message) {
         super(message);
     }
+}
+
+function getCodeGenerationParameters() {
+    if (!instance) {
+        throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
+    }
+    const yamlContent = instance.getYamlContent();
+    return yamlContent.codeGenerationParameters;
 }
 
 // TODO: modify this to rely not only on functionName, but also
@@ -218,5 +252,5 @@ function hasRabbitFunctions(serverInfo) {
 
 
 export default {
-    init, getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, hasHttpFunctions, hasRabbitFunctions
+    init, getCodeGenerationParameters, getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, hasHttpFunctions, hasRabbitFunctions
 }

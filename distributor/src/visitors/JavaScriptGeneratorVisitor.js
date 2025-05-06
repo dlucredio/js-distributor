@@ -302,13 +302,20 @@ export default class JavaScriptGeneratorVisitor extends JavaScriptParserVisitor 
      * @param {Object} ctx - Context of the anonymous function declaration.
      */
     visitAnonymousFunctionDecl(ctx) {
-        if (ctx.Async()) this.appendTokens(ctx.Async());
+        if (ctx.Async()) {
+            this.appendTokens(ctx.Async());
+            this.appendString(" ");
+        }
         this.appendTokens(ctx.Function_());
         if (
             ctx.children[0].getText().includes("*") ||
             ctx.children[1].getText().includes("*")
         )
             this.appendString("*");
+        if (ctx.identifier()) {
+            this.appendString(" ");
+            this.visitIdentifier(ctx.identifier());
+        }
         this.appendString("(");
         if (ctx.formalParameterList())
             this.visitFormalParameterList(ctx.formalParameterList());
@@ -400,12 +407,16 @@ export default class JavaScriptGeneratorVisitor extends JavaScriptParserVisitor 
         this.appendString("{ ");
 
         for (let i = 1; i < ctx.children.length - 1; i++) {
-            this.visit(ctx.children[i]);
-            if (
-                i !== ctx.children.length - 2 &&
-                !ctx.children[i].getText().includes(",")
-            )
-                this.appendString(", ");
+            if (ctx.children[i].getText() === ",") {
+                this.appendString(",");
+            } else {
+                this.visit(ctx.children[i]);
+            }
+            // if (
+            //     i !== ctx.children.length - 2 &&
+            //     !ctx.children[i].getText().includes(",")
+            // )
+            //     this.appendString(", ");
         }
         this.appendString("}");
     }
@@ -972,6 +983,17 @@ export default class JavaScriptGeneratorVisitor extends JavaScriptParserVisitor 
         }
     }
 
+    visitForInStatement(ctx) {
+        //For '(' (singleExpression | variableDeclarationList) In expressionSequence ')' statement   
+        this.appendString("for ");
+        this.appendString("(");
+        this.visit(ctx.children[2]); // singleExpression or variableDeclarationList
+        this.appendString(" in ");
+        this.visitExpressionSequence(ctx.expressionSequence());
+        this.appendString(")");
+        this.visitStatement(ctx.statement());
+    }
+
     /**
      * Visits a for-of statement.
      * @param {Object} ctx - Context of the for-of statement.
@@ -1331,8 +1353,8 @@ export default class JavaScriptGeneratorVisitor extends JavaScriptParserVisitor 
      */
     visitInstanceofExpression(ctx) {
         this.visit(ctx.children[0]);
-        this.appendString("instanceof");
-        this.visit(ctx.children[1]);
+        this.appendString(" instanceof ");
+        this.visit(ctx.children[2]);
     }
 
     /**
