@@ -8,8 +8,8 @@ function httpGetFetch(functionName, serverUrl, serverPort, args) {
     return `
 {
     const response = await fetch(\`${fetchUrl}\`);
-    const { result } = await response.json();
-    return result;
+    const { executionResult } = await response.json();
+    return executionResult;
 }
 `
 };
@@ -27,8 +27,8 @@ function httpPostFetch(functionName, serverUrl, serverPort, args) {
         },
         body: JSON.stringify(${body})
     });
-    const { result } = await response.json();
-    return result;
+    const { executionResult } = await response.json();
+    return executionResult;
 }
 `
 };

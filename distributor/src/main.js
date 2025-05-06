@@ -78,6 +78,7 @@ async function process() {
     for (const s of servers) {
         const ASTs = [];
         const otherFiles = [];
+        console.log(`======= Processing server ${s.id} ========`);
         parseCode(ASTs, otherFiles, inputDir);
         serverStructures.push({
             serverInfo: s,
@@ -113,6 +114,8 @@ async function process() {
         generateDockerInfrastructure(serverStructures);
     }
 
+    copyAdditionalFiles(serverStructures);
+
     console.log(`Done!`);
 }
 
@@ -123,7 +126,7 @@ function parseCode(asts, otherFiles, inputDir) {
     const ignoreList = config.getCodeGenerationParameters().ignore;
     for (let item of items) {
         const itemPath = path.join(inputDir, item);
-        if(ignoreList.some(pattern => minimatch(item, pattern))) {
+        if (ignoreList.some(pattern => minimatch(item, pattern))) {
             let itemType = "file";
             if (fs.statSync(itemPath).isDirectory()) {
                 itemType = "folder";
@@ -281,4 +284,20 @@ function generateDockerInfrastructure(serverStructures) {
     const composeContent = composeTemplate(serverStructures).trim();
     fs.writeFileSync(composeFile, composeContent);
     console.log(`Created file ${composeFile}`);
+}
+
+function copyAdditionalFiles(serverStructures) {
+    for (const { serverInfo } of serverStructures) {
+        if (serverInfo.copyFiles && Array.isArray(serverInfo.copyFiles)) {
+            const serverFolder = path.join(config.getCodeGenerationParameters().outputFolder, serverInfo.id);
+            const sourceGenFolder = path.join(serverFolder, serverInfo.genFolder);
+            for (const { from, to } of serverInfo.copyFiles) {
+                const sourcePath = path.join(config.getConfigPath(), from);
+                const destinationPath = path.join(sourceGenFolder, to);
+                console.log(`Copying file from ${sourcePath} to ${destinationPath}`);
+                fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
+                fs.copyFileSync(sourcePath, destinationPath);
+            }
+        }
+    }
 }

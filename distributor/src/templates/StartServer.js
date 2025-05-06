@@ -21,19 +21,19 @@ app.use(express.json());
 
 // HTTP GET functions
 ${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-get').map((f) => `
-    app.get('/${f.functionName}', ${f.isAsync ? "async " : ""} (req, res) => {
-        ${f.args.map(a => `const ${a} = req.query.${a};`).join("")}
-        const result = ${f.isAsync ? "await " : ""} ${f.functionName}(${f.args.join(", ")});
-        return res.json({ result });
+    app.get('/${f.functionName}', ${f.isAsync ? "async " : ""} (requestParameter, responseParameter) => {
+        ${f.args.map(a => `const ${a} = requestParameter.query.${a};`).join("")}
+        const executionResult = ${f.isAsync ? "await " : ""} ${f.functionName}(${f.args.join(", ")});
+        return responseParameter.json({ executionResult });
     });
 `).join("")}
 
 // HTTP POST functions
 ${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-post').map((f) => `
-    app.post('/${f.functionName}', ${f.isAsync ? "async " : ""} (req, res) => {
-        ${f.args.map(a => `const ${a} = req.body.${a};`).join("")}
-        const result = ${f.isAsync ? "await " : ""} ${f.functionName}(${f.args.join(", ")});
-        return res.json({ result });
+    app.post('/${f.functionName}', ${f.isAsync ? "async " : ""} (requestParameter, responseParameter) => {
+        ${f.args.map(a => `const ${a} = requestParameter.body.${a};`).join("")}
+        const executionResult = ${f.isAsync ? "await " : ""} ${f.functionName}(${f.args.join(", ")});
+        return responseParameter.json({ executionResult });
     });
 `).join("")}
 
@@ -44,12 +44,40 @@ app.listen(port, () => {
 
 ${config.hasRabbitFunctions(serverInfo) ? `
 async function waitForCalls() {
-    const connection = await amqp.connect("amqp://${config.getRabbitConfig().url}:${config.getRabbitConfig().port}");
-    console.log("Waiting for calls via RabbitMQ on port ${config.getRabbitConfig().port}");
-    const channel = await connection.createChannel();
+    try {
+        const rabbitConnectionURL = "amqp://${config.getRabbitConfig().url}:${config.getRabbitConfig().port}";
+        const connection = await tryToConnectToRabbit(rabbitConnectionURL, ${config.getRabbitConfig().numConnectionAttempts}, ${config.getRabbitConfig().timeBetweenAttempts});
+        console.log("Waiting for calls via RabbitMQ on port ${config.getRabbitConfig().port}");
+        const channel = await connection.createChannel();
 
-    // RabbitMQ consumers
-    ${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'rabbit').map(rabbitMQTemplates.generateWaitForCalls).join("")}
+        // RabbitMQ consumers
+        ${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'rabbit').map(rabbitMQTemplates.generateWaitForCalls).join("")}
+    } catch(error) {
+        console.log("Could not connect to RabbitMQ");
+    }
+}
+
+async function tryToConnectToRabbit(rabbitConnectionURL, numConnectionAttempts, timeBetweenAttempts) {
+    const maxRetries = numConnectionAttempts;
+    let attempts = 0;
+
+    while (attempts < maxRetries) {
+        try {
+            const connection = await amqp.connect(rabbitConnectionURL);
+            console.log("Connection with RabbitMQ established");
+            return connection;
+        } catch(error) {
+            attempts++;
+            console.log("Error connecting to Rabbit service at "+rabbitConnectionURL);
+            if (attempts < maxRetries) {
+                console.log('Retrying in ' + timeBetweenAttempts + ' seconds...');
+                await new Promise(resolve => setTimeout(resolve, timeBetweenAttempts * 1000));
+            } else {
+                console.log('Max retries reached. Could not connect to Rabbit service.');
+                throw error;
+            }
+        }
+    }
 }
 
 waitForCalls();

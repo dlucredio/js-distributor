@@ -17,16 +17,14 @@ class ConfigSingleton {
         const yamlContent = yaml.load(fs.readFileSync(this.yamlPath, 'utf8'));
 
         // Basic validation
+
+        // Let's resolve the folders relative to the path of the config file
+        yamlContent.codeGenerationParameters.inputFolder = path.resolve(path.join(getConfigPath(), yamlContent.codeGenerationParameters.inputFolder));
+        yamlContent.codeGenerationParameters.outputFolder = path.resolve(path.join(getConfigPath(), yamlContent.codeGenerationParameters.outputFolder));
         // inputFolder exists? If not, raise error
         if (!fs.existsSync(yamlContent.codeGenerationParameters.inputFolder) || !fs.lstatSync(yamlContent.codeGenerationParameters.inputFolder).isDirectory()) {
             throw new ConfigError(`Error: inputFolder "${yamlContent.codeGenerationParameters.inputFolder}" does not exist or is not a directory`);
-        } else {
-            // If exists, let's adjust it so that it resolves relative to current folder
-            yamlContent.codeGenerationParameters.inputFolder = path.resolve(path.join(".", yamlContent.codeGenerationParameters.inputFolder));
-        }
-
-        // Let's also resolve the outputFolder relative to current folder
-        yamlContent.codeGenerationParameters.outputFolder = path.resolve(path.join(".", yamlContent.codeGenerationParameters.outputFolder));
+        } 
 
         if(!yamlContent.codeGenerationParameters.mode) {
             yamlContent.codeGenerationParameters.mode = "single";
@@ -41,6 +39,27 @@ class ConfigSingleton {
         if(!Array.isArray(yamlContent.codeGenerationParameters.ignore)) {
             throw new ConfigError(`Error: config.yml property "codeGenerationParameters.ignore should be a list`);
         }
+
+        if(!yamlContent.rabbitParameters) {
+            yamlContent.rabbitParameters = {}
+        }
+
+        if(!yamlContent.rabbitParameters.url) {
+            yamlContent.rabbitParameters.url = "localhost";
+        }
+
+        if(!yamlContent.rabbitParameters.port) {
+            yamlContent.rabbitParameters.port = 5672;
+        }
+
+        if(!yamlContent.rabbitParameters.numConnectionAttempts) {
+            yamlContent.rabbitParameters.numConnectionAttempts = 5;
+        }
+
+        if(!yamlContent.rabbitParameters.timeBetweenAttempts) {
+            yamlContent.rabbitParameters.timeBetweenAttempts = 10;
+        }
+
 
         // Let's add the defaults and do some validation/preparation
         // - Lowercase function methods
@@ -82,9 +101,6 @@ class ConfigSingleton {
                         callbackQueue: null
                     }
                 }
-                if(!functionInfo.rabbitConfig.queue) {
-                    functionInfo.rabbitConfig.queue = functionInfo.declarationPattern + "_queue"
-                }
                 if(!functionInfo.rabbitConfig.exchangeType) {
                     functionInfo.rabbitConfig.exchangeType = "fanout"
                 }
@@ -112,6 +128,13 @@ export class ConfigError extends Error {
     constructor(message) {
         super(message);
     }
+}
+
+function getConfigPath() {
+    if(!instance) {
+        throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
+    }
+    return path.dirname(instance.yamlPath);
 }
 
 function getCodeGenerationParameters() {
@@ -234,7 +257,7 @@ function getRabbitConfig() {
     if (!instance) {
         throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
     }
-    return instance.getYamlContent().default.rabbit;
+    return instance.getYamlContent().rabbitParameters;
 }
 
 function hasHttpFunctions(serverInfo) {
@@ -252,5 +275,5 @@ function hasRabbitFunctions(serverInfo) {
 
 
 export default {
-    init, getCodeGenerationParameters, getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, hasHttpFunctions, hasRabbitFunctions
+    init, getConfigPath, getCodeGenerationParameters, getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, hasHttpFunctions, hasRabbitFunctions
 }

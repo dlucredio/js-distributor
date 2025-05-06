@@ -2,7 +2,7 @@ import config from "../config/Configuration.js";
 
 function importStatements() {
     return [
-        "import { v4 as uuidv4 } from 'uuid';",
+        "import { v4 as uuidv4_js_dist } from 'uuid';",
         "import amqp from 'amqplib';"
     ];
 }
@@ -27,7 +27,7 @@ function generateWaitForCalls(f) {
         ` : `
             // This function does not have an exchange, let's use the queue directly
 
-            const ${f.functionName}_queueName = "${f.functionInfo.rabbitConfig.queue}";
+            const ${f.functionName}_queueName = "${f.functionInfo.rabbitConfig.queue ? f.functionInfo.rabbitConfig.queue : f.functionName+"_queue"}";
             await channel.assertQueue(${f.functionName}_queueName, { durable: false });
             channel.consume(
                 ${f.functionName}_queueName,
@@ -100,14 +100,15 @@ function rabbitProducerCode(functionName, functionInfo, args) {
                     await channel.bindQueue(q.queue, ${functionName}_exchange, '${functionInfo.rabbitConfig.callbackQueue}');
                 ` : ``}
             ` : `
-                const queueName = "${functionInfo.rabbitConfig.queue}";
+                const queueName = "${functionInfo.rabbitConfig.queue ? functionInfo.rabbitConfig.queue : functionName+"_queue"}";
+
                 console.log("Declaring queue: " + queueName);
                 ${functionInfo.rabbitConfig.callbackQueue !== 'anonymous' ? `
                     const callbackQueue = "${functionInfo.rabbitConfig.callbackQueue}";
                     await channel.assertQueue(callbackQueue, { durable: false });
                 ` : ``}
             `}
-            const correlationId = uuidv4();
+            const correlationId = uuidv4_js_dist();
             const callObj = {
                 funcName: "${functionName}",
                 parameters: {
@@ -135,7 +136,7 @@ function rabbitProducerCode(functionName, functionInfo, args) {
             ${hasExchange ? `
                 channel.publish(${functionName}_exchange, '${functionInfo.rabbitConfig.routingKey}', Buffer.from(JSON.stringify(callObj))
             ` : `
-                console.log("Sending message to queue: ${functionInfo.rabbitConfig.queue}");
+                console.log("Sending message to queue: ${functionInfo.rabbitConfig.queue ? functionInfo.rabbitConfig.queue : functionName+"_queue"}");
                 channel.sendToQueue(queueName, Buffer.from(JSON.stringify(callObj))
             `}
             , {
