@@ -2,11 +2,7 @@ codeGenerationParameters:
   mode: single                    # single | watch
   inputFolder: '../monolith'              # monolith folder
   outputFolder: '../distributed'  # distributed folder
-<<<<<<<< HEAD:examples/simple-monolith/distributed-utils/config.yml
   cleanOutput: true               # delete output folder before?
-========
-  cleanOutput: false               # delete output folder before?
->>>>>>>> 6041d6a (chore: distributor new system setup for testing.):examples/helloworld/distributed-utils/config.yml
   generateProjects: false          # generate new npm projects?
   generateDocker: true            # generate docker files for each server?
   ignore:                         # ignore the following folders
