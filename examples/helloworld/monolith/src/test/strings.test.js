@@ -1,4 +1,4 @@
-import { toLowerCase, toUpperCase, split, join } from '../src/util/strings.js';
+import { toLowerCase, toUpperCase, split, join } from '../util/strings.js';
 
 // examples/helloworld/monolith/src/util/strings.test.js
 describe('toLowerCase', () => {
