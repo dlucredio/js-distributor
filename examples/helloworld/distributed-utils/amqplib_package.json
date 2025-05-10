@@ -1,0 +1,22 @@
+{
+  "name": "helloworld",
+  "version": "1.0.0",
+  "main": "start.js",
+  "type": "module",
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "start" : "node start.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "amqplib": "^0.10.7",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

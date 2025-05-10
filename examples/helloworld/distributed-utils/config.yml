@@ -2,7 +2,7 @@ codeGenerationParameters:
   mode: single                    # single | watch
   inputFolder: '../monolith'              # monolith folder
   outputFolder: '../distributed'  # distributed folder
-  cleanOutput: false               # delete output folder before?
+  cleanOutput: true               # delete output folder before?
   generateProjects: false          # generate new npm projects?
   generateDocker: true            # generate docker files for each server?
   ignore:                         # ignore the following folders
@@ -18,6 +18,9 @@ servers:
     http:
       url: localhost
       port: 3000
+    copyFiles:
+      - from: amqplib_package.json    # relative to current path
+        to: package.json  
     functions:
       - declarationPattern: 'saveProduct'
         method: rabbit
@@ -27,6 +30,9 @@ servers:
     http:
       url: localhost
       port: 3001
+    copyFiles:
+      - from: amqplib_package.json    # relative to current path
+        to: package.json  
     functions:
     - declarationPattern: split
       callPatterns:
@@ -35,6 +41,9 @@ servers:
     - declarationPattern: log
       method: rabbit
   - id: gamma
+    copyFiles:
+      - from: amqplib_package.json    # relative to current path
+        to: package.json  
     http:
       url: localhost
       port: 3002
