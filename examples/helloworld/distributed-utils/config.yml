@@ -23,9 +23,9 @@ servers:
         to: package.json  
     functions:
       - declarationPattern: 'saveProduct'
-        method: rabbit
+        method: http-get
       - declarationPattern: 'saveCustomer'
-        method: rabbit
+        method: http-get
   - id: beta
     http:
       url: localhost
@@ -37,9 +37,10 @@ servers:
     - declarationPattern: split
       callPatterns:
         - 'strUtils.split'
-      method: rabbit
+        - 'split'
+      method: http-get
     - declarationPattern: log
-      method: rabbit
+      method: http-get
   - id: gamma
     copyFiles:
       - from: amqplib_package.json    # relative to current path
@@ -49,6 +50,6 @@ servers:
       port: 3002
     functions:
     - declarationPattern: join
-      method: rabbit
+      method: http-get
     - declarationPattern: main
       method: http-get

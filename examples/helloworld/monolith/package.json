@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "jest",
-    "generate": "js-distributor-scripts"
+    "generate": "js-distributor-scripts -c ../distributed-utils/config.yml"
   },
   "author": "",
   "license": "ISC",
