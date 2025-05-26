@@ -4,7 +4,7 @@
   "main": "start.js",
   "type": "module",
   "scripts": {
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "jest",
     "start" : "node start.js"
   },
   "author": "",
