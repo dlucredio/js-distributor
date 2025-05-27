@@ -96,11 +96,18 @@ async function process() {
     // find all places where they are called and add an await
     fixAsyncFunctions(serverStructures, allRemoteFunctions);
 
+    // Now we need to generate the code to start the servers
+    generateStartCode(serverStructures, allExposedFunctions);
+    
+    if(config.isTestServer()) {
+        generateStartCodeTest(serverStructures, allExposedFunctions);
+    }
     // Now let's generate the final code: one folder for each server
     generateCode(serverStructures);
 
     // Finally, we copy the non-source code files
     copyOtherFiles(serverStructures);
+
 
     // Finally, we initialize the NPM projects (if the user requested it)
     if (generateProjects) {
@@ -140,6 +147,10 @@ function parseCode(asts, otherFiles, inputDir) {
         } else if (itemPath.slice(-2) === "js") {
             // if item is an input file, let's parse it
             // Let's parse the file
+            if(relativePath.includes("\\test\\") && !config.isTestServer()) {
+                config.setTestServer(true);
+                console.log(`Skipping test file ${relativePath}`);
+            }
             const input = fs.readFileSync(itemPath, { encoding: "utf8" });
 
             const ast = babelParser.parse(input, {
@@ -294,5 +305,23 @@ function copyAdditionalFiles(serverStructures) {
                 fs.copyFileSync(sourcePath, destinationPath);
             }
         }
+    }
+}
+
+function generateStartCodeTest(serverStructures, allExposedFunctions) {
+    for (const { serverInfo, asts } of serverStructures) {
+        console.log(`Generating start code for test server ${serverInfo.id}`);
+        const allExposedFunctionsInServer = allExposedFunctions.filter(
+            (rf) => rf.serverInfo.id === serverInfo.id
+        );
+        const newCode = startTestServerTemplate(
+            serverInfo,
+            allExposedFunctionsInServer
+        );
+        const newTree = ast.generateCompleteTree(newCode);
+        asts.push({
+            relativePath: "start_test_server.js",
+            tree: newTree,
+        });
     }
 }

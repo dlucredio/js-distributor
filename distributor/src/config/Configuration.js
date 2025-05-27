@@ -11,8 +11,8 @@ let instance = null;
 class ConfigSingleton {
     constructor(configFile) {
         this.yamlPath = path.resolve(configFile);
+        this.testPresent = false;
     }
-
     getYamlContent() {
         const yamlContent = yaml.load(fs.readFileSync(this.yamlPath, 'utf8'));
 
@@ -273,7 +273,19 @@ function hasRabbitFunctions(serverInfo) {
     );
 }
 
+function setTestServer(bool){
+    if (!instance) {
+        throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
+    }
+    instance.testPresent = bool;
+}
+
+function isTestServer(){
+    return instance.testPresent;
+}
+
+
 
 export default {
-    init, getConfigPath, getCodeGenerationParameters, getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, hasHttpFunctions, hasRabbitFunctions
+    init, getConfigPath, getCodeGenerationParameters, getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, hasHttpFunctions, hasRabbitFunctions, setTestServer, isTestServer
 }
