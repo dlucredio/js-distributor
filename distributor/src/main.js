@@ -15,7 +15,7 @@ import JavaScriptGeneratorVisitor from "./visitors/JavaScriptGeneratorVisitor.js
 import { ReplaceRemoteFunctionsVisitor } from "./visitors/ReplaceRemoteFunctionsVisitor.js";
 import { FixAsyncFunctionsVisitor } from "./visitors/FixAsyncFunctionsVisitor.js";
 import { PrepareTreeVisitor } from "./visitors/PrepareTreeVisitor.js";
-import { startServerTemplate } from "./templates/StartServer.js";
+import { startServerTemplate, startTestServerTemplate } from "./templates/StartServer.js";
 import ast from "./transformations/ASTModifications.js";
 import npmHelper from "./helpers/NpmHelper.js";
 import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
@@ -97,12 +97,16 @@ async function process() {
 
     // Now we need to generate the code to start the servers
     generateStartCode(serverStructures, allExposedFunctions);
-
+    
+    if(config.isTestServer()) {
+        generateStartCodeTest(serverStructures, allExposedFunctions);
+    }
     // Now let's generate the final code: one folder for each server
     generateCode(serverStructures);
 
     // Finally, we copy the non-source code files
     copyOtherFiles(serverStructures);
+
 
     // Finally, we initialize the NPM projects (if the user requested it)
     if (generateProjects) {
@@ -142,6 +146,10 @@ function parseCode(asts, otherFiles, inputDir) {
         } else if (itemPath.slice(-2) === "js") {
             // if item is an input file, let's parse it
             // Let's parse the file
+            if(relativePath.includes("\\test\\") && !config.isTestServer()) {
+                config.setTestServer(true);
+                console.log(`Skipping test file ${relativePath}`);
+            }
             const input = fs.readFileSync(itemPath, { encoding: "utf8" });
             const chars = new antlr4.InputStream(input);
             const lexer = new JavaScriptLexer(chars);
@@ -218,6 +226,7 @@ function generateStartCode(serverStructures, allExposedFunctions) {
             allExposedFunctionsInServer
         );
         const newTree = ast.generateCompleteTree(newCode);
+        //check if there is a local test. 
         asts.push({
             relativePath: "start.js",
             tree: newTree,
@@ -299,5 +308,23 @@ function copyAdditionalFiles(serverStructures) {
                 fs.copyFileSync(sourcePath, destinationPath);
             }
         }
+    }
+}
+
+function generateStartCodeTest(serverStructures, allExposedFunctions) {
+    for (const { serverInfo, asts } of serverStructures) {
+        console.log(`Generating start code for test server ${serverInfo.id}`);
+        const allExposedFunctionsInServer = allExposedFunctions.filter(
+            (rf) => rf.serverInfo.id === serverInfo.id
+        );
+        const newCode = startTestServerTemplate(
+            serverInfo,
+            allExposedFunctionsInServer
+        );
+        const newTree = ast.generateCompleteTree(newCode);
+        asts.push({
+            relativePath: "start_test_server.js",
+            tree: newTree,
+        });
     }
 }
