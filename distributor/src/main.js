@@ -147,7 +147,7 @@ function parseCode(asts, otherFiles, inputDir) {
         } else if (itemPath.slice(-2) === "js") {
             // if item is an input file, let's parse it
             // Let's parse the file
-            if(relativePath.includes("\\test\\") && !config.isTestServer()) {
+            if(relativePath.includes("test") && !config.isTestServer()) {
                 config.setTestServer(true);
                 console.log(`Skipping test file ${relativePath}`);
             }
