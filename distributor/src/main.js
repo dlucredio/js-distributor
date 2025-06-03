@@ -342,7 +342,6 @@ function generateApiTestCode(serverStructures, allExposedFunctions){
                     //Se for um test
                         // usar a arvore do arquivo para buscar por funções expostas localmente
                             //para os testes expostos localmente, copiar o codigo de teste e trocar a chamada do metodo.
-
     for (const { serverInfo, asts } of serverStructures) {
         for (const { relativePath, tree } of asts) {
             if(relativePath.includes(".test.")) {
@@ -350,6 +349,9 @@ function generateApiTestCode(serverStructures, allExposedFunctions){
                 const exposedFunctions = allExposedFunctions.filter(
                     (ef) => ef.serverInfo.id === serverInfo.id
                 );
+
+                const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, tree);
+                testRouteVisitor.replaceTestApiCall();
                 console.log(`Exposed functions for server ${serverInfo.id}:`, exposedFunctions);
             }
         }
