@@ -14,6 +14,7 @@ import { writeJavaScriptFile } from "./helpers/GeneratorHelpers.js";
 import JavaScriptGeneratorVisitor from "./visitors/JavaScriptGeneratorVisitor.js";
 import { ReplaceRemoteFunctionsVisitor } from "./visitors/ReplaceRemoteFunctionsVisitor.js";
 import { FixAsyncFunctionsVisitor } from "./visitors/FixAsyncFunctionsVisitor.js";
+import { TestRouteVisitor } from "./visitors/TestRouteVisitor.js";
 import { PrepareTreeVisitor } from "./visitors/PrepareTreeVisitor.js";
 import { startServerTemplate, startTestServerTemplate } from "./templates/StartServer.js";
 import ast from "./transformations/ASTModifications.js";
@@ -227,7 +228,6 @@ function generateStartCode(serverStructures, allExposedFunctions) {
             allExposedFunctionsInServer
         );
         const newTree = ast.generateCompleteTree(newCode);
-        //check if there is a local test. 
         asts.push({
             relativePath: "start.js",
             tree: newTree,
@@ -345,7 +345,6 @@ function generateApiTestCode(serverStructures, allExposedFunctions){
                     //Se for um test
                         // usar a arvore do arquivo para buscar por funções expostas localmente
                             //para os testes expostos localmente, copiar o codigo de teste e trocar a chamada do metodo.
-
     for (const { serverInfo, asts } of serverStructures) {
         for (const { relativePath, tree } of asts) {
             if(relativePath.includes(".test.")) {
@@ -353,6 +352,9 @@ function generateApiTestCode(serverStructures, allExposedFunctions){
                 const exposedFunctions = allExposedFunctions.filter(
                     (ef) => ef.serverInfo.id === serverInfo.id
                 );
+
+                const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, tree);
+                testRouteVisitor.replaceTestApiCall();
                 console.log(`Exposed functions for server ${serverInfo.id}:`, exposedFunctions);
             }
         }
