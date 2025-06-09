@@ -345,14 +345,12 @@ function generateApiTestCode(serverStructures, allExposedFunctions){
     for (const { serverInfo, asts } of serverStructures) {
         for (const { relativePath, tree } of asts) {
             if(relativePath.includes(".test.")) {
-                console.log(`Generating API test code for server ${serverInfo.id} in file ${relativePath}`);
                 const exposedFunctions = allExposedFunctions.filter(
                     (ef) => ef.serverInfo.id === serverInfo.id
                 );
 
                 const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, tree);
                 testRouteVisitor.replaceTestApiCall();
-                console.log(`Exposed functions for server ${serverInfo.id}:`, exposedFunctions);
             }
         }
     }
