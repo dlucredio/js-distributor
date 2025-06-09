@@ -19,15 +19,14 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
         return this.tree;
     }
 
-   
-
-    visitArrowFunctionBody(ctx) {
-        super.visitArrowFunctionBody(ctx);
+    visitArgumentsExpression(ctx) {
+        // Your logic here
+        
+        if(this.serverInfo.functions.some(obj => ctx.getText().includes(obj.declarationPattern))){
+            console.log(ctx.getText());// replace this call
+        }
+        super.visitArgumentsExpression(ctx);
     }
 
-    visitFunctionBody(ctx){
-        //console.log(ctx.getText())
-        super.visitFunctionBody(ctx);
-    }
 
 }
