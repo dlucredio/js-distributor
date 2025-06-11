@@ -82,8 +82,10 @@ async function process() {
 
         const ASTs = [];
         const otherFiles = [];
+        const ASTs_copy = [];
         console.log(`======= Processing server ${s.id} ========`);
         parseCode(ASTs, otherFiles, inputDir);
+        parseCode(ASTs_copy, otherFiles, inputDir);
         serverStructures.push({
             serverInfo: s,
             asts: ASTs,
@@ -91,7 +93,7 @@ async function process() {
         });
         serverStructures.push({
             serverInfo: s_copy,
-            asts: ASTs,
+            asts: ASTs_copy,
             otherFiles: otherFiles
         });
     }
@@ -156,10 +158,6 @@ function parseCode(asts, otherFiles, inputDir) {
         } else if (itemPath.slice(-2) === "js") {
             // if item is an input file, let's parse it
             // Let's parse the file
-            if(relativePath.includes("test") && !config.isTestServer()) {
-                config.setTestServer(true);
-                console.log(`Skipping test file ${relativePath}`);
-            }
             const input = fs.readFileSync(itemPath, { encoding: "utf8" });
             const chars = new antlr4.InputStream(input);
             const lexer = new JavaScriptLexer(chars);
@@ -229,9 +227,12 @@ function generateStartCode(serverStructures, allExposedFunctions) {
     for (const { serverInfo, asts } of serverStructures) {
         console.log(`Generating start code for server ${serverInfo.id}`);
         const allExposedFunctionsInServer = allExposedFunctions.filter(
-            (rf) => rf.serverInfo.id === serverInfo.id
+            (rf) => rf.serverInfo.id === serverInfo.id.replace("-test-server", "")
         );
-        const newCode = startServerTemplate(
+        const newCode = serverInfo.id.includes("test-server") ?  startTestServerTemplate(
+            serverInfo,
+            allExposedFunctionsInServer
+        ) : startServerTemplate(
             serverInfo,
             allExposedFunctionsInServer
         );
