@@ -74,12 +74,20 @@ async function process() {
     const serverStructures = [];
     const servers = config.getServers();
     for (const s of servers) {
+        let s_copy = JSON.parse(JSON.stringify(s));
+        s_copy.id = s.id + "-test-server";
+
         const ASTs = [];
         const otherFiles = [];
         console.log(`======= Processing server ${s.id} ========`);
         parseCode(ASTs, otherFiles, inputDir);
         serverStructures.push({
             serverInfo: s,
+            asts: ASTs,
+            otherFiles: otherFiles
+        });
+        serverStructures.push({
+            serverInfo: s_copy,
             asts: ASTs,
             otherFiles: otherFiles
         });
