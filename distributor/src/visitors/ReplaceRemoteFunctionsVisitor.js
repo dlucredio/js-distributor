@@ -125,7 +125,7 @@ export class ReplaceRemoteFunctionsVisitor {
     isInThisServer(functionName) {
         const server = config.getServerInfo(functionName);
         if (!server) { return true; } // Functions not defined in config.yml are replicated to every server
-        return server.id === this.serverInfo.id;
+        return server.id === this.serverInfo.id.replace("-test-server",""); // Functions defined in config.yml are replicated to its respective test server
     }
 
     replaceFunctionBody(path, rawJsCode) {

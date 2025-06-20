@@ -76,13 +76,13 @@ async function process() {
     for (const s of servers) {
         let s_copy = JSON.parse(JSON.stringify(s));
         s_copy.id = s.id + "-test-server";
-
         const ASTs = [];
         const otherFiles = [];
+        const testOtherFiles = [];
         const ASTs_copy = [];
         console.log(`======= Processing server ${s.id} ========`);
         parseCode(ASTs, otherFiles, inputDir);
-        parseCode(ASTs_copy, otherFiles, inputDir);
+        parseCode(ASTs_copy, testOtherFiles, inputDir);
         serverStructures.push({
             serverInfo: s,
             asts: ASTs,
@@ -91,7 +91,7 @@ async function process() {
         serverStructures.push({
             serverInfo: s_copy,
             asts: ASTs_copy,
-            otherFiles: otherFiles
+            otherFiles: testOtherFiles
         });
     }
 
@@ -224,9 +224,7 @@ function fixAsyncFunctions(serverStructures, babelAllRemoteFunctions) {
 function generateStartCode(serverStructures, allExposedFunctions) {
     for (const { serverInfo, asts } of serverStructures) {
         console.log(`Generating start code for server ${serverInfo.id}`);
-        const allExposedFunctionsInServer = allExposedFunctions.filter(
-            (rf) => rf.serverInfo.id === serverInfo.id.replace("-test-server", "")
-        );
+        const allExposedFunctionsInServer = getServerFunctions(allExposedFunctions, serverInfo);
         const newCode = serverInfo.id.includes("test-server") ?  startTestServerTemplate(
             serverInfo,
             allExposedFunctionsInServer
@@ -273,9 +271,7 @@ function copyOtherFiles(serverStructures) {
 async function initializeProjects(serverStructures, allRemoteFunctions) {
     for (const { serverInfo } of serverStructures) {
         const serverFolder = path.join(config.getCodeGenerationParameters().outputFolder, serverInfo.id);
-        const remoteFunctionsInServer = allRemoteFunctions.filter(
-            (rf) => rf.serverInfo.id === serverInfo.id
-        );
+        const remoteFunctionsInServer = getServerFunctions(allRemoteFunctions, serverInfo);
         await npmHelper.initNodeProject(
             serverFolder,
             serverInfo,
@@ -363,4 +359,10 @@ function generateApiTestCode(serverStructures, allExposedFunctions){
             }
         }
     }
+}
+
+function getServerFunctions(allFunctions, serverInfo){
+    return allFunctions.filter(
+            (rf) => rf.serverInfo.id === serverInfo.id
+    );
 }
