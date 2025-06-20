@@ -77,7 +77,7 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
                 const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
                 ast.replaceFunctionBody(ctx, newBody);
                 this.consumesRabbitFunctions = true;
-            }
+            }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)
 
             // Since all remote code uses await, we must make the function async
             ast.addAsyncIfNecessary(ctx);
