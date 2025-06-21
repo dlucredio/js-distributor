@@ -39,6 +39,7 @@ servers:
         - 'strUtils.split'
         - 'split'
       method: http-get
+      mockResponse: '["hello", "world"]'
     - declarationPattern: log
       method: http-get
   - id: gamma
