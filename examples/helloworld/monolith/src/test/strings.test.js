@@ -39,3 +39,12 @@ describe('Use Database',  () => {
     });
 
 })
+
+describe('String Functions', () => {
+    test('split should split a string by a given separator', () => {
+        const str = "hello,world";
+        const separator = ",";
+        const result = split(str, separator);
+        expect(result).toEqual(["hello", "world"]);
+    });
+})
