@@ -66,6 +66,11 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
             const serverInfo = config.getServerInfo(functionName);
             const functionInfo = config.getFunctionInfo(serverInfo, functionName);
 
+            if(this.serverInfo.id.endsWith("-test-server") && functionInfo.mockResponse && functionInfo.method === "http-get" ) {
+                    const newBody = httpAPITemplates.httpMockedFuntions(functionName, functionInfo.mockResponse, args);
+                    ast.replaceFunctionBody(ctx, newBody);
+                    return; 
+            }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)
             // Let's call the templates to fill with the proper remote bodies
             if (functionInfo.method === "http-get") {
                 const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
@@ -77,7 +82,7 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
                 const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
                 ast.replaceFunctionBody(ctx, newBody);
                 this.consumesRabbitFunctions = true;
-            }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)
+            }
 
             // Since all remote code uses await, we must make the function async
             ast.addAsyncIfNecessary(ctx);
