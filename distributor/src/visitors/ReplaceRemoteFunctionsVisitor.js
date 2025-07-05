@@ -130,6 +130,7 @@ export class ReplaceRemoteFunctionsVisitor {
     isInThisServer(functionName) {
         const server = config.getServerInfo(functionName);
         if (!server) { return true; } // Functions not defined in config.yml are replicated to every server
+        // check if the monolith has the same function but as a mock.
         return server.id === this.serverInfo.id.replace("-test-server",""); // Functions defined in config.yml are replicated to its respective test server
     }
 
