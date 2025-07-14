@@ -62,7 +62,7 @@ Federal University of São Carlos – UFSCar
 
 ## Contributing
 
-Contributions are welcome! If you have suggestions, improvements, or bug reports, feel free to open an issue or submit a pull request.
+Contributions are welcome! If you have suggestions, improvements, or bug reports, feel free to open an issue or submit a pull request. Check out the [internal documentation](distributor/README.md) for more details. 
 
 ## Acknowledgements
 
