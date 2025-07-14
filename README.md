@@ -2,7 +2,9 @@
 
 JS-Distributor is a research-driven tool that facilitates the transformation of monolithic JavaScript applications into microservices. It bridges the gap between architectural decomposition and actual deployment by automatically generating boilerplate code for distributed systems using Node.js.
 
-## Demo
+## Paper and demo
+
+Paper is available [here](paper/Artigo_SBES_Ferramentas_2025.pdf)
 
 Video at: https://doi.org/10.5281/zenodo.15477214
 
