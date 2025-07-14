@@ -1,0 +1,11 @@
+GET http://localhost:3000/getMessage?greeting=Alo&person=Fulano
+
+###
+
+POST http://localhost:3000/getMessage
+Content-Type: application/json
+
+{
+    "greeting": "Alo",
+    "person": "Fulano"
+}

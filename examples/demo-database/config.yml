@@ -1,0 +1,23 @@
+codeGenerationParameters:
+  inputFolder: './monolith'
+  outputFolder: './distributed'
+  ignore:
+    - "node_modules"
+    - ".git"
+servers:
+  - id: alpha
+    http:
+      url: localhost
+      port: 3000
+    functions:
+      - declarationPattern: generateId
+        method: http-get
+      - declarationPattern: createUser
+        method: http-post
+  - id: beta
+    http:
+      url: localhost
+      port: 3001
+    functions:
+      - declarationPattern: main
+        method: http-get
