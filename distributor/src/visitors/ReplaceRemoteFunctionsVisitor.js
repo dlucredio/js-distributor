@@ -66,8 +66,9 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
             const serverInfo = config.getServerInfo(functionName);
             const functionInfo = config.getFunctionInfo(serverInfo, functionName);
 
-            if(this.serverInfo.id.endsWith("-test-server") && functionInfo.mockResponse && functionInfo.method === "http-get" ) {
+            if(this.serverInfo.id.endsWith("-test-server")) {
                     const newBody = httpAPITemplates.httpMockedFuntions(functionName, functionInfo.mockResponse, args);
+                    // TODO:  how to check if mock_functionName() really exists on monolith ?
                     ast.replaceFunctionBody(ctx, newBody);
                     return; 
             }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)

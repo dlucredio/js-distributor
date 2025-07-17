@@ -50,6 +50,7 @@ export function split(str, separator = ",") {
 
 // 4. Joins an array into a string with a specified separator (default is comma)
 export function join(arr, separator = ',') {
+    split(arr, separator)
     console.log("join(" + arr + "," + separator + ")");
     let result = '';
 
@@ -60,4 +61,9 @@ export function join(arr, separator = ',') {
         }
     }
     return result;
+}
+
+function mock_split(arr, separator = ',') {
+    console.log("mock_split(" + arr + "," + separator + ")");
+    return arr.join(separator);
 }
