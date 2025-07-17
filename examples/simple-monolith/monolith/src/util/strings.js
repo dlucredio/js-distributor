@@ -68,3 +68,8 @@ export function join(arr, separator = ',') {
     }
     return result;
 }
+
+function mock_split(arr, separator = ',') {
+    console.log("mock_split(" + arr + "," + separator + ")");
+    return arr.join(separator);
+}

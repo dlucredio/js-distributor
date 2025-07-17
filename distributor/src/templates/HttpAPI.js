@@ -38,7 +38,7 @@ function httpMockedFuntions(functionName, mockResponse, args) {
     console.log("Mocking function: " + functionName);
     return `
     {
-        return ${mockResponse};
+        return mock_${functionName}(${args});
     }`;
 }
 export default {
