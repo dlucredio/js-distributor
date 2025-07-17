@@ -80,9 +80,11 @@ async function process() {
         const otherFiles = [];
         const testOtherFiles = [];
         const ASTs_copy = [];
+        const mockedFunctions = [];
+        const mockedFunctionsTest = [];
         console.log(`======= Processing server ${s.id} ========`);
-        parseCode(ASTs, otherFiles, inputDir);
-        parseCode(ASTs_copy, testOtherFiles, inputDir);
+        parseCode(ASTs, otherFiles, inputDir, mockedFunctions);
+        parseCode(ASTs_copy, testOtherFiles, inputDir, mockedFunctionsTest);
         serverStructures.push({
             serverInfo: s,
             asts: ASTs,
@@ -135,7 +137,7 @@ async function process() {
     console.log(`Done!`);
 }
 
-function parseCode(asts, otherFiles, inputDir) {
+function parseCode(asts, otherFiles, inputDir, mockedFunctions) {
     // First let's parse the original code for the project
     // and store it in a proper structure
     let items = fs.readdirSync(inputDir);
@@ -154,7 +156,7 @@ function parseCode(asts, otherFiles, inputDir) {
 
         // if item is a directory, recursive call is made
         if (fs.statSync(itemPath).isDirectory()) {
-            parseCode(asts, otherFiles, itemPath);
+            parseCode(asts, otherFiles, itemPath, mockedFunctions);
         } else if (itemPath.slice(-2) === "js") {
             // if item is an input file, let's parse it
             // Let's parse the file
