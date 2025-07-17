@@ -48,6 +48,12 @@ export function split(str, separator = ",") {
     return result;
 }
 
+export function mock_split(str, separator = ",") {
+    return str.split(separator);
+}
+
+
+
 // 4. Joins an array into a string with a specified separator (default is comma)
 export function join(arr, separator = ',') {
     split(arr, separator)
