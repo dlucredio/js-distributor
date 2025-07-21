@@ -7,6 +7,7 @@ import astHelpers from "../helpers/AstHelpers.js";
 export class PrepareTreeVisitor extends JavaScriptParserVisitor {
     constructor(){
         super();
+        this.mockPrefix = "mock_"
         this.mappedMockFunctions = new Array()
     }
 
@@ -29,8 +30,8 @@ export class PrepareTreeVisitor extends JavaScriptParserVisitor {
         const parentRuleIndex = ctx.parent.ruleIndex;
         if (functionDeclarationContextRuleIndex.includes(parentRuleIndex)) {
             const functionName = ctx.getText();
-            if(functionName.startsWith("mock") && !this.mappedMockFunctions.includes(functionName.replace("mock_",""))){
-                this.mappedMockFunctions.push(functionName.replace("mock_",""))
+            if(functionName.startsWith(this.mockPrefix) && !this.mappedMockFunctions.includes(functionName.replace(this.mockPrefix,""))){
+                this.mappedMockFunctions.push(functionName.replace(this.mockPrefix,""))
             }
         }
 
