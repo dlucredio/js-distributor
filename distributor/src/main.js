@@ -91,12 +91,14 @@ async function process() {
         serverStructures.push({
             serverInfo: s,
             asts: ASTs,
-            otherFiles: otherFiles
+            otherFiles: otherFiles,
+            mockedFunctions: mockedFunctions
         });
         serverStructures.push({
             serverInfo: s_copy,
             asts: ASTs_copy,
-            otherFiles: testOtherFiles
+            otherFiles: testOtherFiles, 
+            mockedFunctions: mockedFunctionsTest
         });
     }
 
@@ -191,11 +193,12 @@ function parseCode(asts, otherFiles, inputDir, mockedFunctions) {
 function replaceRemoteFunctions(serverStructures) {
     const allRemoteFunctions = [];
     const allExposedFunctions = [];
-    for (const { serverInfo, asts } of serverStructures) {
+    for (const { serverInfo, asts, mockedFunctions } of serverStructures) {
         for (const { relativePath, tree } of asts) {
             const replaceRemoteFunctionsVisitor = new ReplaceRemoteFunctionsVisitor(
                 serverInfo,
-                relativePath
+                relativePath,
+                mockedFunctions
             );
             replaceRemoteFunctionsVisitor.visitProgram(tree);
             allRemoteFunctions.push(

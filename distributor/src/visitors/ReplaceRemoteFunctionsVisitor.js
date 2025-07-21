@@ -8,10 +8,11 @@ import rabbitMQTemplates from '../templates/RabbitMQ.js';
 import ast from '../transformations/ASTModifications.js';
 
 export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
-    constructor(serverInfo, relativePath) {
+    constructor(serverInfo, relativePath, mockedFunctions) {
         super();
         this.serverInfo = serverInfo;
         this.relativePath = relativePath;
+        this.mockedFunctions = mockedFunctions;
         this.remoteFunctions = [];
         this.exposedFunctions = [];
         this.consumesRabbitFunctions = false;
@@ -56,6 +57,15 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
         return server.id === this.serverInfo.id.replace("-test-server",""); // Functions defined in config.yml are replicated to its respective test server
     }
 
+    hasMockedFunction(functionName){
+        for(const {relativePath, fileMockedFunctions} of this.mockedFunctions){
+            if(fileMockedFunctions.includes(functionName)){
+                return true;
+            }
+        }
+        return false
+    }
+
     visitFunctionDeclaration(ctx) {
         const functionName = ctx.identifier().getText();
         if (!this.isInThisServer(functionName)) {
@@ -67,7 +77,7 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
             const serverInfo = config.getServerInfo(functionName);
             const functionInfo = config.getFunctionInfo(serverInfo, functionName);
 
-            if(this.serverInfo.id.endsWith("-test-server")) {
+            if(this.serverInfo.id.endsWith("-test-server") && this.hasMockedFunction(functionName)) {
                     const newBody = httpAPITemplates.httpMockedFuntions(functionName, functionInfo.mockResponse, args);
                     // TODO:  how to check if mock_functionName() really exists on monolith ?
                     ast.replaceFunctionBody(ctx, newBody);

@@ -29,8 +29,8 @@ export class PrepareTreeVisitor extends JavaScriptParserVisitor {
         const parentRuleIndex = ctx.parent.ruleIndex;
         if (functionDeclarationContextRuleIndex.includes(parentRuleIndex)) {
             const functionName = ctx.getText();
-            if(functionName.startsWith("mock") && !this.mappedMockFunctions.includes(functionName)){
-                this.mappedMockFunctions.push(functionName)
+            if(functionName.startsWith("mock") && !this.mappedMockFunctions.includes(functionName.replace("mock_",""))){
+                this.mappedMockFunctions.push(functionName.replace("mock_",""))
             }
         }
 
