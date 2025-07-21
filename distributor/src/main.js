@@ -88,12 +88,14 @@ async function process() {
         serverStructures.push({
             serverInfo: s,
             asts: ASTs,
-            otherFiles: otherFiles
+            otherFiles: otherFiles,
+            mockedFunctions: mockedFunctions
         });
         serverStructures.push({
             serverInfo: s_copy,
             asts: ASTs_copy,
-            otherFiles: testOtherFiles
+            otherFiles: testOtherFiles, 
+            mockedFunctions: mockedFunctionsTest
         });
     }
 
@@ -186,7 +188,8 @@ function replaceRemoteFunctions(serverStructures) {
         for (const { relativePath, babelTree } of asts) {
             const replaceRemoteFunctionsVisitor = new ReplaceRemoteFunctionsVisitor(
                 serverInfo,
-                relativePath
+                relativePath,
+                mockedFunctions
             );
             replaceRemoteFunctionsVisitor.visitFunctionDeclarationWrapper(babelTree);
             allRemoteFunctions.push(
