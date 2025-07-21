@@ -13,9 +13,10 @@ import rabbitMQTemplates from '../templates/RabbitMQ.js';
 
 
 export class ReplaceRemoteFunctionsVisitor {
-    constructor(serverInfo, relativePath) {
+    constructor(serverInfo, relativePath, mockedFunctions) {
         this.serverInfo = serverInfo;
         this.relativePath = relativePath;
+        this.mockedFunctions = mockedFunctions;
         this.babelRemoteFunctions = [];
         this.babelExposedFunctions = [];
         this.consumesRabbitFunctions = false;
@@ -157,5 +158,14 @@ export class ReplaceRemoteFunctionsVisitor {
         path.node.async = true;
 
         path.get("body").replaceWith(t.blockStatement(newStatements));
+    }
+
+    hasMockedFunction(functionName){
+        for(const {relativePath, fileMockedFunctions} of this.mockedFunctions){
+            if(fileMockedFunctions.includes(functionName)){
+                return true;
+            }
+        }
+        return false
     }
 }

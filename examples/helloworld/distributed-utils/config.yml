@@ -38,8 +38,6 @@ servers:
       callPatterns:
         - 'strUtils.split'
         - 'split'
-        - 'strUtils.mock_split'
-        - 'mock_split'
       method: http-get
       mockResponse: '["hello", "world"]'
     - declarationPattern: log
