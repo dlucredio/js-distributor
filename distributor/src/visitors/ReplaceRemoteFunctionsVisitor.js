@@ -161,4 +161,26 @@ export class ReplaceRemoteFunctionsVisitor {
         }
         return false
     }
+    
+    shouldExpose(ctx){
+        // If functionInfo is null, this means this function is replicated to
+        // every server and does not need to be exposed. Otherwise we store it
+        // to expose
+        const functionName = ctx.identifier().getText();
+        const functionInfo = config.getFunctionInfo(this.serverInfo, functionName);
+        
+        if (functionInfo) {
+                const args = this.getArgs(ctx);
+
+                this.exposedFunctions.push({
+                    functionName: functionName,
+                    exportedName: functionName+"_localRef",
+                    functionInfo: functionInfo,
+                    serverInfo: this.serverInfo,
+                    relativePath: this.relativePath,
+                    args: args,
+                    isAsync: ctx.Async() ? true : false
+                });
+        }
+    }
 }
