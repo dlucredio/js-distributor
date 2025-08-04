@@ -81,6 +81,10 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
                     const newBody = httpAPITemplates.httpMockedFuntions(functionName, functionInfo.mockResponse, args);
                     ast.replaceFunctionBody(ctx, newBody);
                     return; 
+            }else if(this.serverInfo.id.endsWith("-test-server")){
+                // Its a test server and there is no mocked function, so just copy and check if should be exposed.
+                this.shouldExpose(ctx)
+                return
             }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)
             // Let's call the templates to fill with the proper remote bodies
             if (functionInfo.method === "http-get") {
@@ -107,24 +111,7 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
             });
         } else {
             // Not a remote function. Let's check if it must be expoed
-            const functionInfo = config.getFunctionInfo(this.serverInfo, functionName);
-
-            // If functionInfo is null, this means this function is replicated to
-            // every server and does not need to be exposed. Otherwise we store it
-            // to expose
-            if (functionInfo) {
-                const args = this.getArgs(ctx);
-
-                this.exposedFunctions.push({
-                    functionName: functionName,
-                    exportedName: functionName+"_localRef",
-                    functionInfo: functionInfo,
-                    serverInfo: this.serverInfo,
-                    relativePath: this.relativePath,
-                    args: args,
-                    isAsync: ctx.Async() ? true : false
-                });
-            }
+            this.shouldExpose(ctx)
         }
     }
 
@@ -139,5 +126,28 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
             }
         }
         return args;
+    }
+
+    
+    shouldExpose(ctx){
+        // If functionInfo is null, this means this function is replicated to
+        // every server and does not need to be exposed. Otherwise we store it
+        // to expose
+        const functionName = ctx.identifier().getText();
+        const functionInfo = config.getFunctionInfo(this.serverInfo, functionName);
+        
+        if (functionInfo) {
+                const args = this.getArgs(ctx);
+
+                this.exposedFunctions.push({
+                    functionName: functionName,
+                    exportedName: functionName+"_localRef",
+                    functionInfo: functionInfo,
+                    serverInfo: this.serverInfo,
+                    relativePath: this.relativePath,
+                    args: args,
+                    isAsync: ctx.Async() ? true : false
+                });
+        }
     }
 }
