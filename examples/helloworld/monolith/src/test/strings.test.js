@@ -1,7 +1,18 @@
 import { toLowerCase, toUpperCase, split, join } from '../util/strings.js';
 import { saveCustomer } from '../database/customer.js';
 import { saveProduct } from '../database/product.js';
-// examples/helloworld/monolith/src/util/strings.test.js
+
+
+describe('String Functions', () => {
+    test('split should split a string by a given separator', () => {
+        const str = "hello,world";
+        const separator = ",";
+        const result = split(str, separator);
+
+        expect(result).toEqual(["hello", "world"]);
+    });
+})
+
 describe('Use Database',  () => {
     test('Should return customer', async () => {
         const entryObject = {
@@ -40,11 +51,3 @@ describe('Use Database',  () => {
 
 })
 
-describe('String Functions', () => {
-    test('split should split a string by a given separator', () => {
-        const str = "hello,world";
-        const separator = ",";
-        const result = split(str, separator);
-        expect(result).toEqual(["hello", "world"]);
-    });
-})

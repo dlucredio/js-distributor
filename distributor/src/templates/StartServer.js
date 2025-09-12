@@ -54,6 +54,8 @@ import express from 'express';
 ${config.hasRabbitFunctions(serverInfo) ? `
 import amqp from 'amqplib';
 ` : ``}
+
+${`import request from 'supertest';`}
     
 ${exposedFunctionImports(functionsToBeExposedInServer)}
 
@@ -79,6 +81,16 @@ ${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-post'
         return responseParameter.json({ executionResult });
     });
 `).join("")}
+
+${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-get').map((f) => `
+    
+    export async function ${f.functionName}ApiTest(${f.args.map(a => `${a}`).join(",")}){
+        return JSON.parse((await request(app).get(\`/${f.functionName}${f.args.length > 0 ? '?': '' }${f.args.map(a => `${a}=\$\{${a}\}`).join("&")}\`)).
+        text).executionResult;
+    }
+    `).join("")
+}
+
 
 export default app;
 ` : ``}

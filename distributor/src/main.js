@@ -113,8 +113,8 @@ async function process() {
     // Now we need to generate the code to start the servers
     generateStartCode(serverStructures, allExposedFunctions);
     
-    if(config.isTestServer()) {
-        generateStartCodeTest(serverStructures, allExposedFunctions);
+    //Add config to control this generation
+    if(true || config.isTestServer()) {
         generateApiTestCode(serverStructures, allExposedFunctions);
     }
     // Now let's generate the final code: one folder for each server
@@ -319,24 +319,6 @@ function copyAdditionalFiles(serverStructures) {
     }
 }
 
-function generateStartCodeTest(serverStructures, allExposedFunctions) {
-    for (const { serverInfo, asts } of serverStructures) {
-        console.log(`Generating start code for test server ${serverInfo.id}`);
-        const allExposedFunctionsInServer = allExposedFunctions.filter(
-            (rf) => rf.serverInfo.id === serverInfo.id
-        );
-        const newCode = startTestServerTemplate(
-            serverInfo,
-            allExposedFunctionsInServer
-        );
-        const newTree = ast.generateCompleteTree(newCode);
-        asts.push({
-            relativePath: "start_test_server.js",
-            tree: newTree,
-        });
-    }
-}
-
 function generateApiTestCode(serverStructures, allExposedFunctions){
     /*serverStructures: [{
         serverInfo: s,
@@ -353,12 +335,11 @@ function generateApiTestCode(serverStructures, allExposedFunctions){
                         // usar a arvore do arquivo para buscar por funções expostas localmente
                             //para os testes expostos localmente, copiar o codigo de teste e trocar a chamada do metodo.
     for (const { serverInfo, asts } of serverStructures) {
+        if(!serverInfo.id.includes("-test-server")){
+            continue;
+        }
         for (const { relativePath, tree } of asts) {
             if(relativePath.includes(".test.")) {
-                const exposedFunctions = allExposedFunctions.filter(
-                    (ef) => ef.serverInfo.id === serverInfo.id
-                );
-
                 const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, tree);
                 testRouteVisitor.replaceTestApiCall();
             }
