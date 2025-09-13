@@ -82,6 +82,9 @@ ${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-post'
     });
 `).join("")}
 
+
+
+//HTTP GET MOCKED Functions
 ${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-get').map((f) => `
     
     export async function ${f.functionName}ApiTest(${f.args.map(a => `${a}`).join(",")}){
@@ -91,6 +94,22 @@ ${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-get')
     `).join("")
 }
 
+
+${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-post').map((f) => `
+    
+    export async function ${f.functionName}ApiTest(${f.args.map(a => `${a}`).join(",")}){
+        return JSON.parse
+        (
+            (
+                await request(app).post('/${f.functionName}').send
+                (
+                    {${f.args.map(a => `"${a}": ${a}`).join(",\n")}}
+                )   
+            ).text
+        ).executionResult
+    }
+    `).join("")
+}
 
 export default app;
 ` : ``}
