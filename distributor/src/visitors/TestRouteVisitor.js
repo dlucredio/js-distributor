@@ -46,7 +46,6 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
             // replace calls...
             // how ? I have which method is (get/post) but how to pass the args to it ?
             // the parameters have the same names as the original function definition, but how to get ?Add(again) on the config.yml...?
-            ast.replaceFunctionCall(ctx, "")
             console.log("CTX - " + this.serverInfo.id + " - " + this.relativePath + " ------- " + text)
         }
         
@@ -71,10 +70,14 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
 
 // Problems: 
 /*
-    gerar funções locais pro teste
+    gerar funções locais get pro teste FEITO
+    gerar fuções locais post pro teste  FEITO
         instalar dependencia supertest
         importar supertest 
-    trocar na mão chamada nos testes
+    trocar na mão chamada nos testes (TESTADO COM GET, OK), (TESTADO COM POST, OK)
+        Precisei instalar o pacote supertest
+        Precisei importar a função do start.js
+        adicionar async/await nos testes. (testar se fixAsync cobre esses casos)
 */
 
 
