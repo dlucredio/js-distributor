@@ -4,7 +4,7 @@
   "main": "start.js",
   "type": "module",
   "scripts": {
-    "test": "jest",
+    "test": "set NODE_OPTIONS=--experimental-vm-modules &&  jest",
     "start" : "node start.js"
   },
   "author": "",
@@ -17,6 +17,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "supertest": "^7.1.4"
   }
 }

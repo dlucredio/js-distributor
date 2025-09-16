@@ -66,17 +66,78 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
         // function call args
         super.visitArgument(ctx);
     }
+
+
+    visitExportDefaultDeclaration(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitExportDefaultDeclaration(ctx);
+    }
+
+    visitForInStatement(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitForInStatement(ctx);
+    }
+
+    visitForOfStatement(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitForOfStatement(ctx);
+    }
+
+    visitClassTail(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitClassTail(ctx);
+    }
+
+    visitClassElement(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitClassElement(ctx);
+    }
+
+    visitFormalParameterArg(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitFormalParameterArg(ctx);
+    }
+
+    visitLastFormalParameterArg(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitLastFormalParameterArg(ctx);
+    }
+
+    visitArrayElement(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitArrayElement(ctx);
+    }
+
+    visitPropertyAssignment(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitPropertyAssignment(ctx);
+    }
+
+    visitPropertyName(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitPropertyName(ctx);
+    }
+
+    visitArrowFunctionBody(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitArrowFunctionBody(ctx);
+    }
+
+    visitTemplateStringAtom(ctx) {
+        this.addAwaitIfNecessary(ctx.singleExpression());
+        super.visitTemplateStringAtom(ctx);
+    }
 }
 
 // Problems: 
 /*
     gerar funções locais get pro teste FEITO
     gerar fuções locais post pro teste  FEITO
-        instalar dependencia supertest
-        importar supertest 
+        ~instalar dependencia supertest~
+        ~importar supertest~ 
     trocar na mão chamada nos testes (TESTADO COM GET, OK), (TESTADO COM POST, OK)
-        Precisei instalar o pacote supertest
-        Precisei importar a função do start.js
+        Precisei instalar o pacote supertest (nao precisa, so declarar no package.json auxiliar, é o ideial ?)
+        Precisei importar a função do start.js (problematico...?)
         adicionar async/await nos testes. (testar se fixAsync cobre esses casos)
 */
 
