@@ -41,11 +41,11 @@ export class FixAsyncFunctionsVisitor extends JavaScriptParserVisitor {
                         console.log(`Warning. Could not find declaring function for statement ${newNodeWithAwait.getText()} in server ${this.serverInfo.id} / ${this.relativePath}`);
                     } else {
                         const added = ast.addAsyncIfNecessary(declaringFunction);
-                        if (added) {
+                        if (added && declaringFunction.constructor.name === "FunctionDeclarationContext") {
                             this.newAsyncFunctions.push({
                                 callPatterns: [declaringFunction.identifier().getText()],
                                 serverInfo: this.serverInfo,
-                                relativePath: this.relativePath,
+                                relativePath: this.relativePath
                             });
                         }
                     }
@@ -72,6 +72,8 @@ export class FixAsyncFunctionsVisitor extends JavaScriptParserVisitor {
         let currentNode = ctx;
         while (currentNode) {
             if (currentNode.constructor.name === "FunctionDeclarationContext") {
+                return currentNode;
+            } else if(currentNode.constructor.name === "ArrowFunctionContext") {
                 return currentNode;
             }
             currentNode = currentNode.parent;

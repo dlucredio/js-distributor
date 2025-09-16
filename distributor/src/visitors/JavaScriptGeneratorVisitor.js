@@ -328,7 +328,8 @@ export default class JavaScriptGeneratorVisitor extends JavaScriptParserVisitor 
      * @param {Object} ctx - Context of the arrow function.
      */
     visitArrowFunction(ctx) {
-        if (ctx.Async()) this.appendTokens(ctx.Async());
+        //if (ctx.Async()) this.appendTokens(ctx.Async());
+        if (ctx.Async()) this.appendString("async ");
         this.visitArrowFunctionParameters(ctx.arrowFunctionParameters());
         this.appendString(" => ");
         this.visitArrowFunctionBody(ctx.arrowFunctionBody());

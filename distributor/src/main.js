@@ -34,7 +34,7 @@ export default async function entrypoint(configFile) {
 
         if (config.getCodeGenerationParameters().mode === "single") {
             process();
-        } else if (config.getcodeGenerationParameters().mode === "watch") {
+        } else if (config.getCodeGenerationParameters().mode === "watch") {
             let fsWait = false;
 
             console.log(`Watching ${config.getCodeGenerationParameters().inputFolder} and ${configFile} for changes...`);
@@ -91,12 +91,12 @@ async function process() {
     const [allRemoteFunctions, allExposedFunctions] =
         replaceRemoteFunctions(serverStructures);
 
+    // Now we need to generate the code to start the servers
+    generateStartCode(serverStructures, allExposedFunctions);
+
     // Because we added async to these functions, we must now
     // find all places where they are called and add an await
     fixAsyncFunctions(serverStructures, allRemoteFunctions);
-
-    // Now we need to generate the code to start the servers
-    generateStartCode(serverStructures, allExposedFunctions);
 
     // Now let's generate the final code: one folder for each server
     generateCode(serverStructures);
@@ -192,6 +192,7 @@ function fixAsyncFunctions(serverStructures, allRemoteFunctions) {
         const allRemoteFunctionsInServer = allRemoteFunctions.filter(
             (rf) => rf.serverInfo.id === serverInfo.id
         );
+
         for (const { relativePath, tree } of asts) {
             const fixAsyncFunctionsVisitor = new FixAsyncFunctionsVisitor(
                 serverInfo,
