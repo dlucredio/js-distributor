@@ -166,3 +166,5 @@ servers:
         method: http-post
 
 ```
+
+12. Now experiment a slighly more complex example, where custom libraries are used, in the [Custom Project](CustomProject.md) page.

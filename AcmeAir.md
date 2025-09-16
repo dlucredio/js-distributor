@@ -127,7 +127,7 @@ services:
     #   - ./database_volume:/data/db    # Leave commented to start a new database every run
     restart: unless-stopped
   rabbit:                               # RabbitMQ container
-    image: rabbitmq:3-management
+    image: rabbitmq
     ports:
       - 5672:5672                       # For AMPQ connection
       - 8080:15672                      # Web interface
@@ -264,7 +264,7 @@ services:
     #   - ./database_volume:/data/db
     restart: unless-stopped
   rabbit:
-    image: rabbitmq:3-management
+    image: rabbitmq
     ports:
       - 5672:5672
       - 8080:15672
