@@ -69,62 +69,62 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
 
 
     visitExportDefaultDeclaration(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitExportDefaultDeclaration(ctx);
     }
 
     visitForInStatement(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitForInStatement(ctx);
     }
 
     visitForOfStatement(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitForOfStatement(ctx);
     }
 
     visitClassTail(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitClassTail(ctx);
     }
 
     visitClassElement(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitClassElement(ctx);
     }
 
     visitFormalParameterArg(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitFormalParameterArg(ctx);
     }
 
     visitLastFormalParameterArg(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitLastFormalParameterArg(ctx);
     }
 
     visitArrayElement(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitArrayElement(ctx);
     }
 
     visitPropertyAssignment(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitPropertyAssignment(ctx);
     }
 
     visitPropertyName(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitPropertyName(ctx);
     }
 
     visitArrowFunctionBody(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitArrowFunctionBody(ctx);
     }
 
     visitTemplateStringAtom(ctx) {
-        this.addAwaitIfNecessary(ctx.singleExpression());
+        this.replaceTestCall(ctx.singleExpression());
         super.visitTemplateStringAtom(ctx);
     }
 }
@@ -139,6 +139,7 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
         Precisei instalar o pacote supertest (nao precisa, so declarar no package.json auxiliar, é o ideial ?)
         Precisei importar a função do start.js (problematico...?)
         adicionar async/await nos testes. (testar se fixAsync cobre esses casos)
+    // no import trocar funcApiTest por funcApiTest as func ... start.js. Remover import de func...
 */
 
 
