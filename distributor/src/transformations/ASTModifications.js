@@ -71,6 +71,13 @@ function addAwaitToFunctionCallIfNecessary(argumentsExpressionContext) {
     return newNode;
 }
 
+function replaceImportCall(importStatementCtx, functionName, newFunction, importPath){
+    const oldCode = importStatementCtx.getText();
+    let newCode = oldCode.replace(functionName, newFunction + " as " + functionName)
+    newCode = newCode.replace(/(["'])(.*?)\1/g, "$1"+importPath+"$1")
+    return newCode
+}
+
 function replaceNode(oldNode, newNode) {
     const parent = oldNode.parent;
 
@@ -117,5 +124,6 @@ export default {
     replaceFunctionBody,
     generateCompleteTree,
     addExportStatementNode,
-    addImportStatementNode
+    addImportStatementNode,
+    replaceImportCall
 }
