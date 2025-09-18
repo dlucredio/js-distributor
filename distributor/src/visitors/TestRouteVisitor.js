@@ -26,10 +26,10 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
         return this.tree;
     }
 
-    isReplaceableFunction(text){
+    isReplaceable(text){
         for(let i = 0; i< this.functionPatterns.length; i++){
             const [[key, ]] = Object.entries(this.functionPatterns[i]);
-            if(text.startsWith(key) || text.startsWith("await"+key)){
+            if(text.includes(key)){
                 return i
             }
         }
@@ -37,9 +37,10 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
     }
 
     replaceTestCall(ctx){
+        if(ctx == null) return
         let text = Array.isArray(ctx) ? ctx[0].getText() : ctx.getText();
 
-        const functionIndex = this.isReplaceableFunction(text)
+        const functionIndex = this.isReplaceable(text)
         //console.log("Text - " +this.serverInfo.id + "  <--> " + text)
         if(functionIndex >=0 ){
             // did i map every possible function call scenario ?
@@ -51,81 +52,20 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
         
     }
 
-    visitExpressionSequence(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitExpressionSequence(ctx);
+    impr(ctx){
+        let text = ctx.getText();
+        const functionIndex = this.isReplaceable(text);
+        if(functionIndex >= 0){
+            const functionName = Object.keys(this.functionPatterns[functionIndex])[0];
+            ast.replaceImportCall(ctx, functionName,functionName+"ApiTest", "#root/start.js");
+        }
+
+        console.log("imports: " + ctx.getText())
     }
 
-    visitVariableDeclaration(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitVariableDeclaration(ctx);
-    }
-    
-    visitArgument(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        // function call args
-        super.visitArgument(ctx);
-    }
-
-
-    visitExportDefaultDeclaration(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitExportDefaultDeclaration(ctx);
-    }
-
-    visitForInStatement(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitForInStatement(ctx);
-    }
-
-    visitForOfStatement(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitForOfStatement(ctx);
-    }
-
-    visitClassTail(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitClassTail(ctx);
-    }
-
-    visitClassElement(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitClassElement(ctx);
-    }
-
-    visitFormalParameterArg(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitFormalParameterArg(ctx);
-    }
-
-    visitLastFormalParameterArg(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitLastFormalParameterArg(ctx);
-    }
-
-    visitArrayElement(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitArrayElement(ctx);
-    }
-
-    visitPropertyAssignment(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitPropertyAssignment(ctx);
-    }
-
-    visitPropertyName(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitPropertyName(ctx);
-    }
-
-    visitArrowFunctionBody(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitArrowFunctionBody(ctx);
-    }
-
-    visitTemplateStringAtom(ctx) {
-        this.replaceTestCall(ctx.singleExpression());
-        super.visitTemplateStringAtom(ctx);
+    visitImportStatement(ctx){
+        this.impr(ctx)
+        super.visitImportStatement(ctx);
     }
 }
 
@@ -136,29 +76,7 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
         ~instalar dependencia supertest~
         ~importar supertest~ 
     trocar na mão chamada nos testes (TESTADO COM GET, OK), (TESTADO COM POST, OK)
-        Precisei instalar o pacote supertest (nao precisa, so declarar no package.json auxiliar, é o ideial ?)
         Precisei importar a função do start.js (problematico...?)
         adicionar async/await nos testes. (testar se fixAsync cobre esses casos)
     // no import trocar funcApiTest por funcApiTest as func ... start.js. Remover import de func...
 */
-
-
-
-/*const request = require('supertest');
-const app = require('./app');
-
-describe('API endpoints', () => {
-  test('GET /hello deve retornar mensagem', async () => {
-    const response = await request(app).get('/hello');
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({ message: 'Hello, world!' });
-  });
-
-  test('POST /echo deve retornar os dados enviados', async () => {
-    const payload = { nome: 'Lumi' };
-    const response = await request(app).post('/echo').send(payload);
-    expect(response.status).toBe(201);
-    expect(response.body.data).toEqual(payload);
-  });
-});
- */
