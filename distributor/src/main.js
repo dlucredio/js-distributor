@@ -120,6 +120,10 @@ async function process() {
     // Now let's generate the final code: one folder for each server
     generateCode(serverStructures);
 
+    // Because we added async to these functions, we must now
+    // find all places where they are called and add an await
+    fixAsyncFunctions(serverStructures, allRemoteFunctions)
+
     // Finally, we copy the non-source code files
     copyOtherFiles(serverStructures);
 

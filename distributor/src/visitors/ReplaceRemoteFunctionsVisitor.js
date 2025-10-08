@@ -161,7 +161,7 @@ export class ReplaceRemoteFunctionsVisitor {
         }
         return false
     }
-    
+
     shouldExpose(ctx){
         // If functionInfo is null, this means this function is replicated to
         // every server and does not need to be exposed. Otherwise we store it
