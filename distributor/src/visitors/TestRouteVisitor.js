@@ -41,12 +41,7 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
         let text = Array.isArray(ctx) ? ctx[0].getText() : ctx.getText();
 
         const functionIndex = this.isReplaceable(text)
-        //console.log("Text - " +this.serverInfo.id + "  <--> " + text)
         if(functionIndex >=0 ){
-            // did i map every possible function call scenario ?
-            // replace calls...
-            // how ? I have which method is (get/post) but how to pass the args to it ?
-            // the parameters have the same names as the original function definition, but how to get ?Add(again) on the config.yml...?
             console.log("CTX - " + this.serverInfo.id + " - " + this.relativePath + " ------- " + text)
         }
         
@@ -55,7 +50,7 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
     impr(ctx){
         let text = ctx.getText();
         const functionIndex = this.isReplaceable(text);
-        if(functionIndex >= 0){
+        if(functionIndex >= 0){//check if function is defined on this server.
             const functionName = Object.keys(this.functionPatterns[functionIndex])[0];
             ast.replaceImportCall(ctx, functionName,functionName+"ApiTest", "#root/start.js");
         }
