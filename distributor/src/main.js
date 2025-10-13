@@ -8,6 +8,11 @@ import { minimatch } from 'minimatch';
 import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
 import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 
+// Babel imports
+import * as babelParser from "@babel/parser"
+import generate from "@babel/generator";
+const babelGenerate = generate.default ?? generate;
+
 // Internal imports
 import config, { ConfigError } from "./config/Configuration.js";
 import { writeJavaScriptFile } from "./helpers/GeneratorHelpers.js";
@@ -19,7 +24,7 @@ import { startServerTemplate } from "./templates/StartServer.js";
 import ast from "./transformations/ASTModifications.js";
 import npmHelper from "./helpers/NpmHelper.js";
 import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
-import * as babelParser from "@babel/parser"
+
 
 export default async function entrypoint(configFile) {
     try {
@@ -229,9 +234,11 @@ function generateStartCode(serverStructures, allExposedFunctions) {
             allExposedFunctionsInServer
         );
         const newTree = ast.generateCompleteTree(newCode);
+        const babelNewTree = babelParser.parse(newCode, {sourceType: "module"});
         asts.push({
             relativePath: "start.js",
             tree: newTree,
+            babelTree: babelNewTree
         });
     }
 }
@@ -241,12 +248,18 @@ function generateCode(serverStructures) {
         const serverFolder = path.join(config.getCodeGenerationParameters().outputFolder, serverInfo.id);
         const sourceGenFolder = path.join(serverFolder, serverInfo.genFolder);
 
-        for (const { relativePath, tree } of asts) {
+        for (const { relativePath, tree, babelTree } of asts) {
             const javaScriptGeneratorVisitor = new JavaScriptGeneratorVisitor();
             javaScriptGeneratorVisitor.visitProgram(tree);
             const generatedCode = javaScriptGeneratorVisitor.getGeneratedCode();
             const javaScriptFile = path.join(sourceGenFolder, relativePath);
+            const { code: output } = babelGenerate(babelTree);
+
             writeJavaScriptFile(javaScriptFile, generatedCode);
+
+            // TODO: Just for comparisson, remove this call when babel migration is over.
+            const babelJavaScriptFile = path.join(sourceGenFolder, relativePath.replace(".js", "-babel.js"));
+            writeJavaScriptFile(babelJavaScriptFile, output);
         }
     }
 }

@@ -1,16 +1,19 @@
 // ANTLR code imports
 import JavaScriptParserVisitor from "../antlr4/JavaScriptParserVisitor.js";
 
+// Babel imports
+import * as parser from "@babel/parser";
+import * as t from "@babel/types";
+import traverse from "@babel/traverse";
+const babelTraverse = traverse.default ?? traverse;
+
 // Internal imports
 import config from '../config/Configuration.js';
 import httpAPITemplates from '../templates/HttpAPI.js';
 import rabbitMQTemplates from '../templates/RabbitMQ.js';
 import ast from '../transformations/ASTModifications.js';
 
-import * as parser from "@babel/parser";
-import * as t from "@babel/types";
-import traverse from "@babel/traverse";
-const babelTraverse = traverse.default ?? traverse;
+
 
 export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
     constructor(serverInfo, relativePath, babelTree) {
