@@ -25,32 +25,34 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
 
     visitProgram(ctx) {
         super.visitProgram(ctx);
-
+        const selfReference = this;
         babelTraverse(this.babelTree, {
             FunctionDeclaration(path) {
                 const functionName = path.node.id?.name;
-                const paramsNode = path.node.params;
-                const args = paramsNode.map(param => { //getParams.
-                    if (param.type === "Identifier") return param.name;
-                    if (param.type === "AssignmentPattern") return param.left.name; // default values
-                    if (param.type === "RestElement") return `...${param.argument.name}`; // rest params
-                    return;
-                });
+                if (!selfReference.isInThisServer(functionName)) {
+                    const paramsNode = path.node.params;
+                    const args = paramsNode.map(param => { //getParams.
+                        if (param.type === "Identifier") return param.name;
+                        if (param.type === "AssignmentPattern") return param.left.name; // default values
+                        if (param.type === "RestElement") return `...${param.argument.name}`; // rest params
+                        return;
+                    });
 
-                const serverInfo = config.getServerInfo(functionName);
-                const functionInfo = config.getFunctionInfo(serverInfo, functionName);
-                console.log("Found function:", functionName);
+                    const serverInfo = config.getServerInfo(functionName);
+                    const functionInfo = config.getFunctionInfo(serverInfo, functionName);
+                    console.log("Found function:", functionName);
 
-                if (functionInfo.method === "http-get") {
-                    const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
-                    this.replaceFunctionBody(path, newBody);
-                } else if(functionInfo.method === "http-post") {
-                    const newBody = httpAPITemplates.httpPostFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
-                    this.replaceFunctionBody(path, newBody);
-                } else if(functionInfo.method === "rabbit") {
-                    const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
-                    this.replaceFunctionBody(path, newBody);
-                    this.consumesRabbitFunctions = true;
+                    if (functionInfo.method === "http-get") {
+                        const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
+                        selfReference.replaceFunctionBody(path, newBody);
+                    } else if(functionInfo.method === "http-post") {
+                        const newBody = httpAPITemplates.httpPostFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
+                        selfReference.replaceFunctionBody(path, newBody);
+                    } else if(functionInfo.method === "rabbit") {
+                        const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
+                        selfReference.replaceFunctionBody(path, newBody);
+                        selfReference.consumesRabbitFunctions = true;
+                    }
                 }
             }
         })
@@ -163,7 +165,8 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
     replaceFunctionBody(path, rawJsCode) {
         // Parse the raw code into an AST
         const bodyAst = parser.parse(rawJsCode, {
-            sourceType: "module"        
+            sourceType: "module",
+            allowReturnOutsideFunction: true,        
         });
 
         const newStatements = bodyAst.program.body;
