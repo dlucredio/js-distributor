@@ -114,11 +114,11 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
     }
 
     getRemoteFunctions() {
-        return this.remoteFunctions;
+        return this.babelRemoteFunctions;
     }
 
     getExposedFunctions() {
-        return this.exposedFunctions;
+        return this.babelExposedFunctions;
     }
 
     isInThisServer(functionName) {
