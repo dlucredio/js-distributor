@@ -20,6 +20,8 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
         this.babelTree = babelTree;
         this.remoteFunctions = [];
         this.exposedFunctions = [];
+        this.babelRemoteFunctions = [];
+        this.babelExposedFunctions = [];
         this.consumesRabbitFunctions = false;
     }
 
@@ -52,6 +54,39 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
                         const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
                         selfReference.replaceFunctionBody(path, newBody);
                         selfReference.consumesRabbitFunctions = true;
+                    }
+
+                     selfReference.babelRemoteFunctions.push({
+                        callPatterns: functionInfo.callPatterns,
+                        serverInfo: selfReference.serverInfo,
+                        relativePath: selfReference.relativePath,
+                        method: functionInfo.method
+                    });
+                }else {
+                    // Not a remote function. Let's check if it must be expoed
+                    const functionInfo = config.getFunctionInfo(selfReference.serverInfo, functionName);
+
+                    // If functionInfo is null, this means this function is replicated to
+                    // every server and does not need to be exposed. Otherwise we store it
+                    // to expose
+                    if (functionInfo) {
+                        const paramsNode = path.node.params;
+                        const args = paramsNode.map(param => { //getParams.
+                            if (param.type === "Identifier") return param.name;
+                            if (param.type === "AssignmentPattern") return param.left.name; // default values
+                            if (param.type === "RestElement") return `...${param.argument.name}`; // rest params
+                            return;
+                        });
+
+                        selfReference.babelExposedFunctions.push({
+                            functionName: functionName,
+                            exportedName: functionName+"_localRef",
+                            functionInfo: functionInfo,
+                            serverInfo: selfReference.serverInfo,
+                            relativePath: selfReference.relativePath,
+                            args: args,
+                            isAsync: path.node.async ? true : false
+                        });
                     }
                 }
             }
