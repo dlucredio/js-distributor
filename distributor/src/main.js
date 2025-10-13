@@ -19,6 +19,7 @@ import { startServerTemplate } from "./templates/StartServer.js";
 import ast from "./transformations/ASTModifications.js";
 import npmHelper from "./helpers/NpmHelper.js";
 import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
+import * as babelParser from "@babel/parser"
 
 export default async function entrypoint(configFile) {
     try {
@@ -142,7 +143,14 @@ function parseCode(asts, otherFiles, inputDir) {
         } else if (itemPath.slice(-2) === "js") {
             // if item is an input file, let's parse it
             // Let's parse the file
+            
+
             const input = fs.readFileSync(itemPath, { encoding: "utf8" });
+
+            const ast = babelParser.parse(input, {
+                sourceType: "module", 
+            });
+            
             const chars = new antlr4.InputStream(input);
             const lexer = new JavaScriptLexer(chars);
             const tokens = new antlr4.CommonTokenStream(lexer);
@@ -154,7 +162,8 @@ function parseCode(asts, otherFiles, inputDir) {
             prepareTreeVisitor.visit(tree);
             asts.push({
                 relativePath: relativePath,
-                tree: tree
+                tree: tree,
+                babelTree: ast
             });
         } else {
             otherFiles.push({
@@ -168,10 +177,11 @@ function replaceRemoteFunctions(serverStructures) {
     const allRemoteFunctions = [];
     const allExposedFunctions = [];
     for (const { serverInfo, asts } of serverStructures) {
-        for (const { relativePath, tree } of asts) {
+        for (const { relativePath, tree, babelTree } of asts) {
             const replaceRemoteFunctionsVisitor = new ReplaceRemoteFunctionsVisitor(
                 serverInfo,
-                relativePath
+                relativePath,
+                babelTree
             );
             replaceRemoteFunctionsVisitor.visitProgram(tree);
             allRemoteFunctions.push(

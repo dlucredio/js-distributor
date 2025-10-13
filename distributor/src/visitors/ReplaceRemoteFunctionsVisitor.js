@@ -7,11 +7,17 @@ import httpAPITemplates from '../templates/HttpAPI.js';
 import rabbitMQTemplates from '../templates/RabbitMQ.js';
 import ast from '../transformations/ASTModifications.js';
 
+import * as parser from "@babel/parser";
+import * as t from "@babel/types";
+import traverse from "@babel/traverse";
+const babelTraverse = traverse.default ?? traverse;
+
 export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
-    constructor(serverInfo, relativePath) {
+    constructor(serverInfo, relativePath, babelTree) {
         super();
         this.serverInfo = serverInfo;
         this.relativePath = relativePath;
+        this.babelTree = babelTree;
         this.remoteFunctions = [];
         this.exposedFunctions = [];
         this.consumesRabbitFunctions = false;
@@ -19,6 +25,35 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
 
     visitProgram(ctx) {
         super.visitProgram(ctx);
+
+        babelTraverse(this.babelTree, {
+            FunctionDeclaration(path) {
+                const functionName = path.node.id?.name;
+                const paramsNode = path.node.params;
+                const args = paramsNode.map(param => { //getParams.
+                    if (param.type === "Identifier") return param.name;
+                    if (param.type === "AssignmentPattern") return param.left.name; // default values
+                    if (param.type === "RestElement") return `...${param.argument.name}`; // rest params
+                    return;
+                });
+
+                const serverInfo = config.getServerInfo(functionName);
+                const functionInfo = config.getFunctionInfo(serverInfo, functionName);
+                console.log("Found function:", functionName);
+
+                if (functionInfo.method === "http-get") {
+                    const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
+                    this.replaceFunctionBody(path, newBody);
+                } else if(functionInfo.method === "http-post") {
+                    const newBody = httpAPITemplates.httpPostFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
+                    this.replaceFunctionBody(path, newBody);
+                } else if(functionInfo.method === "rabbit") {
+                    const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
+                    this.replaceFunctionBody(path, newBody);
+                    this.consumesRabbitFunctions = true;
+                }
+            }
+        })
 
         // Let's add the required imports
         if(this.consumesRabbitFunctions) {
@@ -123,5 +158,20 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
             }
         }
         return args;
+    }
+
+    replaceFunctionBody(path, rawJsCode) {
+        // Parse the raw code into an AST
+        const bodyAst = parser.parse(rawJsCode, {
+            sourceType: "module"        
+        });
+
+        const newStatements = bodyAst.program.body;
+
+        if (!t.isBlockStatement(path.node.body)) {
+            path.node.body = t.blockStatement([]);
+        }
+
+        path.get("body").replaceWith(t.blockStatement(newStatements));
     }
 }
