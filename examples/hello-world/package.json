@@ -10,6 +10,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "js-distributor": "^2.0.2"
+    "js-distributor": "file:../../distributor"
   }
 }

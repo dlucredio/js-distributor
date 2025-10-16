@@ -208,7 +208,7 @@ function fixAsyncFunctions(serverStructures, allRemoteFunctions) {
             (rf) => rf.serverInfo.id === serverInfo.id
         );
 
-        for (const { relativePath, tree } of asts) {
+        for (const { relativePath, tree, babelTree } of asts) {
             const fixAsyncFunctionsVisitor = new FixAsyncFunctionsVisitor(
                 serverInfo,
                 relativePath,

@@ -205,7 +205,7 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
         const bodyAst = parser.parse(rawJsCode, {
             sourceType: "module",
             allowReturnOutsideFunction: true,        
-        });
+        }); // the code been returned is double {}, must get the parsed child or other way to replace the body's content
 
         const newStatements = bodyAst.program.body;
 
