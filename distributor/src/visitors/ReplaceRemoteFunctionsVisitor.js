@@ -213,6 +213,8 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
             path.node.body = t.blockStatement([]);
         }
 
+        path.node.async = true;
+
         path.get("body").replaceWith(t.blockStatement(newStatements));
     }
 }

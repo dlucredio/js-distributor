@@ -102,7 +102,7 @@ async function process() {
 
     // Because we added async to these functions, we must now
     // find all places where they are called and add an await
-    fixAsyncFunctions(serverStructures, allRemoteFunctions);
+    fixAsyncFunctions(serverStructures, allRemoteFunctions, allRemoteFunctions);
 
     // Now let's generate the final code: one folder for each server
     generateCode(serverStructures);
@@ -200,11 +200,15 @@ function replaceRemoteFunctions(serverStructures) {
     return [allRemoteFunctions, allExposedFunctions];
 }
 
-function fixAsyncFunctions(serverStructures, allRemoteFunctions) {
+function fixAsyncFunctions(serverStructures, allRemoteFunctions, babelAllRemoteFunctions) {
     const newAsyncFunctions = [];
+    const babelNewAsyncFunctions = [];
     for (const { serverInfo, asts } of serverStructures) {
         // Let's filter only those functions for this server
         const allRemoteFunctionsInServer = allRemoteFunctions.filter(
+            (rf) => rf.serverInfo.id === serverInfo.id
+        );
+        const allBabelRemoteFunctionsInServer = babelAllRemoteFunctions.filter(
             (rf) => rf.serverInfo.id === serverInfo.id
         );
 
@@ -213,13 +217,16 @@ function fixAsyncFunctions(serverStructures, allRemoteFunctions) {
                 serverInfo,
                 relativePath,
                 allRemoteFunctionsInServer,
-                newAsyncFunctions
+                newAsyncFunctions,
+                babelTree,
+                babelNewAsyncFunctions,
+                allBabelRemoteFunctionsInServer
             );
             fixAsyncFunctionsVisitor.visitProgram(tree);
         }
     }
     if (newAsyncFunctions.length > 0) {
-        fixAsyncFunctions(serverStructures, newAsyncFunctions);
+        fixAsyncFunctions(serverStructures, newAsyncFunctions, babelNewAsyncFunctions);
     }
 }
 
