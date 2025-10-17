@@ -84,6 +84,9 @@ export class FixAsyncFunctionsVisitor extends JavaScriptParserVisitor {
         }
     }
 
+    /*
+     * Antlr async propagation handler:  
+     */
     addAwaitIfNecessary(singleExpressionCtx) {
         if (!singleExpressionCtx) {
             return;
