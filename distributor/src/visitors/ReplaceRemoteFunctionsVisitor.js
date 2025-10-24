@@ -100,6 +100,11 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
             const importStatements = rabbitMQTemplates.importStatements();
             for(const is of importStatements) {
                 ast.addImportStatementNode(ctx, is);
+
+                // TODO: Extract this section to avoid code duplication
+                //Babel 
+                const node = parser.parse(is, { sourceType: "module" }).program.body[0];
+                this.babelTree.program.body.unshift(node);
             }
         }
 
@@ -113,6 +118,19 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
             }
             const exportStatement = "export { " + exports.join(", ") + " };";
             ast.addExportStatementNode(ctx, exportStatement);            
+        }
+
+        if (this.babelExposedFunctions.length > 0) {
+            const exports = [];
+            for (const ef of this.babelExposedFunctions) {
+                exports.push(ef.functionName + " as " + ef.exportedName);
+            }
+            const exportStatement = "export { " + exports.join(", ") + " };";
+
+            // TODO: Extract this section to avoid code duplication
+            // Babel
+            const node = parser.parse(exportStatement, { sourceType: "module", errorRecovery: true }).program.body[0]; // error covery is neecessary, since the function to export is not present defined on the `exportstatement`
+            this.babelTree.program.body.push(node);            
         }
     }
 
