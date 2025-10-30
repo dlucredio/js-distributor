@@ -10,8 +10,7 @@
   ],
   "type": "module",
   "scripts": {
-    "generate": "npm run antlr4-js",
-    "antlr4-js": "java -Xmx500M -jar ./bin/antlr-4.13.0-complete.jar -Dlanguage=JavaScript -lib src/antlr4 -o src/antlr4 -visitor -Xexact-output-dir src/antlr4/JavaScriptLexer.g4 src/antlr4/JavaScriptParser.g4"
+    "generate": "npm run start"
   },
   "bin": {
     "js-distributor-scripts": "./bin/distributor-scripts.js"
