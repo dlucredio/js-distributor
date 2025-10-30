@@ -16,8 +16,8 @@ export class FixAsyncFunctionsVisitor {
         
     }
 
-    babelWrapperVisitCallExpression(){
-        babelTraverse(this.babelTree, {
+    babelWrapperVisitCallExpression(babelTree){
+        babelTraverse(babelTree, {
             CallExpression: (path) => this.visitCallExpression(path)
         });
     }
