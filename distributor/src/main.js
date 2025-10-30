@@ -1,12 +1,7 @@
 // External imports
-import antlr4 from "antlr4";
 import path from "path";
 import fs from "fs";
 import { minimatch } from 'minimatch';
-
-// ANTLR code imports
-import JavaScriptLexer from "./antlr4/JavaScriptLexer.js";
-import JavaScriptParser from "./antlr4/JavaScriptParser.js";
 
 // Babel imports
 import * as babelParser from "@babel/parser"
@@ -16,12 +11,9 @@ const babelGenerate = generate.default ?? generate;
 // Internal imports
 import config, { ConfigError } from "./config/Configuration.js";
 import { writeJavaScriptFile } from "./helpers/GeneratorHelpers.js";
-import JavaScriptGeneratorVisitor from "./visitors/JavaScriptGeneratorVisitor.js";
 import { ReplaceRemoteFunctionsVisitor } from "./visitors/ReplaceRemoteFunctionsVisitor.js";
 import { FixAsyncFunctionsVisitor } from "./visitors/FixAsyncFunctionsVisitor.js";
-import { PrepareTreeVisitor } from "./visitors/PrepareTreeVisitor.js";
 import { startServerTemplate } from "./templates/StartServer.js";
-import ast from "./transformations/ASTModifications.js";
 import npmHelper from "./helpers/NpmHelper.js";
 import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
 
@@ -102,7 +94,7 @@ async function process() {
 
     // Because we added async to these functions, we must now
     // find all places where they are called and add an await
-    fixAsyncFunctions(serverStructures, allRemoteFunctions, allRemoteFunctions);
+    fixAsyncFunctions(serverStructures, allRemoteFunctions);
 
     // Now let's generate the final code: one folder for each server
     generateCode(serverStructures);
@@ -148,26 +140,15 @@ function parseCode(asts, otherFiles, inputDir) {
         } else if (itemPath.slice(-2) === "js") {
             // if item is an input file, let's parse it
             // Let's parse the file
-            
-
             const input = fs.readFileSync(itemPath, { encoding: "utf8" });
 
             const ast = babelParser.parse(input, {
                 sourceType: "module", 
             });
             
-            const chars = new antlr4.InputStream(input);
-            const lexer = new JavaScriptLexer(chars);
-            const tokens = new antlr4.CommonTokenStream(lexer);
-            const parser = new JavaScriptParser(tokens);
-            parser.buildParseTrees = true;
-            console.log(`Parsing file ${itemPath}`);
-            const tree = parser.program();
-            const prepareTreeVisitor = new PrepareTreeVisitor();
-            prepareTreeVisitor.visit(tree);
+            console.log(`Parsed file ${itemPath}`);
             asts.push({
                 relativePath: relativePath,
-                tree: tree,
                 babelTree: ast
             });
         } else {
@@ -182,13 +163,12 @@ function replaceRemoteFunctions(serverStructures) {
     const allRemoteFunctions = [];
     const allExposedFunctions = [];
     for (const { serverInfo, asts } of serverStructures) {
-        for (const { relativePath, tree, babelTree } of asts) {
+        for (const { relativePath, babelTree } of asts) {
             const replaceRemoteFunctionsVisitor = new ReplaceRemoteFunctionsVisitor(
                 serverInfo,
-                relativePath,
-                babelTree
+                relativePath
             );
-            replaceRemoteFunctionsVisitor.visitProgram(tree);
+            replaceRemoteFunctionsVisitor.visitFunctionDeclarationWrapper(babelTree);
             allRemoteFunctions.push(
                 ...replaceRemoteFunctionsVisitor.getRemoteFunctions()
             );
@@ -200,33 +180,26 @@ function replaceRemoteFunctions(serverStructures) {
     return [allRemoteFunctions, allExposedFunctions];
 }
 
-function fixAsyncFunctions(serverStructures, allRemoteFunctions, babelAllRemoteFunctions) {
-    const newAsyncFunctions = [];
+function fixAsyncFunctions(serverStructures, babelAllRemoteFunctions) {
     const babelNewAsyncFunctions = [];
     for (const { serverInfo, asts } of serverStructures) {
         // Let's filter only those functions for this server
-        const allRemoteFunctionsInServer = allRemoteFunctions.filter(
-            (rf) => rf.serverInfo.id === serverInfo.id
-        );
         const allBabelRemoteFunctionsInServer = babelAllRemoteFunctions.filter(
             (rf) => rf.serverInfo.id === serverInfo.id
         );
 
-        for (const { relativePath, tree, babelTree } of asts) {
+        for (const { relativePath, babelTree } of asts) {
             const fixAsyncFunctionsVisitor = new FixAsyncFunctionsVisitor(
                 serverInfo,
                 relativePath,
-                allRemoteFunctionsInServer,
-                newAsyncFunctions,
-                babelTree,
                 babelNewAsyncFunctions,
                 allBabelRemoteFunctionsInServer
             );
-            fixAsyncFunctionsVisitor.visitProgram(tree);
+            fixAsyncFunctionsVisitor.babelWrapperVisitCallExpression(babelTree);
         }
     }
-    if (newAsyncFunctions.length > 0) {
-        fixAsyncFunctions(serverStructures, newAsyncFunctions, babelNewAsyncFunctions);
+    if (babelNewAsyncFunctions.length > 0) {
+        fixAsyncFunctions(serverStructures, babelNewAsyncFunctions);
     }
 }
 
@@ -240,11 +213,9 @@ function generateStartCode(serverStructures, allExposedFunctions) {
             serverInfo,
             allExposedFunctionsInServer
         );
-        const newTree = ast.generateCompleteTree(newCode);
         const babelNewTree = babelParser.parse(newCode, {sourceType: "module"});
         asts.push({
             relativePath: "start.js",
-            tree: newTree,
             babelTree: babelNewTree
         });
     }
@@ -255,18 +226,11 @@ function generateCode(serverStructures) {
         const serverFolder = path.join(config.getCodeGenerationParameters().outputFolder, serverInfo.id);
         const sourceGenFolder = path.join(serverFolder, serverInfo.genFolder);
 
-        for (const { relativePath, tree, babelTree } of asts) {
-            const javaScriptGeneratorVisitor = new JavaScriptGeneratorVisitor();
-            javaScriptGeneratorVisitor.visitProgram(tree);
-            const generatedCode = javaScriptGeneratorVisitor.getGeneratedCode();
+        for (const { relativePath, babelTree } of asts) {
             const javaScriptFile = path.join(sourceGenFolder, relativePath);
             const { code: output } = babelGenerate(babelTree);
 
-            writeJavaScriptFile(javaScriptFile, generatedCode);
-
-            // TODO: Just for comparisson, remove this call when babel migration is over.
-            const babelJavaScriptFile = path.join(sourceGenFolder, relativePath.replace(".js", "-babel.js"));
-            writeJavaScriptFile(babelJavaScriptFile, output);
+            writeJavaScriptFile(javaScriptFile, output);
         }
     }
 }

@@ -23,7 +23,6 @@
     "@babel/parser": "^7.28.4",
     "@babel/traverse": "^7.28.4",
     "@babel/types": "^7.28.4",
-    "antlr4": "^4.13.1",
     "chalk": "^5.4.1",
     "child_process": "^1.0.2",
     "commander": "^13.1.0",
