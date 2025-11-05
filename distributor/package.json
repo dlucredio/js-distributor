@@ -10,8 +10,7 @@
   ],
   "type": "module",
   "scripts": {
-    "generate": "npm run antlr4-js",
-    "antlr4-js": "java -Xmx500M -jar ./bin/antlr-4.13.0-complete.jar -Dlanguage=JavaScript -lib src/antlr4 -o src/antlr4 -visitor -Xexact-output-dir src/antlr4/JavaScriptLexer.g4 src/antlr4/JavaScriptParser.g4"
+    "generate": "npm run start"
   },
   "bin": {
     "js-distributor-scripts": "./bin/distributor-scripts.js"
@@ -19,7 +18,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "antlr4": "^4.13.1",
+    "@babel/generator": "^7.28.3",
+    "@babel/parser": "^7.28.4",
+    "@babel/traverse": "^7.28.4",
+    "@babel/types": "^7.28.4",
     "chalk": "^5.4.1",
     "child_process": "^1.0.2",
     "commander": "^13.1.0",

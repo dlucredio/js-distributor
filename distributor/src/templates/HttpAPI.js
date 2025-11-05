@@ -6,11 +6,11 @@ function httpGetFetch(functionName, serverUrl, serverPort, args) {
     }
 
     return `
-{
+
     const response = await fetch(\`${fetchUrl}\`);
     const { executionResult } = await response.json();
     return executionResult;
-}
+
 `
 };
 
@@ -19,7 +19,7 @@ function httpPostFetch(functionName, serverUrl, serverPort, args) {
     const fetchUrl = `http://${serverUrl}:${serverPort}/${functionName}`;
     const body = "{" + args.map(a => '"' + a + '" : ' + a).join(",") + "}";
     return `
-{
+
     const response = await fetch(\`${fetchUrl}\`, {
         method: 'POST',
         headers: {
@@ -29,7 +29,7 @@ function httpPostFetch(functionName, serverUrl, serverPort, args) {
     });
     const { executionResult } = await response.json();
     return executionResult;
-}
+
 `
 };
 

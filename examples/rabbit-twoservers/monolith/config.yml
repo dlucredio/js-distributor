@@ -1,3 +1,13 @@
+codeGenerationParameters:
+  mode: single                    # single | watch
+  inputFolder: './src'              # monolith folder
+  outputFolder: '../distributed'  # distributed folder
+  cleanOutput: true               # delete output folder before?
+  generateProjects: false          # generate new npm projects?
+  generateDocker: true            # generate docker files for each server?
+  ignore:                         # ignore the following folders
+     - "node_modules"
+
 default:
   rabbit:
     url: myrabbit

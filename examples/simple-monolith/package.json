@@ -1,14 +1,13 @@
 {
-  "name": "hello-world",
+  "name": "helloworld",
   "version": "1.0.0",
+  "description": "",
   "main": "index.js",
-  "type": "module",
   "scripts": {
-    "js-dist": "js-distributor-scripts"
+    "test": "js-distributor-scripts -c ./distributed-utils/config.yml"
   },
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "js-distributor": "file:../../distributor"
   }

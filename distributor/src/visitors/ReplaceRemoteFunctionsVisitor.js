@@ -1,52 +1,125 @@
-// ANTLR code imports
-import JavaScriptParserVisitor from "../antlr4/JavaScriptParserVisitor.js";
+// Babel imports
+import * as parser from "@babel/parser";
+import * as t from "@babel/types";
+import traverse from "@babel/traverse";
+const babelTraverse = traverse.default ?? traverse;
 
 // Internal imports
 import config from '../config/Configuration.js';
 import httpAPITemplates from '../templates/HttpAPI.js';
 import rabbitMQTemplates from '../templates/RabbitMQ.js';
-import ast from '../transformations/ASTModifications.js';
 
-export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
+
+
+export class ReplaceRemoteFunctionsVisitor {
     constructor(serverInfo, relativePath) {
-        super();
         this.serverInfo = serverInfo;
         this.relativePath = relativePath;
-        this.remoteFunctions = [];
-        this.exposedFunctions = [];
+        this.babelRemoteFunctions = [];
+        this.babelExposedFunctions = [];
         this.consumesRabbitFunctions = false;
     }
 
-    visitProgram(ctx) {
-        super.visitProgram(ctx);
+    visitFunctionDeclarationWrapper(babelTree){
+        const selfReference = this;
+        babelTraverse(babelTree, {
+            FunctionDeclaration(path) {
+                const functionName = path.node.id?.name;
+                if (!selfReference.isInThisServer(functionName)) {
+                    const paramsNode = path.node.params;
+                    const args = paramsNode.map(param => { //getParams.
+                        if (param.type === "Identifier") return param.name;
+                        if (param.type === "AssignmentPattern") return param.left.name; // default values
+                        if (param.type === "RestElement") return `...${param.argument.name}`; // rest params
+                        return;
+                    });
+
+                    const serverInfo = config.getServerInfo(functionName);
+                    const functionInfo = config.getFunctionInfo(serverInfo, functionName);
+                    console.log("Found function:", functionName);
+
+                    if (functionInfo.method === "http-get") {
+                        const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
+                        selfReference.replaceFunctionBody(path, newBody);
+                    } else if(functionInfo.method === "http-post") {
+                        const newBody = httpAPITemplates.httpPostFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
+                        selfReference.replaceFunctionBody(path, newBody);
+                    } else if(functionInfo.method === "rabbit") {
+                        const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
+                        selfReference.replaceFunctionBody(path, newBody);
+                        selfReference.consumesRabbitFunctions = true;
+                    }
+
+                     selfReference.babelRemoteFunctions.push({
+                        callPatterns: functionInfo.callPatterns,
+                        serverInfo: selfReference.serverInfo,
+                        relativePath: selfReference.relativePath,
+                        method: functionInfo.method
+                    });
+                }else {
+                    // Not a remote function. Let's check if it must be expoed
+                    const functionInfo = config.getFunctionInfo(selfReference.serverInfo, functionName);
+
+                    // If functionInfo is null, this means this function is replicated to
+                    // every server and does not need to be exposed. Otherwise we store it
+                    // to expose
+                    if (functionInfo) {
+                        const paramsNode = path.node.params;
+                        const args = paramsNode.map(param => { //getParams.
+                            if (param.type === "Identifier") return param.name;
+                            if (param.type === "AssignmentPattern") return param.left.name; // default values
+                            if (param.type === "RestElement") return `...${param.argument.name}`; // rest params
+                            return;
+                        });
+
+                        selfReference.babelExposedFunctions.push({
+                            functionName: functionName,
+                            exportedName: functionName+"_localRef",
+                            functionInfo: functionInfo,
+                            serverInfo: selfReference.serverInfo,
+                            relativePath: selfReference.relativePath,
+                            args: args,
+                            isAsync: path.node.async ? true : false
+                        });
+                    }
+                }
+            }
+        })
 
         // Let's add the required imports
         if(this.consumesRabbitFunctions) {
             const importStatements = rabbitMQTemplates.importStatements();
             for(const is of importStatements) {
-                ast.addImportStatementNode(ctx, is);
+                // TODO: Extract this section to avoid code duplication
+                //Babel 
+                const node = parser.parse(is, { sourceType: "module" }).program.body[0];
+                this.babelTree.program.body.unshift(node);
             }
         }
 
         // Let's export the functions that must be exposed to other servers
         // We will use a new, generated name, because the original function
         // may or may not be exposed already
-        if (this.exposedFunctions.length > 0) {
+        if (this.babelExposedFunctions.length > 0) {
             const exports = [];
-            for (const ef of this.exposedFunctions) {
+            for (const ef of this.babelExposedFunctions) {
                 exports.push(ef.functionName + " as " + ef.exportedName);
             }
             const exportStatement = "export { " + exports.join(", ") + " };";
-            ast.addExportStatementNode(ctx, exportStatement);            
+
+            // TODO: Extract this section to avoid code duplication
+            // Babel
+            const node = parser.parse(exportStatement, { sourceType: "module", errorRecovery: true }).program.body[0]; // error covery is neecessary, since the function to export is not present defined on the `exportstatement`
+            babelTree.program.body.push(node);            
         }
     }
 
     getRemoteFunctions() {
-        return this.remoteFunctions;
+        return this.babelRemoteFunctions;
     }
 
     getExposedFunctions() {
-        return this.exposedFunctions;
+        return this.babelExposedFunctions;
     }
 
     isInThisServer(functionName) {
@@ -55,73 +128,21 @@ export class ReplaceRemoteFunctionsVisitor extends JavaScriptParserVisitor {
         return server.id === this.serverInfo.id;
     }
 
-    visitFunctionDeclaration(ctx) {
-        const functionName = ctx.identifier().getText();
-        if (!this.isInThisServer(functionName)) {
-            // Let's transform this function into a remote function
-            const args = this.getArgs(ctx);
+    replaceFunctionBody(path, rawJsCode) {
+        // Parse the raw code into an AST
+        const bodyAst = parser.parse(rawJsCode, {
+            sourceType: "module",
+            allowReturnOutsideFunction: true,        
+        }); // the code been returned is double {}, must get the parsed child or other way to replace the body's content
 
-            // The following two calls will never return null, as we already
-            // confirmed that the function is in this server
-            const serverInfo = config.getServerInfo(functionName);
-            const functionInfo = config.getFunctionInfo(serverInfo, functionName);
+        const newStatements = bodyAst.program.body;
 
-            // Let's call the templates to fill with the proper remote bodies
-            if (functionInfo.method === "http-get") {
-                const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
-                ast.replaceFunctionBody(ctx, newBody);
-            } else if(functionInfo.method === "http-post") {
-                const newBody = httpAPITemplates.httpPostFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
-                ast.replaceFunctionBody(ctx, newBody);
-            } else if(functionInfo.method === "rabbit") {
-                const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
-                ast.replaceFunctionBody(ctx, newBody);
-                this.consumesRabbitFunctions = true;
-            }
-
-            // Since all remote code uses await, we must make the function async
-            ast.addAsyncIfNecessary(ctx);
-
-            // Finally, we mark this function as remote to propagate the async
-            this.remoteFunctions.push({
-                callPatterns: functionInfo.callPatterns,
-                serverInfo: this.serverInfo,
-                relativePath: this.relativePath,
-                method: functionInfo.method
-            });
-        } else {
-            // Not a remote function. Let's check if it must be expoed
-            const functionInfo = config.getFunctionInfo(this.serverInfo, functionName);
-
-            // If functionInfo is null, this means this function is replicated to
-            // every server and does not need to be exposed. Otherwise we store it
-            // to expose
-            if (functionInfo) {
-                const args = this.getArgs(ctx);
-
-                this.exposedFunctions.push({
-                    functionName: functionName,
-                    exportedName: functionName+"_localRef",
-                    functionInfo: functionInfo,
-                    serverInfo: this.serverInfo,
-                    relativePath: this.relativePath,
-                    args: args,
-                    isAsync: ctx.Async() ? true : false
-                });
-            }
+        if (!t.isBlockStatement(path.node.body)) {
+            path.node.body = t.blockStatement([]);
         }
-    }
 
-    getArgs(ctx) {
-        const args = [];
-        if (ctx.formalParameterList()?.formalParameterArg()) {
-            for (let i = 0; i < ctx.formalParameterList().formalParameterArg().length; i++) {
-                args.push(ctx.formalParameterList().formalParameterArg(i).assignable().getText());
-            }
-            if (ctx.formalParameterList().lastFormalParameterArg()) {
-                args.push(ctx.formalParameterList().formalParameterArg(i).assignable().getText());
-            }
-        }
-        return args;
+        path.node.async = true;
+
+        path.get("body").replaceWith(t.blockStatement(newStatements));
     }
 }
