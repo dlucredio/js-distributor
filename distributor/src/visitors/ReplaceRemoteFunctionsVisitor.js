@@ -12,9 +12,10 @@ import rabbitMQTemplates from '../templates/RabbitMQ.js';
 
 
 export class ReplaceRemoteFunctionsVisitor {
-    constructor(serverInfo, relativePath) {
+    constructor(serverInfo, relativePath, mockedFunctions) {
         this.serverInfo = serverInfo;
         this.relativePath = relativePath;
+        this.mockedFunctions = mockedFunctions;
         this.babelRemoteFunctions = [];
         this.babelExposedFunctions = [];
         this.consumesRabbitFunctions = false;
@@ -37,6 +38,11 @@ export class ReplaceRemoteFunctionsVisitor {
                     const serverInfo = config.getServerInfo(functionName);
                     const functionInfo = config.getFunctionInfo(serverInfo, functionName);
                     console.log("Found function:", functionName);
+                    if(selfReference.serverInfo.id.endsWith("-test-server") && functionInfo.mockResponse && functionInfo.method === "http-get" ) {
+                        const newBody = httpAPITemplates.httpMockedFuntions(functionName, functionInfo.mockResponse, args);
+                        selfReference.replaceFunctionBody(path, newBody);
+                        return; 
+                    }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)
 
                     if (functionInfo.method === "http-get") {
                         const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
@@ -125,7 +131,8 @@ export class ReplaceRemoteFunctionsVisitor {
     isInThisServer(functionName) {
         const server = config.getServerInfo(functionName);
         if (!server) { return true; } // Functions not defined in config.yml are replicated to every server
-        return server.id === this.serverInfo.id;
+        // check if the monolith has the same function but as a mock.
+        return server.id === this.serverInfo.id.replace("-test-server",""); // Functions defined in config.yml are replicated to its respective test server
     }
 
     replaceFunctionBody(path, rawJsCode) {
@@ -144,5 +151,36 @@ export class ReplaceRemoteFunctionsVisitor {
         path.node.async = true;
 
         path.get("body").replaceWith(t.blockStatement(newStatements));
+    }
+
+    hasMockedFunction(functionName){
+        for(const {relativePath, fileMockedFunctions} of this.mockedFunctions){
+            if(fileMockedFunctions.includes(functionName)){
+                return true;
+            }
+        }
+        return false
+    }
+
+    shouldExpose(ctx){
+        // If functionInfo is null, this means this function is replicated to
+        // every server and does not need to be exposed. Otherwise we store it
+        // to expose
+        const functionName = ctx.identifier().getText();
+        const functionInfo = config.getFunctionInfo(this.serverInfo, functionName);
+        
+        if (functionInfo) {
+                const args = this.getArgs(ctx);
+
+                this.exposedFunctions.push({
+                    functionName: functionName,
+                    exportedName: functionName+"_localRef",
+                    functionInfo: functionInfo,
+                    serverInfo: this.serverInfo,
+                    relativePath: this.relativePath,
+                    args: args,
+                    isAsync: ctx.Async() ? true : false
+                });
+        }
     }
 }

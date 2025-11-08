@@ -74,14 +74,28 @@ async function process() {
     const serverStructures = [];
     const servers = config.getServers();
     for (const s of servers) {
+        let s_copy = JSON.parse(JSON.stringify(s));
+        s_copy.id = s.id + "-test-server";
         const ASTs = [];
         const otherFiles = [];
+        const testOtherFiles = [];
+        const ASTs_copy = [];
+        const mockedFunctions = [];
+        const mockedFunctionsTest = [];
         console.log(`======= Processing server ${s.id} ========`);
-        parseCode(ASTs, otherFiles, inputDir);
+        parseCode(ASTs, otherFiles, inputDir, mockedFunctions);
+        parseCode(ASTs_copy, testOtherFiles, inputDir, mockedFunctionsTest);
         serverStructures.push({
             serverInfo: s,
             asts: ASTs,
-            otherFiles: otherFiles
+            otherFiles: otherFiles,
+            mockedFunctions: mockedFunctions
+        });
+        serverStructures.push({
+            serverInfo: s_copy,
+            asts: ASTs_copy,
+            otherFiles: testOtherFiles, 
+            mockedFunctions: mockedFunctionsTest
         });
     }
 
@@ -96,11 +110,23 @@ async function process() {
     // find all places where they are called and add an await
     fixAsyncFunctions(serverStructures, allRemoteFunctions);
 
+    // Now we need to generate the code to start the servers
+    generateStartCode(serverStructures, allExposedFunctions);
+    
+    //Add config to control this generation
+    if(true || config.isTestServer()) {
+        generateApiTestCode(serverStructures, allExposedFunctions);
+    }
     // Now let's generate the final code: one folder for each server
     generateCode(serverStructures);
 
+    // Because we added async to these functions, we must now
+    // find all places where they are called and add an await
+    fixAsyncFunctions(serverStructures, allRemoteFunctions)
+
     // Finally, we copy the non-source code files
     copyOtherFiles(serverStructures);
+
 
     // Finally, we initialize the NPM projects (if the user requested it)
     if (generateProjects) {
@@ -117,7 +143,7 @@ async function process() {
     console.log(`Done!`);
 }
 
-function parseCode(asts, otherFiles, inputDir) {
+function parseCode(asts, otherFiles, inputDir, mockedFunctions) {
     // First let's parse the original code for the project
     // and store it in a proper structure
     let items = fs.readdirSync(inputDir);
@@ -136,7 +162,7 @@ function parseCode(asts, otherFiles, inputDir) {
 
         // if item is a directory, recursive call is made
         if (fs.statSync(itemPath).isDirectory()) {
-            parseCode(asts, otherFiles, itemPath);
+            parseCode(asts, otherFiles, itemPath, mockedFunctions);
         } else if (itemPath.slice(-2) === "js") {
             // if item is an input file, let's parse it
             // Let's parse the file
@@ -166,7 +192,8 @@ function replaceRemoteFunctions(serverStructures) {
         for (const { relativePath, babelTree } of asts) {
             const replaceRemoteFunctionsVisitor = new ReplaceRemoteFunctionsVisitor(
                 serverInfo,
-                relativePath
+                relativePath,
+                mockedFunctions
             );
             replaceRemoteFunctionsVisitor.visitFunctionDeclarationWrapper(babelTree);
             allRemoteFunctions.push(
@@ -206,10 +233,11 @@ function fixAsyncFunctions(serverStructures, babelAllRemoteFunctions) {
 function generateStartCode(serverStructures, allExposedFunctions) {
     for (const { serverInfo, asts } of serverStructures) {
         console.log(`Generating start code for server ${serverInfo.id}`);
-        const allExposedFunctionsInServer = allExposedFunctions.filter(
-            (rf) => rf.serverInfo.id === serverInfo.id
-        );
-        const newCode = startServerTemplate(
+        const allExposedFunctionsInServer = getServerFunctions(allExposedFunctions, serverInfo);
+        const newCode = serverInfo.id.includes("test-server") ?  startTestServerTemplate(
+            serverInfo,
+            allExposedFunctionsInServer
+        ) : startServerTemplate(
             serverInfo,
             allExposedFunctionsInServer
         );
@@ -252,9 +280,7 @@ function copyOtherFiles(serverStructures) {
 async function initializeProjects(serverStructures, allRemoteFunctions) {
     for (const { serverInfo } of serverStructures) {
         const serverFolder = path.join(config.getCodeGenerationParameters().outputFolder, serverInfo.id);
-        const remoteFunctionsInServer = allRemoteFunctions.filter(
-            (rf) => rf.serverInfo.id === serverInfo.id
-        );
+        const remoteFunctionsInServer = getServerFunctions(allRemoteFunctions, serverInfo);
         await npmHelper.initNodeProject(
             serverFolder,
             serverInfo,
@@ -295,4 +321,38 @@ function copyAdditionalFiles(serverStructures) {
             }
         }
     }
+}
+
+function generateApiTestCode(serverStructures, allExposedFunctions){
+    /*serverStructures: [{
+        serverInfo: s,
+        asts: [{
+            relativePath: relativePath,
+            tree: tree
+        }],
+        otherFiles: otherFiles}]*/
+
+        // iterar pela lista de serverStructures
+            // iterar pela lista de asts 
+                // verificar se o relativePath é igual a um test
+                    //Se for um test
+                        // usar a arvore do arquivo para buscar por funções expostas localmente
+                            //para os testes expostos localmente, copiar o codigo de teste e trocar a chamada do metodo.
+    for (const { serverInfo, asts } of serverStructures) {
+        if(!serverInfo.id.includes("-test-server")){
+            continue;
+        }
+        for (const { relativePath, tree } of asts) {
+            if(relativePath.includes(".test.")) {
+                const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, tree);
+                testRouteVisitor.replaceTestApiCall();
+            }
+        }
+    }
+}
+
+function getServerFunctions(allFunctions, serverInfo){
+    return allFunctions.filter(
+            (rf) => rf.serverInfo.id === serverInfo.id
+    );
 }
