@@ -1,14 +1,10 @@
-// ANTLR code imports
-import JavaScriptParserVisitor from "../antlr4/JavaScriptParserVisitor.js";
-
 // Internal imports
 import config from '../config/Configuration.js';
 import helpers from '../helpers/GenericHelpers.js';
 import ast from '../transformations/ASTModifications.js';
 
-export class TestRouteVisitor extends JavaScriptParserVisitor {
+export class TestRouteVisitor{
     constructor(serverInfo, relativePath, tree) {
-        super();
         this.serverInfo = serverInfo;
         this.relativePath = relativePath;
         this.tree = { ...tree };
@@ -59,8 +55,8 @@ export class TestRouteVisitor extends JavaScriptParserVisitor {
     }
 
     visitImportStatement(ctx){
-        this.impr(ctx)
-        super.visitImportStatement(ctx);
+        //this.impr(ctx)
+        //super.visitImportStatement(ctx);
     }
 }
 
