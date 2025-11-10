@@ -13,7 +13,7 @@ import config, { ConfigError } from "./config/Configuration.js";
 import { writeJavaScriptFile } from "./helpers/GeneratorHelpers.js";
 import { ReplaceRemoteFunctionsVisitor } from "./visitors/ReplaceRemoteFunctionsVisitor.js";
 import { FixAsyncFunctionsVisitor } from "./visitors/FixAsyncFunctionsVisitor.js";
-import { startServerTemplate } from "./templates/StartServer.js";
+import { startServerTemplate, startTestServerTemplate } from "./templates/StartServer.js";
 import npmHelper from "./helpers/NpmHelper.js";
 import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
 
@@ -188,7 +188,7 @@ function parseCode(asts, otherFiles, inputDir, mockedFunctions) {
 function replaceRemoteFunctions(serverStructures) {
     const allRemoteFunctions = [];
     const allExposedFunctions = [];
-    for (const { serverInfo, asts } of serverStructures) {
+    for (const { serverInfo, asts, mockedFunctions } of serverStructures) {
         for (const { relativePath, babelTree } of asts) {
             const replaceRemoteFunctionsVisitor = new ReplaceRemoteFunctionsVisitor(
                 serverInfo,
@@ -344,8 +344,11 @@ function generateApiTestCode(serverStructures, allExposedFunctions){
         }
         for (const { relativePath, tree } of asts) {
             if(relativePath.includes(".test.")) {
+                /*
+                Maybe, it wont need this visitor, since babel handle almost everything it does.
                 const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, tree);
                 testRouteVisitor.replaceTestApiCall();
+                */
             }
         }
     }
