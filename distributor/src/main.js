@@ -8,6 +8,8 @@ import { minimatch } from 'minimatch';
 import { parse } from './helpers/DebuggableParser.js';
 import generate from "@babel/generator";
 const babelGenerate = generate.default ?? generate;
+import traverse from "@babel/traverse";
+const babelTraverse = traverse.default ?? traverse;
 
 // Internal imports
 import config, { ConfigError } from "./config/Configuration.js";
@@ -104,9 +106,6 @@ async function process() {
     const [allRemoteFunctions, allExposedFunctions] =
         replaceRemoteFunctions(serverStructures);
 
-    // Now we need to generate the code to start the servers
-    generateStartCode(serverStructures, allExposedFunctions);
-
     // Because we added async to these functions, we must now
     // find all places where they are called and add an await
     fixAsyncFunctions(serverStructures, allRemoteFunctions);
@@ -169,10 +168,35 @@ function parseCode(asts, otherFiles, inputDir, mockedFunctions) {
             // Let's parse the file
             const input = fs.readFileSync(itemPath, { encoding: "utf8" });
 
-            // const ast = babelParser.parse(input, {
-            //     sourceType: "module", 
-            // });
-            const ast = parse(input, { sourceType: "module" }, "MainParseCode");
+            const ast = babelParser.parse(input, {
+                sourceType: "module", 
+            });
+
+            babelTraverse(ast, {
+                // Match `function mock_*() {}`
+                FunctionDeclaration(path) {
+                    const name = path.node.id?.name;
+                    if (name && name.startsWith("mock_") && !mockedFunctions.includes(name)) {
+                        mockedFunctions.push(name)
+                    }
+                },
+
+                // Match `const mock_* = function() {}`
+                VariableDeclarator(path) {
+                    const id = path.node.id;
+                    if (id.type === "Identifier" && id.name.startsWith("mock_") && !mockedFunctions.includes(id)) {
+                        mockedFunctions.push(id)
+                    }
+                },
+
+                // Optional: detect object methods like `{ mock_test() {} }`
+                ObjectMethod(path) {
+                    const name = path.node.key?.name;
+                    if (name && name.startsWith("mock_") && !mockedFunctions.includes(id)) {
+                        mockedFunctions.push(name)
+                    }
+                },
+            });
             
             console.log(`Parsed file ${itemPath}`);
             asts.push({
