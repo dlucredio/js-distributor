@@ -19,6 +19,7 @@ export class ReplaceRemoteFunctionsVisitor {
         this.babelRemoteFunctions = [];
         this.babelExposedFunctions = [];
         this.consumesRabbitFunctions = false;
+        this.mockPrefix = "mock_"; // should be configured ?
     }
 
     visitFunctionDeclarationWrapper(babelTree){
@@ -38,11 +39,12 @@ export class ReplaceRemoteFunctionsVisitor {
                     const serverInfo = config.getServerInfo(functionName);
                     const functionInfo = config.getFunctionInfo(serverInfo, functionName);
                     console.log("Found function:", functionName);
-                    if(selfReference.serverInfo.id.endsWith("-test-server") && functionInfo.mockResponse && functionInfo.method === "http-get" ) {
+                    if(selfReference.serverInfo.id.endsWith("-test-server") && selfReference.mockedFunctions.includes(selfReference.mockPrefix.concat(functionName)) &&  functionInfo.method === "http-get" ) {
                         const newBody = httpAPITemplates.httpMockedFuntions(functionName, functionInfo.mockResponse, args);
                         selfReference.replaceFunctionBody(path, newBody);
                         return; 
                     }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)
+                    //should check if there is a mock ?
 
                     if (functionInfo.method === "http-get") {
                         const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
@@ -132,7 +134,9 @@ export class ReplaceRemoteFunctionsVisitor {
         const server = config.getServerInfo(functionName);
         if (!server) { return true; } // Functions not defined in config.yml are replicated to every server
         // check if the monolith has the same function but as a mock.
-        return server.id === this.serverInfo.id.replace("-test-server",""); // Functions defined in config.yml are replicated to its respective test server
+        
+        const hasMock = this.serverInfo.id.includes("-test-server","") && this.mockedFunctions.includes(this.mockPrefix.concat(functionName));
+        return server.id === this.serverInfo.id.replace("-test-server","") || hasMock; // Functions defined in config.yml are replicated to its respective test server
     }
 
     replaceFunctionBody(path, rawJsCode) {
