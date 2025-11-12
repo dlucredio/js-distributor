@@ -38,23 +38,24 @@ export class ReplaceRemoteFunctionsVisitor {
 
                     const serverInfo = config.getServerInfo(functionName);
                     const functionInfo = config.getFunctionInfo(serverInfo, functionName);
-                    console.log("Found function:", functionName);
-                    if(selfReference.serverInfo.id.endsWith("-test-server") && selfReference.mockedFunctions.includes(selfReference.mockPrefix.concat(functionName)) &&  functionInfo.method === "http-get" ) {
+                    console.log("Found remote function: ", functionName);
+                    const mockedFunctionInfo = selfReference.mockedFunctions.find(f => f.name === selfReference.mockPrefix.concat(functionName))
+                    if(selfReference.serverInfo.id.endsWith("-test-server") && mockedFunctionInfo &&  functionInfo.method === "http-get" ) {
                         const newBody = httpAPITemplates.httpMockedFuntions(functionName, functionInfo.mockResponse, args);
-                        selfReference.replaceFunctionBody(path, newBody);
+                        selfReference.replaceFunctionBody(path, newBody, mockedFunctionInfo.isAsync);
                         return; 
                     }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)
                     //should check if there is a mock ?
 
                     if (functionInfo.method === "http-get") {
                         const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
-                        selfReference.replaceFunctionBody(path, newBody);
+                        selfReference.replaceFunctionBody(path, newBody, true);
                     } else if(functionInfo.method === "http-post") {
                         const newBody = httpAPITemplates.httpPostFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
-                        selfReference.replaceFunctionBody(path, newBody);
+                        selfReference.replaceFunctionBody(path, newBody, true);
                     } else if(functionInfo.method === "rabbit") {
                         const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
-                        selfReference.replaceFunctionBody(path, newBody);
+                        selfReference.replaceFunctionBody(path, newBody, true);
                         selfReference.consumesRabbitFunctions = true;
                     }
 
@@ -67,7 +68,7 @@ export class ReplaceRemoteFunctionsVisitor {
                 }else {
                     // Not a remote function. Let's check if it must be expoed
                     const functionInfo = config.getFunctionInfo(selfReference.serverInfo, functionName);
-
+                    console.log("Found function: ", functionName);
                     // If functionInfo is null, this means this function is replicated to
                     // every server and does not need to be exposed. Otherwise we store it
                     // to expose
@@ -134,12 +135,12 @@ export class ReplaceRemoteFunctionsVisitor {
         const server = config.getServerInfo(functionName);
         if (!server) { return true; } // Functions not defined in config.yml are replicated to every server
         // check if the monolith has the same function but as a mock.
-        
-        const hasMock = this.serverInfo.id.includes("-test-server","") && this.mockedFunctions.includes(this.mockPrefix.concat(functionName));
-        return server.id === this.serverInfo.id.replace("-test-server","") || hasMock; // Functions defined in config.yml are replicated to its respective test server
+        const isCurrentServer = server.id === this.serverInfo.id.replace("-test-server","");
+
+        return isCurrentServer; // Functions defined in config.yml are replicated to its respective test server
     }
 
-    replaceFunctionBody(path, rawJsCode) {
+    replaceFunctionBody(path, rawJsCode, isAsync) {
         // Parse the raw code into an AST
         const bodyAst = parser.parse(rawJsCode, {
             sourceType: "module",
@@ -152,7 +153,7 @@ export class ReplaceRemoteFunctionsVisitor {
             path.node.body = t.blockStatement([]);
         }
 
-        path.node.async = true;
+        path.node.async = isAsync;
 
         path.get("body").replaceWith(t.blockStatement(newStatements));
     }

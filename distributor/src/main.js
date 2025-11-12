@@ -176,7 +176,7 @@ function parseCode(asts, otherFiles, inputDir, mockedFunctions) {
                 FunctionDeclaration(path) {
                     const name = path.node.id?.name;
                     if (name && name.startsWith("mock_") && !mockedFunctions.includes(name)) {
-                        mockedFunctions.push(name)
+                        mockedFunctions.push({name, isAsync: path.node.async})
                     }
                 },
 
@@ -184,7 +184,7 @@ function parseCode(asts, otherFiles, inputDir, mockedFunctions) {
                 VariableDeclarator(path) {
                     const id = path.node.id;
                     if (id.type === "Identifier" && id.name.startsWith("mock_") && !mockedFunctions.includes(id)) {
-                        mockedFunctions.push(id)
+                        mockedFunctions.push({id, isAsync: path.node.async})
                     }
                 },
 
@@ -192,7 +192,7 @@ function parseCode(asts, otherFiles, inputDir, mockedFunctions) {
                 ObjectMethod(path) {
                     const name = path.node.key?.name;
                     if (name && name.startsWith("mock_") && !mockedFunctions.includes(id)) {
-                        mockedFunctions.push(name)
+                        mockedFunctions.push({name, isAsync: path.node.async})
                     }
                 },
             });
