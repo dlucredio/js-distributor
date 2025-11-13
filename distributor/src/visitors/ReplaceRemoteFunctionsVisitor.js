@@ -40,12 +40,15 @@ export class ReplaceRemoteFunctionsVisitor {
                     const functionInfo = config.getFunctionInfo(serverInfo, functionName);
                     console.log("Found remote function: ", functionName);
                     const mockedFunctionInfo = selfReference.mockedFunctions.find(f => f.name === selfReference.mockPrefix.concat(functionName))
-                    if(selfReference.serverInfo.id.endsWith("-test-server") && mockedFunctionInfo &&  functionInfo.method === "http-get" ) {
+                    if(selfReference.serverInfo.id.endsWith("-test-server") && mockedFunctionInfo ) {
                         const newBody = httpAPITemplates.httpMockedFuntions(functionName, functionInfo.mockResponse, args);
                         selfReference.replaceFunctionBody(path, newBody, mockedFunctionInfo.isAsync);
                         return; 
                     }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)
-                    //should check if there is a mock ?
+                    else if(selfReference.serverInfo.id.endsWith("-test-server")){
+                        return; // If its a test server, and there is no mocked function, just copy it.
+                    }                
+                    
 
                     if (functionInfo.method === "http-get") {
                         const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
