@@ -121,8 +121,6 @@ async function process() {
     // Now let's generate the final code: one folder for each server
     generateCode(serverStructures);
 
-    
-
     // Finally, we copy the non-source code files
     copyOtherFiles(serverStructures);
 
@@ -372,7 +370,7 @@ function generateApiTestCode(serverStructures, allRemoteFunctions){
                
                 const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, babelTree);
                 testRouteVisitor.replaceTestApiCall();
-                
+                allRemoteFunctions.push(...testRouteVisitor.getNewRemotesFunctions())
             }
         }
     }
