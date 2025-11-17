@@ -23,6 +23,8 @@ export class TestRouteVisitor{
     getNewRemotesFunctions(){
         return this.newRemoteFunctions;
     }
+
+    
     isReplaceable(text){
         for(let i = 0; i< this.functionPatterns.length; i++){
             const [[key, ]] = Object.entries(this.functionPatterns[i]);

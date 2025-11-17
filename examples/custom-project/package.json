@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "js-dist": "js-distributor-scripts"
+    "dist": "js-distributor-scripts -c ./distributed-utils/config.yml"
   },
   "author": "",
   "license": "ISC",
