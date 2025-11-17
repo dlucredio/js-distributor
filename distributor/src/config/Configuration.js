@@ -11,8 +11,8 @@ let instance = null;
 class ConfigSingleton {
     constructor(configFile) {
         this.yamlPath = path.resolve(configFile);
+        this.testPresent = false;
     }
-
     getYamlContent() {
         const yamlContent = yaml.load(fs.readFileSync(this.yamlPath, 'utf8'));
 
@@ -25,6 +25,10 @@ class ConfigSingleton {
         if (!fs.existsSync(yamlContent.codeGenerationParameters.inputFolder) || !fs.lstatSync(yamlContent.codeGenerationParameters.inputFolder).isDirectory()) {
             throw new ConfigError(`Error: inputFolder "${yamlContent.codeGenerationParameters.inputFolder}" does not exist or is not a directory`);
         } 
+        setTestServer(false)
+        if(yamlContent.codeGenerationParameters.generateTestServers){
+            setTestServer(yamlContent.codeGenerationParameters.generateTestServers)
+        }
 
         if(!yamlContent.codeGenerationParameters.mode) {
             yamlContent.codeGenerationParameters.mode = "single";
@@ -273,7 +277,24 @@ function hasRabbitFunctions(serverInfo) {
     );
 }
 
+function setTestServer(bool){
+    if (!instance) {
+        throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
+    }
+    instance.testPresent = bool;
+}
+
+function isTestServer(){
+    return instance.testPresent;
+}
+
+function getTestServerSuffix(){
+    return "-test-server";
+}
+
 
 export default {
-    init, getConfigPath, getCodeGenerationParameters, getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, hasHttpFunctions, hasRabbitFunctions
+    init, getConfigPath, getCodeGenerationParameters, 
+    getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, 
+    hasHttpFunctions, hasRabbitFunctions, setTestServer, isTestServer, getTestServerSuffix
 }

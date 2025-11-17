@@ -12,12 +12,14 @@ import rabbitMQTemplates from '../templates/RabbitMQ.js';
 
 
 export class ReplaceRemoteFunctionsVisitor {
-    constructor(serverInfo, relativePath) {
+    constructor(serverInfo, relativePath, mockedFunctions) {
         this.serverInfo = serverInfo;
         this.relativePath = relativePath;
+        this.mockedFunctions = mockedFunctions;
         this.babelRemoteFunctions = [];
         this.babelExposedFunctions = [];
         this.consumesRabbitFunctions = false;
+        this.mockPrefix = "mock_"; // should be configured ?
     }
 
     visitFunctionDeclarationWrapper(babelTree){
@@ -36,17 +38,27 @@ export class ReplaceRemoteFunctionsVisitor {
 
                     const serverInfo = config.getServerInfo(functionName);
                     const functionInfo = config.getFunctionInfo(serverInfo, functionName);
-                    console.log("Found function:", functionName);
+                    console.log("Found remote function: ", functionName);
+                    const mockedFunctionInfo = selfReference.mockedFunctions.find(f => f.name === selfReference.mockPrefix.concat(functionName))
+                    if(selfReference.serverInfo.id.endsWith(config.getTestServerSuffix()) && mockedFunctionInfo ) {
+                        const newBody = httpAPITemplates.httpMockedFuntions(functionName, functionInfo.mockResponse, args);
+                        selfReference.replaceFunctionBody(path, newBody, mockedFunctionInfo.isAsync);
+                        return; 
+                    }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)
+                    else if(selfReference.serverInfo.id.endsWith(config.getTestServerSuffix())){
+                        return; // If its a test server, and there is no mocked function, just copy it.
+                    }                
+                    
 
                     if (functionInfo.method === "http-get") {
                         const newBody = httpAPITemplates.httpGetFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
-                        selfReference.replaceFunctionBody(path, newBody);
+                        selfReference.replaceFunctionBody(path, newBody, true);
                     } else if(functionInfo.method === "http-post") {
                         const newBody = httpAPITemplates.httpPostFetch(functionName, serverInfo.http.url, serverInfo.http.port, args);
-                        selfReference.replaceFunctionBody(path, newBody);
+                        selfReference.replaceFunctionBody(path, newBody, true);
                     } else if(functionInfo.method === "rabbit") {
                         const newBody = rabbitMQTemplates.rabbitProducerCode(functionName, functionInfo, args);
-                        selfReference.replaceFunctionBody(path, newBody);
+                        selfReference.replaceFunctionBody(path, newBody, true);
                         selfReference.consumesRabbitFunctions = true;
                     }
 
@@ -59,7 +71,7 @@ export class ReplaceRemoteFunctionsVisitor {
                 }else {
                     // Not a remote function. Let's check if it must be expoed
                     const functionInfo = config.getFunctionInfo(selfReference.serverInfo, functionName);
-
+                    console.log("Found function: ", functionName);
                     // If functionInfo is null, this means this function is replicated to
                     // every server and does not need to be exposed. Otherwise we store it
                     // to expose
@@ -125,10 +137,13 @@ export class ReplaceRemoteFunctionsVisitor {
     isInThisServer(functionName) {
         const server = config.getServerInfo(functionName);
         if (!server) { return true; } // Functions not defined in config.yml are replicated to every server
-        return server.id === this.serverInfo.id;
+        // check if the monolith has the same function but as a mock.
+        const isCurrentServer = server.id === this.serverInfo.id.replace(config.getTestServerSuffix(),"");
+
+        return isCurrentServer; // Functions defined in config.yml are replicated to its respective test server
     }
 
-    replaceFunctionBody(path, rawJsCode) {
+    replaceFunctionBody(path, rawJsCode, isAsync) {
         // Parse the raw code into an AST
         const bodyAst = parser.parse(rawJsCode, {
             sourceType: "module",
@@ -141,8 +156,39 @@ export class ReplaceRemoteFunctionsVisitor {
             path.node.body = t.blockStatement([]);
         }
 
-        path.node.async = true;
+        path.node.async = isAsync;
 
         path.get("body").replaceWith(t.blockStatement(newStatements));
+    }
+
+    hasMockedFunction(functionName){
+        for(const {relativePath, fileMockedFunctions} of this.mockedFunctions){
+            if(fileMockedFunctions.includes(functionName)){
+                return true;
+            }
+        }
+        return false
+    }
+
+    shouldExpose(ctx){
+        // If functionInfo is null, this means this function is replicated to
+        // every server and does not need to be exposed. Otherwise we store it
+        // to expose
+        const functionName = ctx.identifier().getText();
+        const functionInfo = config.getFunctionInfo(this.serverInfo, functionName);
+        
+        if (functionInfo) {
+                const args = this.getArgs(ctx);
+
+                this.exposedFunctions.push({
+                    functionName: functionName,
+                    exportedName: functionName+"_localRef",
+                    functionInfo: functionInfo,
+                    serverInfo: this.serverInfo,
+                    relativePath: this.relativePath,
+                    args: args,
+                    isAsync: ctx.Async() ? true : false
+                });
+        }
     }
 }

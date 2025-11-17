@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "js-distributor-scripts -c ./distributed-utils/config.yml"
+    "dist": "js-distributor-scripts -c ./distributed-utils/config.yml"
   },
   "author": "",
   "license": "ISC",

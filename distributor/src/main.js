@@ -7,17 +7,20 @@ import { minimatch } from 'minimatch';
 import * as babelParser from "@babel/parser"
 import generate from "@babel/generator";
 const babelGenerate = generate.default ?? generate;
+import traverse from "@babel/traverse";
+const babelTraverse = traverse.default ?? traverse;
 
 // Internal imports
 import config, { ConfigError } from "./config/Configuration.js";
 import { writeJavaScriptFile } from "./helpers/GeneratorHelpers.js";
 import { ReplaceRemoteFunctionsVisitor } from "./visitors/ReplaceRemoteFunctionsVisitor.js";
 import { FixAsyncFunctionsVisitor } from "./visitors/FixAsyncFunctionsVisitor.js";
-import { startServerTemplate } from "./templates/StartServer.js";
+import {TestRouteVisitor } from "./visitors/TestRouteVisitor.js"
+import { startServerTemplate, startTestServerTemplate } from "./templates/StartServer.js";
 import npmHelper from "./helpers/NpmHelper.js";
 import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
 
-
+const TESTFILETEXT = ".test.";
 export default async function entrypoint(configFile) {
     try {
         config.init(configFile);
@@ -74,14 +77,31 @@ async function process() {
     const serverStructures = [];
     const servers = config.getServers();
     for (const s of servers) {
+        if(config.isTestServer()){
+            let s_copy = JSON.parse(JSON.stringify(s));
+            s_copy.id = s.id + config.getTestServerSuffix();
+            const testOtherFiles = [];
+            const ASTs_copy = [];
+            const mockedFunctionsTest = [];
+            parseCode(ASTs_copy, testOtherFiles, inputDir, mockedFunctionsTest);
+            serverStructures.push({
+                serverInfo: s_copy,
+                asts: ASTs_copy,
+                otherFiles: testOtherFiles, 
+                mockedFunctions: mockedFunctionsTest
+            });
+        }
+
         const ASTs = [];
-        const otherFiles = [];
+        const otherFiles = [];        
+        const mockedFunctions = [];
         console.log(`======= Processing server ${s.id} ========`);
-        parseCode(ASTs, otherFiles, inputDir);
+        parseCode(ASTs, otherFiles, inputDir, mockedFunctions);
         serverStructures.push({
             serverInfo: s,
             asts: ASTs,
-            otherFiles: otherFiles
+            otherFiles: otherFiles,
+            mockedFunctions: mockedFunctions
         });
     }
 
@@ -91,16 +111,22 @@ async function process() {
 
     // Now we need to generate the code to start the servers
     generateStartCode(serverStructures, allExposedFunctions);
+    
+    //Add config to control this generation
+    if(config.isTestServer()) {
+        generateApiTestCode(serverStructures, allRemoteFunctions);
+    }
 
     // Because we added async to these functions, we must now
     // find all places where they are called and add an await
-    fixAsyncFunctions(serverStructures, allRemoteFunctions);
+    fixAsyncFunctions(serverStructures, allRemoteFunctions)
 
     // Now let's generate the final code: one folder for each server
     generateCode(serverStructures);
 
     // Finally, we copy the non-source code files
     copyOtherFiles(serverStructures);
+
 
     // Finally, we initialize the NPM projects (if the user requested it)
     if (generateProjects) {
@@ -117,7 +143,7 @@ async function process() {
     console.log(`Done!`);
 }
 
-function parseCode(asts, otherFiles, inputDir) {
+function parseCode(asts, otherFiles, inputDir, mockedFunctions) {
     // First let's parse the original code for the project
     // and store it in a proper structure
     let items = fs.readdirSync(inputDir);
@@ -136,7 +162,7 @@ function parseCode(asts, otherFiles, inputDir) {
 
         // if item is a directory, recursive call is made
         if (fs.statSync(itemPath).isDirectory()) {
-            parseCode(asts, otherFiles, itemPath);
+            parseCode(asts, otherFiles, itemPath, mockedFunctions);
         } else if (itemPath.slice(-2) === "js") {
             // if item is an input file, let's parse it
             // Let's parse the file
@@ -144,6 +170,32 @@ function parseCode(asts, otherFiles, inputDir) {
 
             const ast = babelParser.parse(input, {
                 sourceType: "module", 
+            });
+
+            babelTraverse(ast, {
+                // Match `function mock_*() {}`
+                FunctionDeclaration(path) {
+                    const name = path.node.id?.name;
+                    if (name && name.startsWith("mock_") && !mockedFunctions.includes(name)) {
+                        mockedFunctions.push({name, isAsync: path.node.async})
+                    }
+                },
+
+                // Match `const mock_* = function() {}`
+                VariableDeclarator(path) {
+                    const id = path.node.id;
+                    if (id.type === "Identifier" && id.name.startsWith("mock_") && !mockedFunctions.includes(id)) {
+                        mockedFunctions.push({id, isAsync: path.node.async})
+                    }
+                },
+
+                // Optional: detect object methods like `{ mock_test() {} }`
+                ObjectMethod(path) {
+                    const name = path.node.key?.name;
+                    if (name && name.startsWith("mock_") && !mockedFunctions.includes(id)) {
+                        mockedFunctions.push({name, isAsync: path.node.async})
+                    }
+                },
             });
             
             console.log(`Parsed file ${itemPath}`);
@@ -162,11 +214,12 @@ function parseCode(asts, otherFiles, inputDir) {
 function replaceRemoteFunctions(serverStructures) {
     const allRemoteFunctions = [];
     const allExposedFunctions = [];
-    for (const { serverInfo, asts } of serverStructures) {
+    for (const { serverInfo, asts, mockedFunctions } of serverStructures) {
         for (const { relativePath, babelTree } of asts) {
             const replaceRemoteFunctionsVisitor = new ReplaceRemoteFunctionsVisitor(
                 serverInfo,
-                relativePath
+                relativePath,
+                mockedFunctions
             );
             replaceRemoteFunctionsVisitor.visitFunctionDeclarationWrapper(babelTree);
             allRemoteFunctions.push(
@@ -206,10 +259,11 @@ function fixAsyncFunctions(serverStructures, babelAllRemoteFunctions) {
 function generateStartCode(serverStructures, allExposedFunctions) {
     for (const { serverInfo, asts } of serverStructures) {
         console.log(`Generating start code for server ${serverInfo.id}`);
-        const allExposedFunctionsInServer = allExposedFunctions.filter(
-            (rf) => rf.serverInfo.id === serverInfo.id
-        );
-        const newCode = startServerTemplate(
+        const allExposedFunctionsInServer = getServerFunctions(allExposedFunctions, serverInfo);
+        const newCode = serverInfo.id.includes(config.getTestServerSuffix()) ?  startTestServerTemplate(
+            serverInfo,
+            allExposedFunctionsInServer
+        ) : startServerTemplate(
             serverInfo,
             allExposedFunctionsInServer
         );
@@ -252,9 +306,7 @@ function copyOtherFiles(serverStructures) {
 async function initializeProjects(serverStructures, allRemoteFunctions) {
     for (const { serverInfo } of serverStructures) {
         const serverFolder = path.join(config.getCodeGenerationParameters().outputFolder, serverInfo.id);
-        const remoteFunctionsInServer = allRemoteFunctions.filter(
-            (rf) => rf.serverInfo.id === serverInfo.id
-        );
+        const remoteFunctionsInServer = getServerFunctions(allRemoteFunctions, serverInfo);
         await npmHelper.initNodeProject(
             serverFolder,
             serverInfo,
@@ -295,4 +347,26 @@ function copyAdditionalFiles(serverStructures) {
             }
         }
     }
+}
+
+function generateApiTestCode(serverStructures, allRemoteFunctions){
+    for (const { serverInfo, asts } of serverStructures) {
+        if(!serverInfo.id.includes(config.getTestServerSuffix())){
+            continue;
+        }
+        for (const { relativePath, babelTree } of asts) {
+            if(relativePath.includes(TESTFILETEXT)) {
+               
+                const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, babelTree);
+                testRouteVisitor.replaceTestApiCall();
+                allRemoteFunctions.push(...testRouteVisitor.getNewRemotesFunctions())
+            }
+        }
+    }
+}
+
+function getServerFunctions(allFunctions, serverInfo){
+    return allFunctions.filter(
+            (rf) => rf.serverInfo.id === serverInfo.id
+    );
 }
