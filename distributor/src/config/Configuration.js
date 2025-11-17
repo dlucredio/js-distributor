@@ -25,6 +25,10 @@ class ConfigSingleton {
         if (!fs.existsSync(yamlContent.codeGenerationParameters.inputFolder) || !fs.lstatSync(yamlContent.codeGenerationParameters.inputFolder).isDirectory()) {
             throw new ConfigError(`Error: inputFolder "${yamlContent.codeGenerationParameters.inputFolder}" does not exist or is not a directory`);
         } 
+        setTestServer(false)
+        if(yamlContent.codeGenerationParameters.generateTestServers){
+            setTestServer(yamlContent.codeGenerationParameters.generateTestServers)
+        }
 
         if(!yamlContent.codeGenerationParameters.mode) {
             yamlContent.codeGenerationParameters.mode = "single";
@@ -284,8 +288,13 @@ function isTestServer(){
     return instance.testPresent;
 }
 
+function getTestServerSuffix(){
+    return "-test-server";
+}
 
 
 export default {
-    init, getConfigPath, getCodeGenerationParameters, getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, hasHttpFunctions, hasRabbitFunctions, setTestServer, isTestServer
+    init, getConfigPath, getCodeGenerationParameters, 
+    getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, 
+    hasHttpFunctions, hasRabbitFunctions, setTestServer, isTestServer, getTestServerSuffix
 }

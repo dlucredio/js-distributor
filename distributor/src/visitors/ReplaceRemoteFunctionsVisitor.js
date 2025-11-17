@@ -40,12 +40,12 @@ export class ReplaceRemoteFunctionsVisitor {
                     const functionInfo = config.getFunctionInfo(serverInfo, functionName);
                     console.log("Found remote function: ", functionName);
                     const mockedFunctionInfo = selfReference.mockedFunctions.find(f => f.name === selfReference.mockPrefix.concat(functionName))
-                    if(selfReference.serverInfo.id.endsWith("-test-server") && mockedFunctionInfo ) {
+                    if(selfReference.serverInfo.id.endsWith(config.getTestServerSuffix()) && mockedFunctionInfo ) {
                         const newBody = httpAPITemplates.httpMockedFuntions(functionName, functionInfo.mockResponse, args);
                         selfReference.replaceFunctionBody(path, newBody, mockedFunctionInfo.isAsync);
                         return; 
                     }// if is http and the current server is a test, the function must be mocked(replace the function body with a return object)
-                    else if(selfReference.serverInfo.id.endsWith("-test-server")){
+                    else if(selfReference.serverInfo.id.endsWith(config.getTestServerSuffix())){
                         return; // If its a test server, and there is no mocked function, just copy it.
                     }                
                     
@@ -138,7 +138,7 @@ export class ReplaceRemoteFunctionsVisitor {
         const server = config.getServerInfo(functionName);
         if (!server) { return true; } // Functions not defined in config.yml are replicated to every server
         // check if the monolith has the same function but as a mock.
-        const isCurrentServer = server.id === this.serverInfo.id.replace("-test-server","");
+        const isCurrentServer = server.id === this.serverInfo.id.replace(config.getTestServerSuffix(),"");
 
         return isCurrentServer; // Functions defined in config.yml are replicated to its respective test server
     }

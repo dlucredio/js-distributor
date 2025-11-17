@@ -20,7 +20,7 @@ import { startServerTemplate, startTestServerTemplate } from "./templates/StartS
 import npmHelper from "./helpers/NpmHelper.js";
 import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
 
-
+const TESTFILETEXT = ".test.";
 export default async function entrypoint(configFile) {
     try {
         config.init(configFile);
@@ -77,28 +77,31 @@ async function process() {
     const serverStructures = [];
     const servers = config.getServers();
     for (const s of servers) {
-        let s_copy = JSON.parse(JSON.stringify(s));
-        s_copy.id = s.id + "-test-server";
+        if(config.isTestServer()){
+            let s_copy = JSON.parse(JSON.stringify(s));
+            s_copy.id = s.id + config.getTestServerSuffix();
+            const testOtherFiles = [];
+            const ASTs_copy = [];
+            const mockedFunctionsTest = [];
+            parseCode(ASTs_copy, testOtherFiles, inputDir, mockedFunctionsTest);
+            serverStructures.push({
+                serverInfo: s_copy,
+                asts: ASTs_copy,
+                otherFiles: testOtherFiles, 
+                mockedFunctions: mockedFunctionsTest
+            });
+        }
+
         const ASTs = [];
-        const otherFiles = [];
-        const testOtherFiles = [];
-        const ASTs_copy = [];
+        const otherFiles = [];        
         const mockedFunctions = [];
-        const mockedFunctionsTest = [];
         console.log(`======= Processing server ${s.id} ========`);
         parseCode(ASTs, otherFiles, inputDir, mockedFunctions);
-        parseCode(ASTs_copy, testOtherFiles, inputDir, mockedFunctionsTest);
         serverStructures.push({
             serverInfo: s,
             asts: ASTs,
             otherFiles: otherFiles,
             mockedFunctions: mockedFunctions
-        });
-        serverStructures.push({
-            serverInfo: s_copy,
-            asts: ASTs_copy,
-            otherFiles: testOtherFiles, 
-            mockedFunctions: mockedFunctionsTest
         });
     }
 
@@ -110,7 +113,7 @@ async function process() {
     generateStartCode(serverStructures, allExposedFunctions);
     
     //Add config to control this generation
-    if(true || config.isTestServer()) {
+    if(config.isTestServer()) {
         generateApiTestCode(serverStructures, allRemoteFunctions);
     }
 
@@ -257,7 +260,7 @@ function generateStartCode(serverStructures, allExposedFunctions) {
     for (const { serverInfo, asts } of serverStructures) {
         console.log(`Generating start code for server ${serverInfo.id}`);
         const allExposedFunctionsInServer = getServerFunctions(allExposedFunctions, serverInfo);
-        const newCode = serverInfo.id.includes("test-server") ?  startTestServerTemplate(
+        const newCode = serverInfo.id.includes(config.getTestServerSuffix()) ?  startTestServerTemplate(
             serverInfo,
             allExposedFunctionsInServer
         ) : startServerTemplate(
@@ -347,26 +350,12 @@ function copyAdditionalFiles(serverStructures) {
 }
 
 function generateApiTestCode(serverStructures, allRemoteFunctions){
-    /*serverStructures: [{
-        serverInfo: s,
-        asts: [{
-            relativePath: relativePath,
-            tree: tree
-        }],
-        otherFiles: otherFiles}]*/
-
-        // iterar pela lista de serverStructures
-            // iterar pela lista de asts 
-                // verificar se o relativePath é igual a um test
-                    //Se for um test
-                        // usar a arvore do arquivo para buscar por funções expostas localmente
-                            //para os testes expostos localmente, copiar o codigo de teste e trocar a chamada do metodo.
     for (const { serverInfo, asts } of serverStructures) {
-        if(!serverInfo.id.includes("-test-server")){
+        if(!serverInfo.id.includes(config.getTestServerSuffix())){
             continue;
         }
         for (const { relativePath, babelTree } of asts) {
-            if(relativePath.includes(".test.")) {
+            if(relativePath.includes(TESTFILETEXT)) {
                
                 const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, babelTree);
                 testRouteVisitor.replaceTestApiCall();
