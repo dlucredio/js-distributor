@@ -15,6 +15,7 @@ import config, { ConfigError } from "./config/Configuration.js";
 import { writeJavaScriptFile } from "./helpers/GeneratorHelpers.js";
 import { ReplaceRemoteFunctionsVisitor } from "./visitors/ReplaceRemoteFunctionsVisitor.js";
 import { FixAsyncFunctionsVisitor } from "./visitors/FixAsyncFunctionsVisitor.js";
+import {TestRouteVisitor } from "./visitors/TestRouteVisitor.js"
 import { startServerTemplate, startTestServerTemplate } from "./templates/StartServer.js";
 import npmHelper from "./helpers/NpmHelper.js";
 import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
@@ -105,23 +106,22 @@ async function process() {
     const [allRemoteFunctions, allExposedFunctions] =
         replaceRemoteFunctions(serverStructures);
 
-    // Because we added async to these functions, we must now
-    // find all places where they are called and add an await
-    fixAsyncFunctions(serverStructures, allRemoteFunctions);
-
     // Now we need to generate the code to start the servers
     generateStartCode(serverStructures, allExposedFunctions);
     
     //Add config to control this generation
     if(true || config.isTestServer()) {
-        generateApiTestCode(serverStructures, allExposedFunctions);
+        generateApiTestCode(serverStructures, allRemoteFunctions);
     }
-    // Now let's generate the final code: one folder for each server
-    generateCode(serverStructures);
 
     // Because we added async to these functions, we must now
     // find all places where they are called and add an await
     fixAsyncFunctions(serverStructures, allRemoteFunctions)
+
+    // Now let's generate the final code: one folder for each server
+    generateCode(serverStructures);
+
+    
 
     // Finally, we copy the non-source code files
     copyOtherFiles(serverStructures);
@@ -348,7 +348,7 @@ function copyAdditionalFiles(serverStructures) {
     }
 }
 
-function generateApiTestCode(serverStructures, allExposedFunctions){
+function generateApiTestCode(serverStructures, allRemoteFunctions){
     /*serverStructures: [{
         serverInfo: s,
         asts: [{
@@ -367,13 +367,12 @@ function generateApiTestCode(serverStructures, allExposedFunctions){
         if(!serverInfo.id.includes("-test-server")){
             continue;
         }
-        for (const { relativePath, tree } of asts) {
+        for (const { relativePath, babelTree } of asts) {
             if(relativePath.includes(".test.")) {
-                /*
-                Maybe, it wont need this visitor, since babel handle almost everything it does.
-                const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, tree);
+               
+                const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, babelTree);
                 testRouteVisitor.replaceTestApiCall();
-                */
+                
             }
         }
     }
