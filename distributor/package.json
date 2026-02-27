@@ -1,6 +1,6 @@
 {
   "name": "js-distributor",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "Distribution of a monolithic JavaScript project across multiple servers",
   "main": "src/main.js",
   "keywords": [

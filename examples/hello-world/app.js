@@ -10,7 +10,7 @@ function getFullName(firstName, lastName) {
 
 function main() {
     console.log("Running application");
-    const fullName = getFullName("Fulano", "Silva");
+    const fullName = getFullName("John", "Doe");
     const greeting = "Hello";
     const message = getMessage(greeting, fullName);
     console.log(message);

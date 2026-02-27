@@ -1,22 +1,22 @@
 codeGenerationParameters:
-  mode: single
-  inputFolder: '.'
-  outputFolder: 'distributed'
-  cleanOutput: true
-  generateProjects: true
-  ignore:
+  mode: single                  # Runs the tool a single time (instead of watching for changes)
+  inputFolder: '.'              # Folder where to look for the monolith code
+  outputFolder: 'distributed'   # Folder to generate the microservices
+  cleanOutput: true             # Instructs the tool to clean the output folder
+  generateProjects: true        # Generates npm projects for the microservices
+  ignore:                       # Folders to ignore in the monolith
     - "node_modules"
-servers:
-  - id: alpha
-  - id: beta
-    http:
+servers:                        # Now comes the three servers
+  - id: alpha                   # alpha server will contain all functions
+  - id: beta                    # beta server will contain function "getMessage", exposed
+    http:                       # at localhost, port 3000, as a HTTP GET endpoint
       url: localhost
       port: 3000
     functions:
       - declarationPattern: getMessage
-        method: http-post
-  - id: gamma
-    http:
+        method: http-get
+  - id: gamma                   # gamma server will contain function "getFullName", exposed
+    http:                       # at localhost, port 3001, as a HTTP POST endpoint
       url: localhost
       port: 3001
     functions:

@@ -74,7 +74,7 @@ function generateWaitForCalls(f) {
 
 function rabbitProducerCode(functionName, functionInfo, args) {
     const hasExchange = !!functionInfo.rabbitConfig.exchangeName;
-    const responseQueue = 'q.queue';
+    let responseQueue = 'q.queue';
     if(!hasExchange && functionInfo.rabbitConfig.callbackQueue !== 'anonymous') {
         responseQueue = 'callbackQueue';
     }
@@ -88,9 +88,11 @@ function rabbitProducerCode(functionName, functionInfo, args) {
             console.log("Connection established!");
             console.log("Sending call to function ${functionName}");
             const channel = await connection.createChannel();
-            const q = await channel.assertQueue('', {
-                exclusive: true,
-            });
+            ${functionInfo.rabbitConfig.callbackQueue === 'anonymous' ? `
+                const q = await channel.assertQueue('', {
+                    exclusive: true,
+                });
+            ` : ``}
             ${hasExchange ? `
                 const ${functionName}_exchange = '${functionInfo.rabbitConfig.exchangeName}';
                 await channel.assertExchange(${functionName}_exchange, '${functionInfo.rabbitConfig.exchangeType}', {

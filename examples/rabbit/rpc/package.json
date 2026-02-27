@@ -1,0 +1,16 @@
+{
+  "name": "rpc",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "js-dist-default": "js-distributor-scripts -c config_default.yml",
+    "js-dist-with-rpc-queue": "js-distributor-scripts -c config_with_rpc_queue.yml",
+    "js-dist-with-rpc-queue-and-callback-queue": "js-distributor-scripts -c config_with_rpc_queue_and_callback_queue.yml"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "js-distributor": "file:../../../distributor"
+  }
+}

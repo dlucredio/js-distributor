@@ -5,14 +5,20 @@ import {
 const app = express();
 const port = 3000;
 app.use(express.json());
-app.post('/getMessage', (requestParameter, responseParameter) => {
-    const greeting = requestParameter.body.greeting;
-    const person = requestParameter.body.person;
+
+// HTTP GET functions
+
+app.get('/getMessage', (requestParameter, responseParameter) => {
+    const greeting = requestParameter.query.greeting;
+    const person = requestParameter.query.person;
     const executionResult = getMessage(greeting, person);
     return responseParameter.json({
         executionResult
     });
 });
+
+// HTTP POST functions
+
 app.listen(port, () => {
     console.log('Server running in port ' + port);
 });

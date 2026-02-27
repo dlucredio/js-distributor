@@ -93,7 +93,7 @@ export class ReplaceRemoteFunctionsVisitor {
                 // TODO: Extract this section to avoid code duplication
                 //Babel 
                 const node = parser.parse(is, { sourceType: "module" }).program.body[0];
-                this.babelTree.program.body.unshift(node);
+                babelTree.program.body.unshift(node);
             }
         }
 

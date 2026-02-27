@@ -20,7 +20,7 @@ async function getFullName(firstName, lastName) {
 }
 async function main() {
     console.log("Running application");
-    const fullName = await getFullName("Fulano", "Silva");
+    const fullName = await getFullName("John", "Doe");
     const greeting = "Hello";
     const message = getMessage(greeting, fullName);
     console.log(message);

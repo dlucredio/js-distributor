@@ -1,0 +1,12 @@
+POST http://localhost:3001/registerPerson
+Content-Type: application/json
+
+{
+    "person": {
+        "name": "Fulano Santos 2",
+        "email": "fulano.silva@email.com",
+        "phone": "(16) 95516-1234",
+        "birthDate": "1990-05-12",
+        "cpf": "123.456.789-09"
+    }
+}

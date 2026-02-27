@@ -5,6 +5,11 @@ import {
 const app = express();
 const port = 3001;
 app.use(express.json());
+
+// HTTP GET functions
+
+// HTTP POST functions
+
 app.post('/getFullName', (requestParameter, responseParameter) => {
     const firstName = requestParameter.body.firstName;
     const lastName = requestParameter.body.lastName;
