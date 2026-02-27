@@ -4,7 +4,8 @@ import fs from "fs";
 import { minimatch } from 'minimatch';
 
 // Babel imports
-import * as babelParser from "@babel/parser"
+// import * as babelParser from "@babel/parser"
+import { parse } from './helpers/DebuggableParser.js';
 import generate from "@babel/generator";
 const babelGenerate = generate.default ?? generate;
 
@@ -142,9 +143,10 @@ function parseCode(asts, otherFiles, inputDir) {
             // Let's parse the file
             const input = fs.readFileSync(itemPath, { encoding: "utf8" });
 
-            const ast = babelParser.parse(input, {
-                sourceType: "module", 
-            });
+            // const ast = babelParser.parse(input, {
+            //     sourceType: "module", 
+            // });
+            const ast = parse(input, { sourceType: "module" }, "MainParseCode");
             
             console.log(`Parsed file ${itemPath}`);
             asts.push({
@@ -213,7 +215,8 @@ function generateStartCode(serverStructures, allExposedFunctions) {
             serverInfo,
             allExposedFunctionsInServer
         );
-        const babelNewTree = babelParser.parse(newCode, {sourceType: "module"});
+        // const babelNewTree = babelParser.parse(newCode, {sourceType: "module"});
+        const babelNewTree = parse(newCode, { sourceType: "module" }, "StartServerParse");
         asts.push({
             relativePath: "start.js",
             babelTree: babelNewTree

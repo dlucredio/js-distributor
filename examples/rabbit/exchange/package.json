@@ -1,0 +1,16 @@
+{
+  "name": "rpc",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "js-dist-direct": "js-distributor-scripts -c config_direct.yml",
+    "js-dist-multiple-bindings": "js-distributor-scripts -c config_multiple_bindings.yml",
+    "js-dist-fanout": "js-distributor-scripts -c config_fanout.yml"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "js-distributor": "file:../../../distributor"
+  }
+}

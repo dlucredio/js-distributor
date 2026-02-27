@@ -1,5 +1,6 @@
 // Babel imports
-import * as parser from "@babel/parser";
+// import * as parser from "@babel/parser";
+import { parse } from '../helpers/DebuggableParser.js';
 import * as t from "@babel/types";
 import traverse from "@babel/traverse";
 const babelTraverse = traverse.default ?? traverse;
@@ -92,7 +93,8 @@ export class ReplaceRemoteFunctionsVisitor {
             for(const is of importStatements) {
                 // TODO: Extract this section to avoid code duplication
                 //Babel 
-                const node = parser.parse(is, { sourceType: "module" }).program.body[0];
+                // const node = parser.parse(is, { sourceType: "module" }).program.body[0];
+                const node = parse(is, { sourceType: "module" }, "RabbitMQImport").program.body[0];
                 babelTree.program.body.unshift(node);
             }
         }
@@ -109,7 +111,8 @@ export class ReplaceRemoteFunctionsVisitor {
 
             // TODO: Extract this section to avoid code duplication
             // Babel
-            const node = parser.parse(exportStatement, { sourceType: "module", errorRecovery: true }).program.body[0]; // error covery is neecessary, since the function to export is not present defined on the `exportstatement`
+            // const node = parser.parse(exportStatement, { sourceType: "module", errorRecovery: true }).program.body[0]; // error covery is neecessary, since the function to export is not present defined on the `exportstatement`
+            const node = parse(exportStatement, { sourceType: "module", errorRecovery: true }, "ExportStatement").program.body[0];
             babelTree.program.body.push(node);            
         }
     }
@@ -130,11 +133,15 @@ export class ReplaceRemoteFunctionsVisitor {
 
     replaceFunctionBody(path, rawJsCode) {
         // Parse the raw code into an AST
-        const bodyAst = parser.parse(rawJsCode, {
-            sourceType: "module",
-            allowReturnOutsideFunction: true,        
-        }); // the code been returned is double {}, must get the parsed child or other way to replace the body's content
+        // const bodyAst = parser.parse(rawJsCode, {
+        //     sourceType: "module",
+        //     allowReturnOutsideFunction: true,        
+        // }); // the code been returned is double {}, must get the parsed child or other way to replace the body's content
 
+        const bodyAst = parse(rawJsCode, {
+            sourceType: "module",
+            allowReturnOutsideFunction: true,
+        }, "ReplaceFunctionBody"); // the code been returned is double {}, must get the parsed child or other way to replace the body's content
         const newStatements = bodyAst.program.body;
 
         if (!t.isBlockStatement(path.node.body)) {

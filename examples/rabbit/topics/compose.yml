@@ -1,0 +1,6 @@
+services:
+  rabbit:                               # RabbitMQ container
+    image: rabbitmq
+    ports:
+      - 5672:5672                       # For AMPQ connection
+      - 8080:15672                      # Web interface

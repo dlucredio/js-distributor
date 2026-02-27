@@ -11,9 +11,10 @@ async function waitForCalls() {
 
         // RabbitMQ consumers
 
+        const sortArray_queueName = "sortArrayRPCQueue";
+
         // This function does not have an exchange, let's use the queue directly
 
-        const sortArray_queueName = "sortArrayRPCQueue";
         await channel.assertQueue(sortArray_queueName, {
             durable: false
         });
@@ -28,12 +29,12 @@ async function waitForCalls() {
                     } = message_call_received.parameters;
                     console.log("Calling function sortArray", array, algorithm);
                     const result_sortArray = sortArray(array, algorithm);
+                    console.log("Sending response to function sortArray");
                     const response_sortArray = {
                         funcName: "sortArray",
                         result: result_sortArray
                     };
-                    console.log("Sending response to function sortArray");
-                    channel.sendToQueue(msg.properties.replyTo, Buffer.from(JSON.stringify(response_sortArray)), {
+                    channel.sendToQueue('sortArrayCallbackQueue', Buffer.from(JSON.stringify(response_sortArray)), {
                         correlationId: msg.properties.correlationId
                     });
                 }

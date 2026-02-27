@@ -1,0 +1,138 @@
+import amqp from 'amqplib';
+import {
+    v4 as uuidv4_js_dist
+} from 'uuid';
+async function main() {
+    const data = [8, 3, 5, 1, 9, 2];
+    console.log("\n--- MERGE SORT ---");
+    console.log("Original array:", data);
+    console.log("================================");
+    const mergeResult = await mergeSort(data, 0);
+    console.log("Merge result:", mergeResult);
+    console.log("\n--- QUICK SORT ---");
+    console.log("Original array:", data);
+    console.log("================================");
+    const quickResult = await quickSort(data, 0);
+    console.log("Quick result:", quickResult);
+    console.log("\nOriginal array after execution:", data);
+}
+async function mergeSort(arr, depth) {
+    {
+        const p = new Promise(async (resolve, reject) => {
+            try {
+                console.log("Connecting to RabbitMQ...");
+                const connection = await amqp.connect("amqp://localhost:5672");
+                console.log("Connection established!");
+                console.log("Sending call to function mergeSort");
+                const channel = await connection.createChannel();
+                const q = await channel.assertQueue('', {
+                    exclusive: true
+                });
+                const mergeSort_exchange = 'sortExchange';
+                await channel.assertExchange(mergeSort_exchange, 'fanout', {
+                    durable: false
+                });
+                const correlationId = uuidv4_js_dist();
+                const callObj = {
+                    funcName: "mergeSort",
+                    parameters: {
+                        arr: arr,
+                        depth: depth
+                    }
+                };
+                channel.consume(q.queue, msg => {
+                    if (msg) {
+                        const message = JSON.parse(msg.content.toString());
+                        console.log("Receiving response for function mergeSort");
+                        if (msg.properties.correlationId === correlationId) {
+                            const result = message.result;
+                            console.log("Response received:", result);
+                            resolve(result);
+                            channel.cancel(msg.fields.consumerTag);
+                        }
+                    }
+                }, {
+                    noAck: true
+                });
+                channel.publish(mergeSort_exchange, '', Buffer.from(JSON.stringify(callObj)), {
+                    correlationId: correlationId,
+                    replyTo: q.queue
+                });
+            } catch (error) {
+                console.error("Error processing call to function mergeSort:", error);
+                reject(error);
+            }
+        });
+        return p;
+    }
+}
+
+function merge(left, right, depth) {
+    console.log(`${indent(depth)}merge ${JSON.stringify(left)} + ${JSON.stringify(right)}`);
+    const result = [];
+    let i = 0;
+    let j = 0;
+    while (i < left.length && j < right.length) {
+        if (left[i] <= right[j]) {
+            result.push(left[i++]);
+        } else {
+            result.push(right[j++]);
+        }
+    }
+    return [...result, ...left.slice(i), ...right.slice(j)];
+}
+async function quickSort(arr, depth) {
+    {
+        const p = new Promise(async (resolve, reject) => {
+            try {
+                console.log("Connecting to RabbitMQ...");
+                const connection = await amqp.connect("amqp://localhost:5672");
+                console.log("Connection established!");
+                console.log("Sending call to function quickSort");
+                const channel = await connection.createChannel();
+                const q = await channel.assertQueue('', {
+                    exclusive: true
+                });
+                const quickSort_exchange = 'sortExchange';
+                await channel.assertExchange(quickSort_exchange, 'fanout', {
+                    durable: false
+                });
+                const correlationId = uuidv4_js_dist();
+                const callObj = {
+                    funcName: "quickSort",
+                    parameters: {
+                        arr: arr,
+                        depth: depth
+                    }
+                };
+                channel.consume(q.queue, msg => {
+                    if (msg) {
+                        const message = JSON.parse(msg.content.toString());
+                        console.log("Receiving response for function quickSort");
+                        if (msg.properties.correlationId === correlationId) {
+                            const result = message.result;
+                            console.log("Response received:", result);
+                            resolve(result);
+                            channel.cancel(msg.fields.consumerTag);
+                        }
+                    }
+                }, {
+                    noAck: true
+                });
+                channel.publish(quickSort_exchange, '', Buffer.from(JSON.stringify(callObj)), {
+                    correlationId: correlationId,
+                    replyTo: q.queue
+                });
+            } catch (error) {
+                console.error("Error processing call to function quickSort:", error);
+                reject(error);
+            }
+        });
+        return p;
+    }
+}
+
+function indent(depth) {
+    return "  ".repeat(depth);
+}
+export default main;

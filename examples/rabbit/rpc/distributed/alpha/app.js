@@ -27,11 +27,12 @@ async function sortArray(array, algorithm = "merge") {
                 console.log("Connection established!");
                 console.log("Sending call to function sortArray");
                 const channel = await connection.createChannel();
-                const q = await channel.assertQueue('', {
-                    exclusive: true
-                });
                 const queueName = "sortArrayRPCQueue";
                 console.log("Declaring queue: " + queueName);
+                const callbackQueue = "sortArrayCallbackQueue";
+                await channel.assertQueue(callbackQueue, {
+                    durable: false
+                });
                 const correlationId = uuidv4_js_dist();
                 const callObj = {
                     funcName: "sortArray",
@@ -40,7 +41,7 @@ async function sortArray(array, algorithm = "merge") {
                         algorithm: algorithm
                     }
                 };
-                channel.consume(q.queue, msg => {
+                channel.consume(callbackQueue, msg => {
                     if (msg) {
                         const message = JSON.parse(msg.content.toString());
                         console.log("Receiving response for function sortArray");
@@ -56,8 +57,7 @@ async function sortArray(array, algorithm = "merge") {
                 });
                 console.log("Sending message to queue: sortArrayRPCQueue");
                 channel.sendToQueue(queueName, Buffer.from(JSON.stringify(callObj)), {
-                    correlationId: correlationId,
-                    replyTo: q.queue
+                    correlationId: correlationId
                 });
             } catch (error) {
                 console.error("Error processing call to function sortArray:", error);

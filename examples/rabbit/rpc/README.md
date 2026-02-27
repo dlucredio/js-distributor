@@ -13,3 +13,5 @@ Each example uses a different configuration file:
 Use the tasks provided in `package.json` to run each way.
 
 After generating the code, inspect the generated files to see the differences.
+
+To execute, start `compose.yml`, then start alpha, beta and gamma and run the HTTP tests in `tests.http` file. 

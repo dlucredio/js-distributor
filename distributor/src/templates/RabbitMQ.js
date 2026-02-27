@@ -10,24 +10,25 @@ function importStatements() {
 function generateWaitForCalls(f) {
     const hasExchange = !!f.functionInfo.rabbitConfig.exchangeName;
     return `
+        const ${f.functionName}_queueName = "${f.functionInfo.rabbitConfig.queue ? f.functionInfo.rabbitConfig.queue : f.functionName+"_queue"}";
+
         ${hasExchange ? `
             // This function has an exchange, let's use it
 
             const ${f.functionName}_exchange = '${f.functionInfo.rabbitConfig.exchangeName}';
-            await channel.assertExchange(${f.functionName}_exchange, '${f.rabbitConfig.exchangeType}', { durable: false });
-            const queue_${f.functionName} = await channel.assertQueue('', { exclusive: true });
+            await channel.assertExchange(${f.functionName}_exchange, '${f.functionInfo.rabbitConfig.exchangeType}', { durable: false });
+            const queue_${f.functionName} = await channel.assertQueue(${f.functionName}_queueName, { exclusive: true });
             await channel.bindQueue(queue_${f.functionName}.queue, ${f.functionName}_exchange, '${f.functionInfo.rabbitConfig.routingKey}');
             channel.consume(
                 queue_${f.functionName}.queue,
                 async (msg) => {
                     if (msg) {
                         console.log("Receiving call");
-                        const message = JSON.parse(msg.content.toString());
+                        const message_call_received = JSON.parse(msg.content.toString());
 
         ` : `
             // This function does not have an exchange, let's use the queue directly
 
-            const ${f.functionName}_queueName = "${f.functionInfo.rabbitConfig.queue ? f.functionInfo.rabbitConfig.queue : f.functionName+"_queue"}";
             await channel.assertQueue(${f.functionName}_queueName, { durable: false });
             channel.consume(
                 ${f.functionName}_queueName,
@@ -40,34 +41,25 @@ function generateWaitForCalls(f) {
         const { ${f.args.join(", ")} } = message_call_received.parameters;
         console.log("Calling function ${f.functionName}", ${f.args});
         const result_${f.functionName} = ${f.isAsync ? "await " : ""} ${f.functionName}(${f.args.join(", ")});
-        const response_${f.functionName} = {
-            funcName: "${f.functionName}",
-            result: result_${f.functionName}
-        };
-        console.log("Sending response to function ${f.functionName}");
 
-        ${hasExchange ? `
-            ${f.functionInfo.rabbitConfig.callbackQueue === 'anonymous' ? `
-                channel.publish('', msg.properties.replyTo, Buffer.from(JSON.stringify(response_${f.functionName})), {
-            ` : `
-                channel.publish(${f.functionName}_exchange, '${f.functionInfo.rabbitConfig.callbackQueue}', Buffer.from(JSON.stringify(response_${f.functionName})), {
-            `}
-                        correlationId: msg.properties.correlationId
-                    });
-                }            
-            }, { noAck: true });    
-        ` : `
-            ${f.functionInfo.rabbitConfig.callbackQueue === 'anonymous' ? `
-                channel.sendToQueue(msg.properties.replyTo, Buffer.from(JSON.stringify(response_${f.functionName})), {
-            ` : `
-                channel.sendToQueue('${f.functionInfo.rabbitConfig.callbackQueue}', Buffer.from(JSON.stringify(response_${f.functionName})), {
-            `}
-                            correlationId: msg.properties.correlationId
-                        });
-                    }
-                }
-            }, { noAck: true });
+        ${!f.functionInfo.rabbitConfig.hasReturn ? `` : `
+
+            console.log("Sending response to function ${f.functionName}");
+
+            const response_${f.functionName} = {
+                funcName: "${f.functionName}",
+                result: result_${f.functionName}
+            };
+
+            channel.sendToQueue(
+                ${f.functionInfo.rabbitConfig.callbackQueue === 'anonymous' ? `msg.properties.replyTo` : `'${f.functionInfo.rabbitConfig.callbackQueue}'`}
+                , Buffer.from(JSON.stringify(response_${f.functionName})), {
+                    correlationId: msg.properties.correlationId
+                });
         `}
+        ${hasExchange ? `` : `}`}
+            }            
+        }, { noAck: true });    
 
     `;
 }

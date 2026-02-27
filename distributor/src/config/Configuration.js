@@ -98,7 +98,8 @@ class ConfigSingleton {
                         exchangeType: null,
                         exchangeName: null,
                         routingKey: null,
-                        callbackQueue: null
+                        callbackQueue: null,
+                        hasReturn: true
                     }
                 }
                 if(!functionInfo.rabbitConfig.exchangeType) {
@@ -109,6 +110,9 @@ class ConfigSingleton {
                 }
                 if(!functionInfo.rabbitConfig.callbackQueue) {
                     functionInfo.rabbitConfig.callbackQueue = "anonymous"
+                }
+                if (functionInfo.rabbitConfig.hasReturn === undefined) {
+                    functionInfo.rabbitConfig.hasReturn = true;
                 }
             }
         }

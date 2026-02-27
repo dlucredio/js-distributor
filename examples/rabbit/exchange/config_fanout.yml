@@ -1,0 +1,31 @@
+codeGenerationParameters:
+  mode: single                  # Runs the tool a single time (instead of watching for changes)
+  inputFolder: 'monolith'       # Folder where to look for the monolith code
+  outputFolder: 'distributed'   # Folder to generate the microservices
+  cleanOutput: false            # Instructs the tool not to clean the output folder
+  generateProjects: true        # Do not generate npm projects for the microservices
+  ignore:                       # Folders to ignore in the monolith
+    - "node_modules"
+rabbitParameters:               # Details of the RabbitMQ communication
+  url: localhost
+  port: 5672
+  numConnectionAttempts: 5
+  timeBetweenAttempts: 10    
+servers:                        # Now comes the three servers
+  - id: alpha                   # alpha server will contain all functions
+  - id: beta                    # beta server will contain mergeSort as a rabbit method
+    functions:
+      - declarationPattern: mergeSort
+        method: rabbit
+        rabbitConfig:
+          queue: mergeSortQueueDirect
+          exchangeType: fanout  # fanout means that the messages will be sent to all queues that are bound to the exchange, regardless of the routing key. This means that both mergeSort and quickSort will receive the same messages.
+          exchangeName: sortExchange
+  - id: gamma                   # gamma server will contain the quickSort as a rabbit method
+    functions:
+      - declarationPattern: quickSort
+        method: rabbit
+        rabbitConfig:
+          queue: quickSortQueueDirect
+          exchangeType: fanout  # fanout means that the messages will be sent to all queues that are bound to the exchange, regardless of the routing key. This means that both mergeSort and quickSort will receive the same messages.
+          exchangeName: sortExchange

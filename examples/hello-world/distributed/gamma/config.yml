@@ -14,7 +14,7 @@ servers:                        # Now comes the three servers
       port: 3000
     functions:
       - declarationPattern: getMessage
-        method: http-get
+        method: http-post
   - id: gamma                   # gamma server will contain function "getFullName", exposed
     http:                       # at localhost, port 3001, as a HTTP POST endpoint
       url: localhost

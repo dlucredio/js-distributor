@@ -1,0 +1,14 @@
+{
+  "name": "rpc",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "js-dist": "js-distributor-scripts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "js-distributor": "file:../../../distributor"
+  }
+}
