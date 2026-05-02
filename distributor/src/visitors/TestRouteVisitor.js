@@ -82,9 +82,11 @@ export class TestRouteVisitor{
     onProgramExit(path) {
         if(this.replacedFunctions.length == 0) return
         
-        const importNode = this.buildImport();
         this.buildNewRemoteFunctions();
         // Insert at the top
+        
+        if(this.relativePath.endsWith("start.js")) return
+        const importNode = this.buildImport();
         path.unshiftContainer("body", importNode);
     }
 

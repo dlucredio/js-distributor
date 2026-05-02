@@ -357,12 +357,12 @@ function generateApiTestCode(serverStructures, allRemoteFunctions){
             continue;
         }
         for (const { relativePath, babelTree } of asts) {
-            if(relativePath.includes(TESTFILETEXT)) {
-               
-                const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, babelTree);
-                testRouteVisitor.replaceTestApiCall();
-                allRemoteFunctions.push(...testRouteVisitor.getNewRemotesFunctions())
-            }
+            
+            if(!relativePath.includes("start.js"))   
+            {const testRouteVisitor = new TestRouteVisitor(serverInfo, relativePath, babelTree);
+            testRouteVisitor.replaceTestApiCall();
+            allRemoteFunctions.push(...testRouteVisitor.getNewRemotesFunctions())}
+            
         }
     }
 }
