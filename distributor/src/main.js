@@ -4,7 +4,7 @@ import fs from "fs";
 import { minimatch } from 'minimatch';
 
 // Babel imports
-// import * as babelParser from "@babel/parser"
+import * as babelParser from "@babel/parser"
 import { parse } from './helpers/DebuggableParser.js';
 import generate from "@babel/generator";
 const babelGenerate = generate.default ?? generate;
@@ -21,7 +21,6 @@ import { startServerTemplate, startTestServerTemplate } from "./templates/StartS
 import npmHelper from "./helpers/NpmHelper.js";
 import { dockerfileTemplate, composeTemplate } from "./templates/Docker.js";
 
-const TESTFILETEXT = ".test.";
 export default async function entrypoint(configFile) {
     try {
         config.init(configFile);

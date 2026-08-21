@@ -5,6 +5,7 @@ codeGenerationParameters:
   cleanOutput: true               # delete output folder before?
   generateProjects: false          # generate new npm projects?
   generateDocker: true            # generate docker files for each server?
+  generateTestServers: true       # Generate test server, default is to not generate
   ignore:                         # ignore the following folders
      - "node_modules"
   #   - "main*"

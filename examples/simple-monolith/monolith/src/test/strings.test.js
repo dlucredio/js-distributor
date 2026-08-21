@@ -11,6 +11,11 @@ describe('String Functions', () => {
 
         expect(result).toEqual(["hello", "world"]);
     });
+    test('toUpperCase should correctly format the given string', () => {
+        const str = "hello world";
+        const result = toUpperCase(str);
+        expect(result).toBe("HELLO WORLD")
+    })
 })
 
 describe('Use Database',  () => {
