@@ -33,6 +33,11 @@ function httpPostFetch(functionName, serverUrl, serverPort, args) {
 `
 };
 
+
+function httpMockedFuntions(functionName, mockResponse, args) {
+    console.log("Mocking function: " + functionName);
+    return `return mock_${functionName}(${args});`;
+}
 export default {
-    httpGetFetch, httpPostFetch
+    httpGetFetch, httpPostFetch, httpMockedFuntions
 }
