@@ -11,6 +11,10 @@ import express from 'express';
 ${config.hasRabbitFunctions(serverInfo) ? `
 import amqp from 'amqplib';
 ` : ``}
+
+${config.hasMetricsEnable() ? `
+import promBundle from 'express-prom-bundle';;
+` : ``}
     
 ${exposedFunctionImports(functionsToBeExposedInServer)}
 
@@ -18,6 +22,10 @@ ${config.hasHttpFunctions(serverInfo) ? `
 const app = express();
 const port = ${serverInfo.http.port};
 app.use(express.json());
+${config.hasMetricsEnable() ? `
+const metricsMiddleware = promBundle({ includeMethod: true });
+
+app.use(metricsMiddleware);` : ``}
 
 // HTTP GET functions
 ${functionsToBeExposedInServer.filter(f => f.functionInfo.method === 'http-get').map((f) => `

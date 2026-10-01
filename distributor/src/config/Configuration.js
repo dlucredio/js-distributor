@@ -30,6 +30,12 @@ class ConfigSingleton {
             setTestServer(yamlContent.codeGenerationParameters.generateTestServers)
         }
 
+        setMetricsServer(false)
+        if(yamlContent.codeGenerationParameters.generateMetricsServer){
+            setMetricsServer(yamlContent.codeGenerationParameters.generateMetricsServer)
+        }
+
+
         if(!yamlContent.codeGenerationParameters.mode) {
             yamlContent.codeGenerationParameters.mode = "single";
         } else if(yamlContent.codeGenerationParameters.mode !== "single" && yamlContent.codeGenerationParameters.mode !== "watch") {
@@ -281,11 +287,22 @@ function hasRabbitFunctions(serverInfo) {
     );
 }
 
+function hasMetricsEnable(){
+    return instance.metricsServer;
+}
+
 function setTestServer(bool){
     if (!instance) {
         throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
     }
     instance.testPresent = bool;
+}
+
+function setMetricsServer(bool){
+    if (!instance) {
+        throw new ConfigError("Configuration not initialized. Use config.init(configFile) first.");
+    }
+    instance.metricsServer = bool;
 }
 
 function isTestServer(){
@@ -300,5 +317,5 @@ function getTestServerSuffix(){
 export default {
     init, getConfigPath, getCodeGenerationParameters, 
     getServerInfo, getServers, getRabbitConfig, getFunctionInfo, matchCallPattern, 
-    hasHttpFunctions, hasRabbitFunctions, setTestServer, isTestServer, getTestServerSuffix
+    hasHttpFunctions, hasRabbitFunctions, setTestServer, isTestServer, getTestServerSuffix, hasMetricsEnable
 }

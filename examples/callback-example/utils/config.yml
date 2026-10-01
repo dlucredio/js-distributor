@@ -6,6 +6,7 @@ codeGenerationParameters:
   generateProjects: false          # generate new npm projects?
   generateDocker: true            # generate docker files for each server?
   generateTestServers: true       # Generate test server, default is to not generate
+  generateMetricsServer: true
   ignore:                         # ignore the following folders
      - "node_modules"
   #   - "main*"
