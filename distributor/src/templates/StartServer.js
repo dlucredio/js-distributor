@@ -23,7 +23,7 @@ const app = express();
 const port = ${serverInfo.http.port};
 app.use(express.json());
 ${config.hasMetricsEnable() ? `
-const metricsMiddleware = promBundle({ includeMethod: true });
+const metricsMiddleware = promBundle({ includeMethod: true, includePath: true, promClient: { collectDefaultMetrics: {} } });
 
 app.use(metricsMiddleware);` : ``}
 

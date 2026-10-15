@@ -9,7 +9,7 @@ COPY . .
 ${config.hasHttpFunctions(serverInfo) ? `
 EXPOSE ${serverInfo.http.port}
 ` : ``}
-CMD ["node", "src-gen/start.js"]
+CMD ["npm", "run", "start"]
 `;
 
 export const composeTemplate = (serverStructures) => `
