@@ -1,17 +1,11 @@
 import config from "../config/Configuration.js";
 
-// ── Shared helpers ────────────────────────────────────────────────────────────
-
 function importStatements() {
     return [
         "import { v4 as uuidv4_js_dist } from 'uuid';",
         "import amqp from 'amqplib';"
     ];
 }
-
-// ── Consumer side (server / theta) ────────────────────────────────────────────
-// Unchanged from original — the consumer already reads msg.properties.replyTo
-// when callbackQueue === 'anonymous', so both options work on this side.
 
 function generateWaitForCalls(f) {
     const hasExchange = !!f.functionInfo.rabbitConfig.exchangeName;
@@ -64,246 +58,11 @@ function generateWaitForCalls(f) {
                 });
         `}
         ${hasExchange ? `` : `}`}
-            }
-        }, { noAck: true });
+            }            
+        }, { noAck: true });    
 
     `;
 }
-
-// ── Option 2 — single instance ────────────────────────────────────────────────
-//
-// One persistent connection + channel + pending Map shared across all calls.
-// Reply queue is a fixed named queue (e.g. 'cargoDataCallBack').
-//
-// Works correctly under concurrent load because each call is keyed by a unique
-// correlationId in the Map — no per-call consumer or queue is created.
-//
-// Limitation: if multiple instances of this server run simultaneously they all
-// consume from the same reply queue, so a reply can land on the wrong instance
-// (its Map won't have the correlationId → message is dropped).
-// Use the multi-instance option when horizontal scaling is needed.
-
-/**
- * Emitted once at the top of the caller module.
- * @param {Array} functions - all rabbit-producer functions with hasReturn:true
- */
-function generateRabbitClientBootstrap_singleInstance(functions) {
-    const returningFns = functions.filter(f => f.functionInfo.rabbitConfig?.hasReturn);
-    if (returningFns.length === 0) return '';
-
-    // deduplicate named reply queues
-    const namedQueues = [...new Set(
-        returningFns
-            .filter(f => f.functionInfo.rabbitConfig.callbackQueue !== 'anonymous')
-            .map(f => f.functionInfo.rabbitConfig.callbackQueue)
-    )];
-
-    const namedQueueSetup = namedQueues.map(q => `
-    await _rabbit_channel.assertQueue('${q}', { durable: false });
-    _rabbit_channel.consume('${q}', _rabbit_reply_handler, { noAck: true });`).join('\n');
-
-    return `
-// ── Shared RabbitMQ client state (single-instance) ───────────────────────────
-const _rabbit_pending = new Map();
-let _rabbit_channel;
-
-function _rabbit_reply_handler(msg) {
-    if (!msg) return;
-    const resolver = _rabbit_pending.get(msg.properties.correlationId);
-    if (resolver) {
-        _rabbit_pending.delete(msg.properties.correlationId);
-        resolver(JSON.parse(msg.content.toString()).result);
-    }
-}
-
-const _rabbit_ready = (async () => {
-    const _rabbit_conn = await amqp.connect("amqp://${config.getRabbitConfig().url}:${config.getRabbitConfig().port}");
-    _rabbit_channel = await _rabbit_conn.createChannel();
-    ${namedQueueSetup}
-    return _rabbit_channel;
-})();
-// ─────────────────────────────────────────────────────────────────────────────
-`;
-}
-
-/**
- * Thin per-function call code (single-instance variant).
- * Uses the shared channel and pending map from the bootstrap above.
- */
-function rabbitProducerCode_singleInstance(functionName, functionInfo, args) {
-    if (!functionInfo.rabbitConfig.hasReturn) {
-        return _fireAndForgetCode(functionName, functionInfo, args);
-    }
-
-    const hasExchange = !!functionInfo.rabbitConfig.exchangeName;
-    const replyTo     = `'${functionInfo.rabbitConfig.callbackQueue}'`;
-
-    return `
-{
-    const channel = await _rabbit_ready;
-    return new Promise((resolve, reject) => {
-        let correlationId;
-        try {
-            correlationId = uuidv4_js_dist();
-            _rabbit_pending.set(correlationId, resolve);
-            const callObj = {
-                funcName: "${functionName}",
-                parameters: { ${args.map(a => a + ': ' + a).join(', ')} },
-            };
-            ${hasExchange ? `
-            channel.publish('${functionInfo.rabbitConfig.exchangeName}', '${functionInfo.rabbitConfig.routingKey}',
-                Buffer.from(JSON.stringify(callObj)), { correlationId, replyTo: ${replyTo} });
-            ` : `
-            channel.sendToQueue('${functionInfo.rabbitConfig.queue || functionName + '_queue'}',
-                Buffer.from(JSON.stringify(callObj)), { correlationId, replyTo: ${replyTo} });
-            `}
-        } catch (error) {
-            if (correlationId) _rabbit_pending.delete(correlationId);
-            reject(error);
-        }
-    });
-}
-`;
-}
-
-// ── Option 2 — multi-instance ─────────────────────────────────────────────────
-//
-// Same as single-instance but the reply queue name includes a UUID generated
-// once at server startup. Each running instance gets its own exclusive queue,
-// so replies are always routed to the correct instance and its local Map is
-// always valid — no message loss under horizontal scaling.
-//
-// The queue is declared with autoDelete:true so RabbitMQ cleans it up
-// automatically when the server process dies.
-//
-// On the consumer side (theta / generateWaitForCalls) nothing changes:
-// it already uses msg.properties.replyTo when callbackQueue === 'anonymous'.
-
-/**
- * Emitted once at the top of the caller module.
- * @param {Array} functions - all rabbit-producer functions with hasReturn:true
- */
-function generateRabbitClientBootstrap_multiInstance(functions) {
-    const returningFns = functions.filter(f => f.functionInfo.rabbitConfig?.hasReturn);
-    if (returningFns.length === 0) return '';
-
-    const hasAnonymous = returningFns.some(
-        f => f.functionInfo.rabbitConfig.callbackQueue === 'anonymous'
-    );
-    const namedQueues = [...new Set(
-        returningFns
-            .filter(f => f.functionInfo.rabbitConfig.callbackQueue !== 'anonymous')
-            .map(f => f.functionInfo.rabbitConfig.callbackQueue)
-    )];
-
-    const namedQueueSetup = namedQueues.map(q => `
-    await _rabbit_channel.assertQueue('${q}', { durable: false });
-    _rabbit_channel.consume('${q}', _rabbit_reply_handler, { noAck: true });`).join('\n');
-
-    // One instance-scoped queue for ALL anonymous-callback functions.
-    // They share the pending Map keyed by correlationId, so there is no conflict.
-    const anonymousQueueSetup = hasAnonymous ? `
-    const _rabbit_instance_reply_queue = \`reply-\${uuidv4_js_dist()}\`;
-    await _rabbit_channel.assertQueue(_rabbit_instance_reply_queue, { durable: false, autoDelete: true });
-    _rabbit_channel.consume(_rabbit_instance_reply_queue, _rabbit_reply_handler, { noAck: true });` : '';
-
-    const returnValue = hasAnonymous
-        ? `return { channel: _rabbit_channel, instanceReplyQueue: _rabbit_instance_reply_queue };`
-        : `return { channel: _rabbit_channel };`;
-
-    return `
-// ── Shared RabbitMQ client state (multi-instance) ────────────────────────────
-const _rabbit_pending = new Map();
-let _rabbit_channel;
-
-function _rabbit_reply_handler(msg) {
-    if (!msg) return;
-    const resolver = _rabbit_pending.get(msg.properties.correlationId);
-    if (resolver) {
-        _rabbit_pending.delete(msg.properties.correlationId);
-        resolver(JSON.parse(msg.content.toString()).result);
-    }
-}
-
-const _rabbit_ready = (async () => {
-    const _rabbit_conn = await amqp.connect("amqp://${config.getRabbitConfig().url}:${config.getRabbitConfig().port}");
-    _rabbit_channel = await _rabbit_conn.createChannel();
-    ${namedQueueSetup}
-    ${anonymousQueueSetup}
-    ${returnValue}
-})();
-// ─────────────────────────────────────────────────────────────────────────────
-`;
-}
-
-/**
- * Thin per-function call code (multi-instance variant).
- * Uses the shared channel and pending map from the bootstrap above.
- * For anonymous callbackQueues, destructures instanceReplyQueue from _rabbit_ready.
- */
-function rabbitProducerCode_multiInstance(functionName, functionInfo, args) {
-    if (!functionInfo.rabbitConfig.hasReturn) {
-        return _fireAndForgetCode(functionName, functionInfo, args);
-    }
-
-    const hasExchange = !!functionInfo.rabbitConfig.exchangeName;
-    const isAnonymous = functionInfo.rabbitConfig.callbackQueue === 'anonymous';
-    const destructure  = isAnonymous ? '{ channel, instanceReplyQueue }' : '{ channel }';
-    const replyTo      = isAnonymous ? 'instanceReplyQueue' : `'${functionInfo.rabbitConfig.callbackQueue}'`;
-
-    return `
-{
-    const ${destructure} = await _rabbit_ready;
-    return new Promise((resolve, reject) => {
-        let correlationId;
-        try {
-            correlationId = uuidv4_js_dist();
-            _rabbit_pending.set(correlationId, resolve);
-            const callObj = {
-                funcName: "${functionName}",
-                parameters: { ${args.map(a => a + ': ' + a).join(', ')} },
-            };
-            ${hasExchange ? `
-            channel.publish('${functionInfo.rabbitConfig.exchangeName}', '${functionInfo.rabbitConfig.routingKey}',
-                Buffer.from(JSON.stringify(callObj)), { correlationId, replyTo: ${replyTo} });
-            ` : `
-            channel.sendToQueue('${functionInfo.rabbitConfig.queue || functionName + '_queue'}',
-                Buffer.from(JSON.stringify(callObj)), { correlationId, replyTo: ${replyTo} });
-            `}
-        } catch (error) {
-            if (correlationId) _rabbit_pending.delete(correlationId);
-            reject(error);
-        }
-    });
-}
-`;
-}
-
-// ── Shared fire-and-forget (no reply) ─────────────────────────────────────────
-// Same for both options — no pending map entry, no replyTo.
-
-function _fireAndForgetCode(functionName, functionInfo, args) {
-    const hasExchange = !!functionInfo.rabbitConfig.exchangeName;
-    return `
-{
-    const { channel } = await _rabbit_ready;
-    const callObj = {
-        funcName: "${functionName}",
-        parameters: { ${args.map(a => a + ': ' + a).join(', ')} },
-    };
-    ${hasExchange ? `
-    channel.publish('${functionInfo.rabbitConfig.exchangeName}', '${functionInfo.rabbitConfig.routingKey}',
-        Buffer.from(JSON.stringify(callObj)));
-    ` : `
-    channel.sendToQueue('${functionInfo.rabbitConfig.queue || functionName + '_queue'}',
-        Buffer.from(JSON.stringify(callObj)));
-    `}
-}
-`;
-}
-
-// ── Legacy export (original single-call-per-connection behaviour) ─────────────
-// Kept for reference. DO NOT use in new code — replaced by the options above.
 
 function rabbitProducerCode(functionName, functionInfo, args) {
     const hasExchange = !!functionInfo.rabbitConfig.exchangeName;
@@ -390,14 +149,5 @@ function rabbitProducerCode(functionName, functionInfo, args) {
 
 
 export default {
-    importStatements,
-    generateWaitForCalls,
-    // option 2 — single instance
-    generateRabbitClientBootstrap_singleInstance,
-    rabbitProducerCode_singleInstance,
-    // option 2 — multi instance
-    generateRabbitClientBootstrap_multiInstance,
-    rabbitProducerCode_multiInstance,
-    // legacy (original)
-    rabbitProducerCode,
+    importStatements, generateWaitForCalls, rabbitProducerCode
 }
