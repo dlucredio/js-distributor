@@ -52,7 +52,7 @@ function generateWaitForCalls(f) {
             };
 
             channel.sendToQueue(
-                ${f.functionInfo.rabbitConfig.callbackQueue === 'anonymous' ? `msg.properties.replyTo` : `'${f.functionInfo.rabbitConfig.callbackQueue}'`}
+                ${f.functionInfo.rabbitConfig.callbackQueue === 'anonymous' ? `msg.properties.replyTo` : `msg.properties.replyTo || '${f.functionInfo.rabbitConfig.callbackQueue}'`}
                 , Buffer.from(JSON.stringify(response_${f.functionName})), {
                     correlationId: msg.properties.correlationId
                 });
@@ -66,11 +66,10 @@ function generateWaitForCalls(f) {
 
 function rabbitProducerCode(functionName, functionInfo, args) {
     const hasExchange = !!functionInfo.rabbitConfig.exchangeName;
-    let responseQueue = 'q.queue';
-    if(!hasExchange && functionInfo.rabbitConfig.callbackQueue !== 'anonymous') {
-        responseQueue = 'callbackQueue';
-    }
 
+    // Replies use RabbitMQ direct reply-to: the reply is routed back to the exact
+    // channel that published the call, so it can never reach another caller,
+    // regardless of how many caller/server instances are running.
     return `
 {
     const p = new Promise(async (resolve, reject) => {
@@ -80,27 +79,13 @@ function rabbitProducerCode(functionName, functionInfo, args) {
             console.log("Connection established!");
             console.log("Sending call to function ${functionName}");
             const channel = await connection.createChannel();
-            ${functionInfo.rabbitConfig.callbackQueue === 'anonymous' ? `
-                const q = await channel.assertQueue('', {
-                    exclusive: true,
-                });
-            ` : ``}
             ${hasExchange ? `
                 const ${functionName}_exchange = '${functionInfo.rabbitConfig.exchangeName}';
                 await channel.assertExchange(${functionName}_exchange, '${functionInfo.rabbitConfig.exchangeType}', {
                     durable: false,
                 });
-                ${functionInfo.rabbitConfig.callbackQueue !== 'anonymous' ? `
-                    await channel.bindQueue(q.queue, ${functionName}_exchange, '${functionInfo.rabbitConfig.callbackQueue}');
-                ` : ``}
             ` : `
                 const queueName = "${functionInfo.rabbitConfig.queue ? functionInfo.rabbitConfig.queue : functionName+"_queue"}";
-
-                console.log("Declaring queue: " + queueName);
-                ${functionInfo.rabbitConfig.callbackQueue !== 'anonymous' ? `
-                    const callbackQueue = "${functionInfo.rabbitConfig.callbackQueue}";
-                    await channel.assertQueue(callbackQueue, { durable: false });
-                ` : ``}
             `}
             const correlationId = uuidv4_js_dist();
             const callObj = {
@@ -109,8 +94,9 @@ function rabbitProducerCode(functionName, functionInfo, args) {
                     ${args.map(a => a + " : " + a).join(", ")}
                 },
             };
-            channel.consume(
-                ${responseQueue},
+            // Direct reply-to requires consuming on the same channel, with noAck, before publishing
+            await channel.consume(
+                'amq.rabbitmq.reply-to',
                 (msg) => {
                     if (msg) {
                         const message = JSON.parse(msg.content.toString());
@@ -119,7 +105,7 @@ function rabbitProducerCode(functionName, functionInfo, args) {
                             const result = message.result;
                             console.log("Response received:", result);
                             resolve(result);
-                            channel.cancel(msg.fields.consumerTag);
+                            connection.close().catch(() => {});
                         }
                     }
                 },
@@ -130,12 +116,12 @@ function rabbitProducerCode(functionName, functionInfo, args) {
             ${hasExchange ? `
                 channel.publish(${functionName}_exchange, '${functionInfo.rabbitConfig.routingKey}', Buffer.from(JSON.stringify(callObj))
             ` : `
-                console.log("Sending message to queue: ${functionInfo.rabbitConfig.queue ? functionInfo.rabbitConfig.queue : functionName+"_queue"}");
+                console.log("Sending message to queue: " + queueName);
                 channel.sendToQueue(queueName, Buffer.from(JSON.stringify(callObj))
             `}
             , {
-                correlationId: correlationId
-                ${functionInfo.rabbitConfig.callbackQueue === 'anonymous' ? `, replyTo: q.queue` : ``}
+                correlationId: correlationId,
+                replyTo: 'amq.rabbitmq.reply-to'
             });
         } catch (error) {
             console.error("Error processing call to function ${functionName}:", error);
@@ -146,7 +132,6 @@ function rabbitProducerCode(functionName, functionInfo, args) {
 }
     `;
 }
-
 
 export default {
     importStatements, generateWaitForCalls, rabbitProducerCode
